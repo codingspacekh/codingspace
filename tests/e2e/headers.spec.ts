@@ -12,5 +12,6 @@ for (const path of ['/', '/this-page-does-not-exist']) {
     expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(h['permissions-policy']).toContain('camera=()');
     expect(h['x-powered-by']).toBeUndefined();
+    expect(h['x-robots-tag']).toBe('noindex, nofollow'); // until launch (M7)
   });
 }

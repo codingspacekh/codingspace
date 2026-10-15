@@ -55,3 +55,16 @@ describe('security headers', () => {
     expect(byKey['Content-Security-Policy']).toBe(buildCsp({}));
   });
 });
+
+describe('search indexing (M7: indexed only after launch)', () => {
+  const robots = (opts: Parameters<typeof securityHeaders>[0]) =>
+    securityHeaders(opts).find((h) => h.key === 'X-Robots-Tag')?.value;
+
+  it('asks search engines not to index the site by default', () => {
+    expect(robots({})).toBe('noindex, nofollow');
+  });
+
+  it('allows indexing only when explicitly enabled for launch', () => {
+    expect(robots({ indexable: true })).toBeUndefined();
+  });
+});
