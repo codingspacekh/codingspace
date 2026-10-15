@@ -43,8 +43,8 @@ The owner teaches competition mathematics, physics, programming and Cambridge AS
 
 | # | Decision | Reason |
 |---|---|---|
-| D1 | **Next.js Pages Router + React 18.3**, `reactStrictMode: false` | Arwes supports only React 18 and does not support StrictMode or Server Components. |
-| D2 | **Arwes isolated in `src/ui/arwes/`** and pinned to an exact version | Arwes is no longer maintained; contain the risk. |
+| D1 | **Next.js 16.4 Pages Router, built with webpack (`next build --webpack`) + React 18.3**, `reactStrictMode: false`; React 19 compatibility tested in CI | Arwes declares React 18 and doesn't support StrictMode or Server Components. Turbopack adds inline scripts that break a strict static CSP. Next 17 will drop React 18, and Arwes passed all spike tests on React 19 ([ADR 0001](./adr/0001-arwes.md)). |
+| D2 | **Arwes isolated in `src/ui/arwes/`**, pinned to `1.0.0-next.25020502`, with the safe-math patch replacing its `eval` | Arwes is no longer maintained; contain the risk and keep CSP free of `'unsafe-eval'` ([ADR 0001](./adr/0001-arwes.md)). |
 | D3 | **Static pages + on-demand revalidation (ISR)** for every public page | Fast, cheap, survives database hiccups; scales far past 1,000 visits/day. |
 | D4 | **Supabase** (Postgres, Auth, RLS) | Managed Postgres with auth and row-level security on a free tier. |
 | D5 | **Cloudflare R2** for media and lesson files, served from `files.codingspace.io` | No egress fees. The capacity analysis in §5 shows image traffic would exceed Supabase Storage's free egress. *This reverses the v0.2 note that suggested Supabase Storage.* |
@@ -103,7 +103,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 
 | ID | Area | Requirement | How it is verified |
 |---|---|---|---|
-| NFR-PERF-1 | Speed | LCP < 2.5 s, INP < 200 ms, CLS < 0.1 at p75 on mid-range Android over 4G | Lighthouse CI budgets on every PR; Vercel Speed Insights in production |
+| NFR-PERF-1 | Speed | **Real users:** LCP < 2.5 s, INP < 200 ms, CLS < 0.1 at p75 on mid-range Android over 4G. **Lab gate:** Lighthouse mobile Performance ≥ 75, TBT ≤ 1,000 ms, A11y/SEO/Best practices ≥ 95 | Vercel Speed Insights in production; Lighthouse CI on every PR (gate calibrated in [ADR 0001](./adr/0001-arwes.md)) |
 | NFR-PERF-2 | Weight | First-load JS ≤ 200 KB gzipped on lesson pages; ≤ 260 KB on Home (orbit hero) | `next build` output checked in CI (bundle budget test) |
 | NFR-PERF-3 | Server | Cached HTML TTFB < 200 ms; uncached (revalidating) < 800 ms | k6 + synthetic monitor |
 | NFR-CAP-1 | Capacity | ≥ 1,000 visits/day; tested at **10×** (20 HTML req/s for 10 min, p95 < 300 ms, 0 % errors) | k6 load test before launch (M7) |
@@ -267,7 +267,7 @@ erDiagram
 
 ### 8.3 Controls checklist
 - **Headers** (set in middleware/`next.config.js`):
-  - `Content-Security-Policy`: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://files.codingspace.io data:; font-src 'self'; connect-src 'self' https://<project>.supabase.co; frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. M0 confirms whether Arwes needs `'unsafe-inline'` for styles.
+  - `Content-Security-Policy` (tested in M0): `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https://files.codingspace.io data:; font-src 'self'; connect-src 'self' https://<project>.supabase.co; frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. The only relaxation is `style-src-attr 'unsafe-inline'`, for `style=""` attributes from KaTeX, Shiki and Arwes, which can't execute code.
   - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
   - `X-Content-Type-Options: nosniff`
   - `Referrer-Policy: strict-origin-when-cross-origin`

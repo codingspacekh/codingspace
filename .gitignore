@@ -1,0 +1,33 @@
+# dependencies & builds
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# test output
+test-results/
+playwright-report/
+blob-report/
+
+# secrets: never commit (public repo)
+.env
+.env.*
+!.env.example
+*.pem
+supabase/.temp/
+supabase/.branches/
+.vercel/
+
+# spikes: keep source, not installs/builds
+spikes/*/node_modules/
+spikes/*/.next/
+spikes/*/test-results/
+spikes/m0-arwes-r19/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

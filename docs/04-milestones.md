@@ -49,7 +49,7 @@ flowchart LR
 
 Each milestone lists the **tests written first**. They start red and define "done".
 
-### M0 — Arwes & stack spike (3 days)
+### M0 — Arwes & stack spike (3 days) — ✅ DONE 2026-10-15: **GO** ([ADR 0001](./adr/0001-arwes.md))
 **Goal:** prove the risky stack works together before investing in it.
 
 **Build (throwaway branch):**

@@ -1,0 +1,210 @@
+/* Design tokens: the single source for colours and type (03 §6.1). Dark-first, deliberate single theme. */
+:root {
+  color-scheme: dark;
+  --bg: #03080c;
+  --surface: #071820;
+  --raised: #0b2530;
+  --line: #123a44;
+  --fg: #d9fbfc;
+  --fg2: #8fc3c8;
+  --muted: #6f9da3;
+  --cyan: #18e4ec;
+  --violet: #9b8cff;
+  --amber: #ffb84a;
+  --lime: #7dff9b;
+  --pink: #ff6fcf;
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+
+* {
+  box-sizing: border-box;
+}
+/* Background on <html> only, so the fixed Arwes backdrop isn't painted over by <body> (ADR 0001 finding 7). */
+html {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  margin: 0;
+}
+.app {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+a {
+  color: var(--cyan);
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+h1,
+h2,
+h3 {
+  line-height: 1.15;
+  text-wrap: balance;
+  margin: 0;
+}
+p {
+  margin: 0;
+}
+
+/* ── UI primitives ── */
+.ui-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.ui-skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 100;
+  padding: 10px 14px;
+  background: var(--raised);
+  border: 1px solid var(--cyan);
+  color: var(--fg);
+}
+.ui-skip:focus {
+  top: 10px;
+}
+.ui-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px var(--gutter-r) 16px var(--gutter);
+  border-bottom: 1px solid rgba(24, 228, 236, 0.3);
+}
+.ui-logo {
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--fg);
+}
+.ui-logo b {
+  color: var(--cyan);
+  font-weight: 500;
+}
+.ui-toggle {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  color: var(--muted);
+}
+.ui-toggle[aria-pressed='true'] {
+  color: var(--cyan);
+  border-color: rgba(24, 228, 236, 0.6);
+}
+
+/* Arwes frames read these variables */
+.ui-frame {
+  position: relative;
+  padding: 28px;
+  --arwes-frames-bg-color: rgba(7, 24, 32, 0.75);
+  --arwes-frames-line-color: rgba(24, 228, 236, 0.75);
+  --arwes-frames-deco-color: var(--cyan);
+}
+.ui-frame__content {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.btn {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-self: start;
+  padding: 12px 20px;
+  border: 1px solid rgba(24, 228, 236, 0.85);
+  color: var(--cyan);
+  background: rgba(24, 228, 236, 0.1);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+/* ── Layout ── */
+.wrap {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px var(--gutter-r) 96px var(--gutter);
+  display: grid;
+  gap: 36px;
+}
+main:focus {
+  outline: none;
+}
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding: 24px var(--gutter-r) 24px var(--gutter);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+/* ── Home (M1 placeholder; full design in M2) ── */
+.headline {
+  font-size: clamp(40px, 7vw, 76px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+}
+.headline > span {
+  display: block;
+}
+.w1 {
+  color: var(--cyan);
+}
+.w2 {
+  color: var(--violet);
+}
+.w3 {
+  color: var(--amber);
+}
+.intro {
+  color: var(--fg2);
+  max-width: 60ch;
+  font-size: 19px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
