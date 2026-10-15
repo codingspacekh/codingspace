@@ -5,7 +5,7 @@
   "description": "codingspace.io: lessons in competition maths, physics, coding and IT",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "postinstall": "node patches/apply-arwes-patch.mjs",

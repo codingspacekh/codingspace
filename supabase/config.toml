@@ -274,7 +274,8 @@ max_frequency = "5s"
 # Force log out after the specified duration.
 # timebox = "24h"
 # Force log out if the user has been inactive longer than the specified duration.
-inactivity_timeout = "12h"
+# Needs Supabase Pro. On the free plan the 12h idle timeout (ADM-01) is enforced by the app (M3).
+# inactivity_timeout = "12h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -413,3 +414,12 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# ── Remote: staging (codingspace-staging, Singapore) ─────────────────────
+# Values not listed here are inherited from the sections above (sign-up off, TOTP MFA, password rules, 12h idle timeout).
+[remotes.staging]
+project_id = "ouwxyrhnlfywnuqvrate"
+
+[remotes.staging.auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]

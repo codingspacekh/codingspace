@@ -14,7 +14,7 @@ Built with Next.js (Pages Router), React 18, [Arwes](https://github.com/arwes/ar
 
 ## Run it locally
 
-Requirements: Node 22+, and a Docker runtime (e.g. [Colima](https://github.com/abiosoft/colima)) for the local database.
+Requirements: Node 24, and a Docker runtime (e.g. [Colima](https://github.com/abiosoft/colima)) for the local database.
 
 ```bash
 npm install                 # also applies the Arwes safe-math patch
