@@ -37,15 +37,18 @@ export function buildCsp({ supabaseUrl, filesOrigin } = {}) {
 }
 
 /**
- * @param {{ supabaseUrl?: string, filesOrigin?: string }} options
+ * @param {{ supabaseUrl?: string, filesOrigin?: string, indexable?: boolean }} options
  * @returns {{ key: string, value: string }[]}
  */
 export function securityHeaders(options = {}) {
+  const { indexable = false, ...cspOptions } = options;
   return [
-    { key: 'Content-Security-Policy', value: buildCsp(options) },
+    { key: 'Content-Security-Policy', value: buildCsp(cspOptions) },
     { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    // Keep the site out of search results until launch (M7 sets SITE_INDEXABLE=true in production).
+    ...(indexable ? [] : [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }]),
   ];
 }

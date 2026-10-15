@@ -421,5 +421,5 @@ enabled = true
 project_id = "ouwxyrhnlfywnuqvrate"
 
 [remotes.staging.auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000"]
+site_url = "https://codingspace-tawny.vercel.app"
+additional_redirect_urls = ["http://localhost:3000", "https://*-codingspacekhs-projects.vercel.app"]

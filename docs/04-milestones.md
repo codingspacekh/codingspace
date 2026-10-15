@@ -65,7 +65,13 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** an ADR (`docs/adr/0001-arwes.md`) recording **go** or **fallback** (fallback: plain CSS frames as in the prototype), with measured bundle size, Lighthouse score and CSP findings.
 
-### M1 — Walking skeleton (4 days)
+### M1 — Walking skeleton (4 days) — ✅ DONE 2026-10-15
+> **Result:**
+> - Repo `codingspacekh/codingspace` (public). `main` is protected: PRs only, 3 required checks, enforced for admins too.
+> - CI on every PR: audit, types, lint, format, coverage, pgTAP, E2E + axe; React 19 compatibility job (informational).
+> - Supabase **codingspace-staging** (Singapore): migration applied; 24/24 RLS tests pass on the live DB; sign-up disabled (verified); TOTP on.
+> - Vercel project `codingspace` connected to GitHub: protected PR previews; production at `codingspace-tawny.vercel.app` (noindex until M7).
+> - Deviations: `eslint-config-next` dropped (unfixable `braces` advisory). Supabase's session timeout is Pro-only, so the 12 h idle timeout moves into the app (M3). Local Docker (Colima) is still installing; database tests run in CI meanwhile.
 **Goal:** every later change runs through a working TDD pipeline.
 
 **Build:**
