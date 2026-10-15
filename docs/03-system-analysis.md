@@ -80,7 +80,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 ### 3.2 Admin
 | ID | Requirement | P |
 |---|---|---|
-| ADM-01 | Sign in with email + password, then **TOTP 2FA** (required). One allowed owner account. Sign out; session expires after 12 h idle. | M |
+| ADM-01 | Sign in with email + password, then **TOTP 2FA** (required). One allowed owner account. Sign out; session expires after 12 h idle (enforced by the app: Supabase's own session timeout needs the Pro plan). | M |
 | ADM-02 | Dashboard: counts (published, drafts, scheduled, life), recent posts, quick actions. | M |
 | ADM-03 | Posts list: search; filter by type, subject and status; edit, view, delete with confirmation. | M |
 | ADM-04 | Block editor: headings, bold/italic/underline/strike, links, lists, quotes, **"/" menu**, maths block with live preview and inline maths, code block with language, callout (Note / Contest tip / Exam tip / Warning), image (upload, paste, drag), file attachment, embed (YouTube, Desmos, GeoGebra), divider, undo/redo. | M |
