@@ -301,3 +301,38 @@ describe('revision history', () => {
     expect(data ?? []).toEqual([]);
   });
 });
+
+describe('a new lesson in an existing section', () => {
+  it('goes to the end of the section, and publishing rebuilds the other lessons’ pages too', async () => {
+    const first = await createPost(owner, {
+      kind: 'lesson',
+      title: 'IT test order: first',
+      subject_id: 'math',
+      section_id: sectionId,
+    });
+    await saveDraft(owner, first.id, 1, { content_json: doc('1') });
+    await publishPost(owner, first.id, 2);
+
+    const second = await createPost(owner, {
+      kind: 'lesson',
+      title: 'IT test order: second',
+      subject_id: 'math',
+      section_id: sectionId,
+    });
+    await saveDraft(owner, second.id, 1, { content_json: doc('2') });
+    const result = await publishPost(owner, second.id, 2);
+
+    const { data } = await anon
+      .from('public_posts')
+      .select('slug')
+      .eq('section_id', sectionId)
+      .order('sort')
+      .order('slug');
+    const order = data!.map((r) => r.slug);
+    expect(order.indexOf('it-test-order-second')).toBeGreaterThan(order.indexOf('it-test-order-first'));
+    expect(result.paths).toContain('/posts/it-test-order-first');
+
+    const off = await unpublishPost(owner, second.id);
+    expect(off.paths).toContain('/posts/it-test-order-first');
+  });
+});

@@ -190,6 +190,10 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     expect(Date.now() - started).toBeLessThan(10_000);
     await student.goto(`/posts/${slug}`);
     await expect(student.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    // It goes last in its section, and the lesson before it links to it (found on staging:
+    // that page wasn't rebuilt, so it still ended the section).
+    await student.getByRole('link', { name: /← Previous/ }).click();
+    await expect(student.getByRole('link', { name: new RegExp(`Next →\\s*${title}`) })).toBeVisible();
 
     // Unpublish: the page is gone for students.
     await page.getByRole('button', { name: 'Unpublish…' }).click();

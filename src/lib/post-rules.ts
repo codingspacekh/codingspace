@@ -94,15 +94,20 @@ export type PublishedRef = {
   kind: 'lesson' | 'life';
   subject: string | null;
   previous_subject?: string | null;
+  /** Live section now, and the one it left (an Update that moved it). */
+  section?: string | null;
+  previous_section?: string | null;
 };
 
 /**
  * Static (ISR) pages that show a post, to rebuild after publish / update / unpublish / delete
  * (03 §6.3). sitemap.xml and rss.xml are server-rendered with a 10-minute CDN cache instead.
  */
-export function revalidationPaths(p: PublishedRef): string[] {
+export function revalidationPaths(p: PublishedRef, sectionLessons: string[] = []): string[] {
   const paths = [`/posts/${p.slug}`, '/'];
   if (p.kind === 'life') paths.push('/author');
   for (const s of [p.subject, p.previous_subject]) if (s) paths.push(`/study/${s}`);
+  // The other lessons in its section(s): their prev/next links and section list change too.
+  for (const slug of sectionLessons) paths.push(`/posts/${slug}`);
   return [...new Set(paths)];
 }
