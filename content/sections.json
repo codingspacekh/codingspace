@@ -1,0 +1,103 @@
+{
+  "dummy": true,
+  "sections": [
+    {
+      "subject": "math",
+      "slug": "inequalities",
+      "title": "Inequalities",
+      "description": "AM–GM, Cauchy–Schwarz and the tricks that make them work.",
+      "sort": 1
+    },
+    {
+      "subject": "math",
+      "slug": "sequences",
+      "title": "Sequences",
+      "description": "Recurrences, telescoping sums and limits.",
+      "sort": 2
+    },
+    {
+      "subject": "math",
+      "slug": "functional-equations",
+      "title": "Functional equations",
+      "description": "Substitutions, injectivity and Cauchy's equation.",
+      "sort": 3
+    },
+    {
+      "subject": "math",
+      "slug": "number-theory",
+      "title": "Number theory",
+      "description": "Divisibility, modular arithmetic and primes.",
+      "sort": 4
+    },
+    {
+      "subject": "math",
+      "slug": "combinatorics",
+      "title": "Combinatorics",
+      "description": "Counting, pigeonhole and invariants.",
+      "sort": 5
+    },
+    {
+      "subject": "physics",
+      "slug": "mechanics",
+      "title": "Mechanics",
+      "description": "Motion, forces and energy.",
+      "sort": 1
+    },
+    {
+      "subject": "physics",
+      "slug": "waves",
+      "title": "Waves",
+      "description": "Wave properties, superposition and light.",
+      "sort": 2
+    },
+    {
+      "subject": "physics",
+      "slug": "electricity",
+      "title": "Electricity",
+      "description": "Current, potential difference and circuits.",
+      "sort": 3
+    },
+    {
+      "subject": "coding",
+      "slug": "python-basics",
+      "title": "Python basics",
+      "description": "Variables, selection, loops and functions.",
+      "sort": 1
+    },
+    {
+      "subject": "coding",
+      "slug": "algorithms",
+      "title": "Algorithms",
+      "description": "Searching and sorting for Cambridge 9618.",
+      "sort": 2
+    },
+    {
+      "subject": "coding",
+      "slug": "data-structures",
+      "title": "Data structures",
+      "description": "Arrays, records, stacks, queues and linked lists.",
+      "sort": 3
+    },
+    {
+      "subject": "it",
+      "slug": "hardware-software",
+      "title": "Hardware and software",
+      "description": "Components, devices and system software (9626).",
+      "sort": 1
+    },
+    {
+      "subject": "it",
+      "slug": "networks",
+      "title": "Networks",
+      "description": "Topologies, protocols and network security (9626).",
+      "sort": 2
+    },
+    {
+      "subject": "it",
+      "slug": "spreadsheets",
+      "title": "Spreadsheets",
+      "description": "Formulas, functions and modelling (9626).",
+      "sort": 3
+    }
+  ]
+}

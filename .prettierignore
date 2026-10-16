@@ -10,3 +10,6 @@ docs
 
 # Renderer output snapshots are compared byte for byte
 tests/unit/render/__snapshots__/
+
+# Lesson sources are authored text; the importer parses them as written
+content/posts/
