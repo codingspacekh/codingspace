@@ -100,12 +100,55 @@ describe('author (ADM-14)', () => {
     });
     expect(out.paths).toEqual(['/author']);
     expect(await getAuthor(owner)).toEqual({
-      profile: { name: 'IT Teacher', bio: 'Bio.', years: 9, students: 600, email: 'me@example.com' },
+      profile: {
+        name: 'IT Teacher',
+        bio: 'Bio.',
+        years: 9,
+        students: 600,
+        email: 'me@example.com',
+        photo_media_id: null,
+      },
+      photo: null,
       timeline: [
         { year: 2020, text: 'First' },
         { year: 2019, text: 'Second, though earlier' },
       ],
     });
+  });
+
+  it('takes an image from the library as the photo, and refuses anything else', async () => {
+    const image = '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f';
+    await service
+      .from('profile')
+      .update({ photo_media_id: null, photo_widths: [], photo_width: null, photo_height: null })
+      .eq('id', true);
+    await service.from('media').delete().eq('id', image);
+    await service.from('media').insert({
+      id: image,
+      kind: 'image',
+      mime: 'image/jpeg',
+      bytes: 10,
+      sha256: 'f'.repeat(64),
+      width: 600,
+      height: 600,
+      widths: [480, 600],
+      original_name: 'it-photo.jpg',
+    });
+    const profile = { name: 'IT Teacher', photo_media_id: image };
+    await saveAuthor(owner, { profile, timeline: [] });
+    expect((await getAuthor(owner)).photo).toEqual({ id: image, widths: [480, 600] });
+    const { data } = await service
+      .from('public_profile')
+      .select('photo, photo_widths, photo_width, photo_height')
+      .single();
+    expect(data).toEqual({ photo: image, photo_widths: [480, 600], photo_width: 600, photo_height: 600 });
+    await expect(
+      saveAuthor(owner, { profile: { ...profile, photo_media_id: 'not-a-uuid' }, timeline: [] }),
+    ).rejects.toMatchObject({
+      status: 422,
+    });
+    await saveAuthor(owner, { profile: { ...profile, photo_media_id: null }, timeline: [] });
+    await service.from('media').delete().eq('id', image);
   });
 
   it('refuses a bad email or an empty name', async () => {

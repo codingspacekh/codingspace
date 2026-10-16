@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import sharp from 'sharp';
 import { collectProblems, enrolEditor, expectAccessible, signInEditor } from './helpers';
 
 // M5 site content (03 ADM-11, ADM-13, ADM-14), as the second test owner. Runs in its own
@@ -142,6 +143,47 @@ test.describe('site content', { tag: '@single-account' }, () => {
     expect((await page.request.delete(`/api/admin/problems/${mine.id}`, { headers: origin })).status()).toBe(200);
     await student.goto('/');
     await expect(student.getByText(marker)).toHaveCount(0);
+    await student.context().close();
+    expect(problems).toEqual([]);
+  });
+
+  test('author photo: upload it, save → the Author page shows it instead of the initials; then put it back', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.skip(!process.env.NEXT_PUBLIC_MEDIA_BASE_URL, 'uploads need a media store (see README "Media (R2)")');
+    const problems = await collectProblems(page);
+    const origin = { Origin: baseURL! };
+    const original = await (await page.request.get('/api/admin/author')).json();
+
+    await page.goto('/admin/author');
+    const photo = page.getByRole('group', { name: 'Photo' });
+    const png = await sharp({
+      create: { width: 600, height: 600, channels: 3, background: { r: 40, g: (Date.now() % 200) + 30, b: 200 } },
+    })
+      .png()
+      .toBuffer();
+    await page.getByLabel('Upload a photo').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: png });
+    await expect(photo.getByRole('status')).toHaveText('Photo ready. Save to show it on the Author page.');
+    await expect(photo.getByRole('img')).toHaveJSProperty('complete', true);
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('status').last()).toHaveText('Saved. The Author page is updated.');
+    await expectAccessible(page);
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    await student.goto('/author');
+    const img = student.locator('.profile .avatar picture img');
+    await expect(img).toHaveAttribute('alt', original.profile.name);
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+    await expect(student.locator('.profile .avatar span')).toHaveCount(0);
+
+    // Put the profile back, then remove the uploaded photo from the library.
+    const saved = await (await page.request.get('/api/admin/author')).json();
+    expect((await page.request.put('/api/admin/author', { headers: origin, data: original })).status()).toBe(200);
+    expect((await page.request.delete(`/api/admin/media/${saved.photo.id}`, { headers: origin })).status()).toBe(200);
+    await student.goto('/author');
+    await expect(student.locator('.profile .avatar picture')).toHaveCount(0);
     await student.context().close();
     expect(problems).toEqual([]);
   });

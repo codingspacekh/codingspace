@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthorAdmin } from '@/views/admin/author-admin';
+import type { UploadedMedia } from '@/lib/media-upload';
 
 const loaded = {
   profile: { name: 'CodingSpace', bio: 'I teach.', years: 8, students: null, email: 'hello@codingspace.io' },
@@ -55,6 +56,7 @@ describe('author page admin (03 ADM-14)', () => {
             years: 8,
             students: 500,
             email: 'hello@codingspace.io',
+            photo_media_id: null,
           },
           timeline: [
             { year: 2026, text: 'Launched the site.' },
@@ -99,7 +101,7 @@ describe('author page admin (03 ADM-14)', () => {
     mockApi([422, { error: 'profile.email: not an email address' }]);
     render(<AuthorAdmin />);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Save' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Not saved: profile.email');
+    expect(await screen.findByText(/^Not saved: profile\.email/)).toBeInTheDocument();
   });
 
   it('shows an error when the profile cannot load', async () => {
@@ -109,5 +111,76 @@ describe('author page admin (03 ADM-14)', () => {
     );
     render(<AuthorAdmin />);
     expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded');
+  });
+
+  describe('photo (shown instead of the initials)', () => {
+    const PHOTO = '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f';
+    const uploaded: UploadedMedia = {
+      id: PHOTO,
+      kind: 'image',
+      mime: 'image/jpeg',
+      bytes: 1000,
+      width: 800,
+      height: 800,
+      widths: [480, 800],
+      alt: '',
+      original_name: 'me.jpg',
+    };
+
+    it('shows the initials until a photo is uploaded; the photo is saved with the profile', async () => {
+      const calls = mockApi();
+      const upload = vi.fn(async () => uploaded);
+      render(<AuthorAdmin upload={upload} />);
+      const user = userEvent.setup();
+      const field = await screen.findByRole('group', { name: 'Photo' });
+      expect(field.querySelector('.avatar')).toHaveTextContent('C'); // the initials
+      await user.upload(screen.getByLabelText('Upload a photo'), new File(['x'], 'me.jpg', { type: 'image/jpeg' }));
+      expect(upload).toHaveBeenCalledWith(expect.objectContaining({ name: 'me.jpg' }), 'image');
+      expect(await screen.findByRole('img', { name: 'CodingSpace, as shown on the Author page' })).toHaveAttribute(
+        'src',
+        `https://files.codingspace.io/i/${PHOTO}/480.webp`,
+      );
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect((calls[0]!.body as { profile: { photo_media_id: string } }).profile.photo_media_id).toBe(PHOTO),
+      );
+    });
+
+    it('a photo can be removed (back to the initials)', async () => {
+      const calls = mockApi();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_url: string, init?: RequestInit) => {
+          if (!init?.method || init.method === 'GET')
+            return new Response(JSON.stringify({ ...loaded, photo: { id: PHOTO, widths: [480] } }), { status: 200 });
+          calls.push({ method: init.method, body: JSON.parse(String(init.body)) });
+          return new Response('{}', { status: 200 });
+        }),
+      );
+      render(<AuthorAdmin />);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Remove photo' }));
+      expect(screen.queryByRole('img')).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect((calls[0]!.body as { profile: { photo_media_id: string | null } }).profile.photo_media_id).toBeNull(),
+      );
+    });
+
+    it('says why an upload failed', async () => {
+      mockApi();
+      render(
+        <AuthorAdmin
+          upload={async () => {
+            throw new Error('HEIC photos can’t be shown in every browser.');
+          }}
+        />,
+      );
+      // applyAccept off: the picker would hide .heic; the upload rules must refuse it themselves.
+      await userEvent
+        .setup({ applyAccept: false })
+        .upload(await screen.findByLabelText('Upload a photo'), new File(['x'], 'me.heic', { type: 'image/heic' }));
+      expect(await screen.findByText(/Couldn’t upload “me.heic”: HEIC/)).toBeInTheDocument();
+    });
   });
 });

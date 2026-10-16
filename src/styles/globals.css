@@ -1290,6 +1290,19 @@ figure.code pre {
   clip-path: inherit;
   background: var(--surface);
 }
+.avatar picture,
+.avatar img {
+  position: relative;
+  display: block;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  clip-path: inherit;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .avatar span {
   position: relative;
   font-family: var(--font-display), var(--font-mono), monospace;
@@ -2634,5 +2647,39 @@ html[data-reading='on'] body::after {
   .ui-streak,
   .ui-circuit {
     display: none !important;
+  }
+}
+
+/* author photo in the Author page admin */
+.adm-photo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+.adm-photo legend {
+  padding: 0 6px;
+  color: var(--fg2);
+}
+.adm-photo .avatar {
+  width: 140px;
+  height: 140px;
+}
+.adm-photo .ed-picker {
+  grid-column: 1 / -1;
+}
+.adm-photo-actions {
+  display: grid;
+  gap: 12px;
+}
+.adm-photo-actions .adm-hint {
+  margin: 0;
+}
+@media (max-width: 560px) {
+  .adm-photo {
+    grid-template-columns: 1fr;
   }
 }

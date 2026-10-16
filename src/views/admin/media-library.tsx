@@ -13,7 +13,7 @@ import type { MediaItem } from '@/server/media/uploads';
  */
 
 export type Filters = { kind: '' | MediaKind; q: string; unused: boolean };
-type Detail = MediaItem & { used_by: MediaUse[] };
+type Detail = MediaItem & { used_by: MediaUse[]; author_photo?: boolean };
 type Upload = (file: File, kind: MediaKind) => Promise<UploadedMedia>;
 
 function query(f: Filters, before?: string) {
@@ -311,10 +311,16 @@ function MediaDetails({
         </p>
       )}
       <h3 id={`${uid}-u`}>Used in</h3>
-      {detail.used_by.length === 0 ? (
-        <p className="meta">No post uses it.</p>
+      {detail.used_by.length === 0 && !detail.author_photo ? (
+        <p className="meta">Nothing uses it.</p>
       ) : (
         <ul aria-labelledby={`${uid}-u`} className="adm-recent">
+          {detail.author_photo && (
+            <li>
+              <Link href="/admin/author">Author page</Link>
+              <span className="meta">your photo</span>
+            </li>
+          )}
           {detail.used_by.map((p) => (
             <li key={p.id}>
               <Link href={`/admin/posts/${p.id}`}>{p.title || 'Untitled'}</Link>
@@ -323,8 +329,11 @@ function MediaDetails({
           ))}
         </ul>
       )}
-      {detail.used_by.length > 0 ? (
-        <p className="adm-hint">To delete it, remove it from these posts first (and publish them, if it is live).</p>
+      {detail.used_by.length > 0 || detail.author_photo ? (
+        <p className="adm-hint">
+          To delete it, remove it from {detail.used_by.length > 0 ? 'these posts' : 'the Author page'} first
+          {detail.used_by.length > 0 ? ' (and publish them, if it is live)' : ''}.
+        </p>
       ) : confirming ? (
         <span className="adm-confirm" role="group" aria-label="Confirm delete">
           Delete “{detail.original_name}” for good?

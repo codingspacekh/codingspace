@@ -242,18 +242,39 @@ export async function getProjects(): Promise<Project[]> {
   }));
 }
 
+type ProfileRow = Omit<Profile, 'photo'> & {
+  photo: string | null;
+  photo_widths: number[];
+  photo_width: number | null;
+  photo_height: number | null;
+};
+
 export async function getAuthorPage(): Promise<{
   profile: Profile | null;
   timeline: { year: number; text: string }[];
   lifePosts: PostCard[];
 }> {
   const [profile, timeline, life] = await Promise.all([
-    db().from('public_profile').select('name, bio, years, students, email').maybeSingle(),
+    db()
+      .from('public_profile')
+      .select('name, bio, years, students, email, photo, photo_widths, photo_width, photo_height')
+      .maybeSingle(),
     db().from('public_timeline').select('year, text').order('sort'),
     db().from('public_posts').select(CARD_COLUMNS).eq('kind', 'life').order('published_at', { ascending: false }),
   ]);
+  const p = must<ProfileRow | null>(profile, 'profile');
   return {
-    profile: must<Profile | null>(profile, 'profile'),
+    profile: p && {
+      name: p.name,
+      bio: p.bio,
+      years: p.years,
+      students: p.students,
+      email: p.email,
+      photo:
+        p.photo && p.photo_width && p.photo_height
+          ? { id: p.photo, widths: p.photo_widths, width: p.photo_width, height: p.photo_height }
+          : null,
+    },
     timeline: must<{ year: number; text: string }[]>(timeline, 'timeline'),
     lifePosts: must<CardRow[]>(life, 'life posts').map(toCard),
   };
