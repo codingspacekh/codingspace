@@ -2368,3 +2368,58 @@ img.ProseMirror-separator {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* search (03 PUB-09) */
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 32px 0 20px;
+}
+.search-form input {
+  flex: 1 1 280px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 18px;
+}
+.search-form input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+.search-count {
+  color: var(--fg2);
+}
+.search-results {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.search-hit {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+}
+.search-hit h2 {
+  font-size: 22px;
+}
+.search-hit h2 a {
+  color: var(--fg);
+  text-decoration: none;
+}
+.search-hit h2 a:hover {
+  color: var(--c, var(--cyan));
+}
+.search-hit p {
+  color: var(--fg2);
+}
+.snippet mark {
+  padding: 0 2px;
+  background: rgba(24, 228, 236, 0.18);
+  color: var(--fg);
+}

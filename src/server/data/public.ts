@@ -10,7 +10,7 @@ import type { FeaturedProblem, Post, PostCard, PostPageData, Profile, Project, S
 
 let client: SupabaseClient | undefined;
 
-function db(): SupabaseClient {
+export function db(): SupabaseClient {
   if (client) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

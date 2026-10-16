@@ -81,7 +81,7 @@ function StudyMenu({ active }: { active: boolean }) {
   );
 }
 
-export type NavItem = 'home' | 'study' | 'projects' | 'author';
+export type NavItem = 'home' | 'study' | 'projects' | 'author' | 'search';
 
 export function TopBar({ active }: { active?: NavItem }) {
   const { sound, motion, toggleSound, toggleMotion } = usePrefs();
@@ -118,6 +118,9 @@ export function TopBar({ active }: { active?: NavItem }) {
           </Link>
           <Link className="nl" href="/author" aria-current={current('author')}>
             Author
+          </Link>
+          <Link className="nl" href="/search" aria-current={current('search')}>
+            Search
           </Link>
           <div className="tools">
             <button
