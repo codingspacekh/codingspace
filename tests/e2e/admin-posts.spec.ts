@@ -332,8 +332,9 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
 
     // A worksheet from the Insert menu.
     await page.getByRole('combobox', { name: 'Insert' }).selectOption('file');
+    const worksheet = `worksheet-${Date.now()}.pdf`;
     await page.getByLabel('Upload a file').setInputFiles({
-      name: `worksheet-${Date.now()}.pdf`,
+      name: worksheet,
       mimeType: 'application/pdf',
       buffer: Buffer.from(`%PDF-1.4\n% E2E ${Date.now()}\n`),
     });
@@ -365,7 +366,29 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     expect(file.headers()['content-type']).toBe('application/pdf');
     expect(file.headers()['content-disposition']).toMatch(/^attachment; filename="worksheet-\d+\.pdf"/);
     await student.context().close();
-    expect(problems).toEqual([]);
     expect(studentProblems).toEqual([]);
+
+    // The media library: the worksheet is used by this lesson, so it can't be deleted…
+    await page.goto('/admin/media');
+    await page.getByRole('searchbox', { name: 'Name' }).fill(worksheet);
+    await page.getByRole('button', { name: 'Search' }).click();
+    await page.getByRole('button', { name: new RegExp(`^${worksheet.replace('.', '\\.')}`) }).click();
+    const details = page.getByRole('region', { name: `Details of ${worksheet}` });
+    await expect(details.getByRole('link', { name: title })).toBeVisible();
+    await expect(details).toContainText('live and draft');
+    await expect(details.getByRole('button', { name: 'Delete…' })).toHaveCount(0);
+    await expectAccessible(page);
+
+    // …until the lesson is gone; then it can, and its download goes with it.
+    await page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: baseURL! } });
+    await page.reload();
+    await page.getByRole('searchbox', { name: 'Name' }).fill(worksheet);
+    await page.getByRole('button', { name: 'Search' }).click();
+    await page.getByRole('button', { name: new RegExp(`^${worksheet.replace('.', '\\.')}`) }).click();
+    await page.getByRole('button', { name: 'Delete…' }).click();
+    await page.getByRole('button', { name: 'Delete permanently' }).click();
+    await expect(page.getByRole('status').filter({ hasText: `Deleted “${worksheet}”.` })).toBeVisible();
+    expect((await page.request.get(href)).status()).toBe(404);
+    expect(problems).toEqual([]);
   });
 });

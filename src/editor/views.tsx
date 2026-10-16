@@ -5,7 +5,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import { CODE_LANGUAGE_CHOICES } from '@/lib/code-languages';
 import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
 import { formatBytes } from '@/lib/media-rules';
-import { imageKey, isMediaId, mediaUrl, mediaWidths } from '@/lib/media-urls';
+import { thumbnailUrl } from '@/lib/media-urls';
 import { CALLOUT_VARIANTS } from '@/server/render/schema';
 import { Callout, Embed, FileNode, Image, MathBlock, MathInline } from './nodes';
 
@@ -156,9 +156,8 @@ function EmbedView({ node, updateAttributes, selected }: ReactNodeViewProps) {
 
 /** The smallest variant of an uploaded image (or an imported image's URL), for the editor. */
 export function previewSrc(attrs: { media?: unknown; widths?: unknown; src?: unknown }): string {
-  const widths = mediaWidths(attrs.widths);
-  if (isMediaId(attrs.media) && widths) return mediaUrl(imageKey(attrs.media, widths[0]!, 'webp'));
-  return typeof attrs.src === 'string' ? attrs.src : '';
+  const thumb = typeof attrs.media === 'string' ? thumbnailUrl(attrs.media, attrs.widths) : null;
+  return thumb ?? (typeof attrs.src === 'string' ? attrs.src : '');
 }
 
 function ImageView({ node, updateAttributes, selected }: ReactNodeViewProps) {

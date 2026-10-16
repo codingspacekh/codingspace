@@ -46,15 +46,19 @@ export async function processImage(input: Uint8Array): Promise<ProcessedImage> {
   const widths = variantWidths(width);
 
   try {
-    const variants = await Promise.all(
-      widths.flatMap((w) =>
+    // One width at a time (both formats together): a 50 MP photo decodes to ~150 MB, and six
+    // pipelines at once could exhaust a serverless function's memory.
+    const variants: Variant[] = [];
+    for (const w of widths) {
+      const pair = await Promise.all(
         IMAGE_FORMATS.map(async (format): Promise<Variant> => {
           const resized = open().autoOrient().resize({ width: w, withoutEnlargement: true });
           const { data, info } = await QUALITY[format](resized).toBuffer({ resolveWithObject: true });
           return { width: info.width, height: info.height, format, data };
         }),
-      ),
-    );
+      );
+      variants.push(...pair);
+    }
     return { width, height, widths, variants };
   } catch (e) {
     throw new ImageError('The image could not be converted. Is the file damaged?', { cause: e });
