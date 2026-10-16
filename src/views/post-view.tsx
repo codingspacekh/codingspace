@@ -5,6 +5,7 @@ import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { SUBJECTS } from '@/lib/subjects';
 import type { PostPageData } from '@/server/data/types';
+import { usePrefs } from '@/ui';
 
 /** Copy buttons in code blocks (rendered by the server as plain <button class="code-copy">). */
 function useCopyButtons(root: React.RefObject<HTMLElement | null>) {
@@ -28,9 +29,43 @@ function useCopyButtons(root: React.RefObject<HTMLElement | null>) {
   }, [root]);
 }
 
+/** Printing opens every hint and solution (closed <details> don't print), then closes them again. */
+function usePrintOpensDetails() {
+  useEffect(() => {
+    let opened: HTMLDetailsElement[] = [];
+    const before = () => {
+      opened = Array.from(document.querySelectorAll<HTMLDetailsElement>('details:not([open])'));
+      opened.forEach((d) => (d.open = true));
+    };
+    const after = () => opened.forEach((d) => (d.open = false));
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, []);
+}
+
+/** 03 PUB-11: reading mode (no backdrop, glow or motion; remembered) and a print button. */
+function ReadingTools() {
+  const { reading, toggleReading } = usePrefs();
+  return (
+    <div className="read-tools">
+      <button type="button" className="ui-toggle" aria-pressed={reading} onClick={toggleReading}>
+        Reading mode {reading ? 'on' : 'off'}
+      </button>
+      <button type="button" className="ui-toggle" onClick={() => window.print()}>
+        Print
+      </button>
+    </div>
+  );
+}
+
 export function PostView({ post, section, siblings }: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
+  usePrintOpensDetails();
   const subject = post.subject ? SUBJECTS[post.subject] : null;
   const { prev, next } = neighbours(siblings, post.slug);
   const isLesson = post.kind === 'lesson' && subject;
@@ -83,6 +118,7 @@ export function PostView({ post, section, siblings }: PostPageData) {
           )}
           <h1>{post.title}</h1>
           <div className="meta">{postMeta(post)}</div>
+          <ReadingTools />
           {post.summary && <p className="lead">{post.summary}</p>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
 

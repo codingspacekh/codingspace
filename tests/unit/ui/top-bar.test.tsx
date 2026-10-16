@@ -60,11 +60,22 @@ describe('<TopBar>', () => {
   });
 
   it('toggles sound and motion, both reported with aria-pressed', async () => {
-    renderBar();
+    // A device that asks for reduced motion: motion starts off, and the visitor can turn it on.
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: q.includes('reduce'),
+      media: q,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    render(
+      <UiRoot>
+        <TopBar />
+      </UiRoot>,
+    );
     const sound = screen.getByRole('button', { name: /sound/i });
     const motion = screen.getByRole('button', { name: /motion/i });
     expect(sound).toHaveAttribute('aria-pressed', 'false');
-    expect(motion).toHaveAttribute('aria-pressed', 'false'); // tests run with motion off
+    expect(motion).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(motion);
     expect(motion).toHaveAttribute('aria-pressed', 'true');
   });

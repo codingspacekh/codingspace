@@ -8,7 +8,9 @@ vi.mock('@/ui/arwes/bleeps', () => ({
     bleeps: { click: { play: play.click }, hover: { play: play.hover }, assemble: { play: play.assemble } },
   }),
 }));
-import { Backdrop, TopBar, UiRoot, useSound } from '@/ui';
+import { act } from 'react';
+import { Backdrop, TopBar, UiRoot, usePrefs, useSound } from '@/ui';
+import { getPrefs, setPref } from '@/ui/prefs-store';
 
 function mockReducedMotion(reduce: boolean) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -34,6 +36,71 @@ describe('motion preference (PUB-11, NFR-A11Y-1)', () => {
   it('keeps motion on otherwise', () => {
     render(<UiRoot>x</UiRoot>);
     expect(document.documentElement.dataset.motion).toBe('on');
+  });
+});
+
+describe('remembered choices (PUB-11)', () => {
+  function Reading() {
+    const { reading, animate, toggleReading } = usePrefs();
+    return (
+      <button type="button" aria-pressed={reading} onClick={toggleReading}>
+        Reading mode {animate ? '(animated)' : '(still)'}
+      </button>
+    );
+  }
+
+  it('a stored choice beats the OS setting, and survives a new page', () => {
+    mockReducedMotion(true);
+    window.localStorage.setItem('cs-prefs', JSON.stringify({ motion: true, sound: true }));
+    render(
+      <UiRoot>
+        <TopBar />
+      </UiRoot>,
+    );
+    expect(screen.getByRole('button', { name: /motion on/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('toggling stores the choice', async () => {
+    render(
+      <UiRoot>
+        <TopBar />
+      </UiRoot>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /motion on/i }));
+    expect(JSON.parse(window.localStorage.getItem('cs-prefs')!)).toEqual({ motion: false });
+    expect(document.documentElement.dataset.motion).toBe('off');
+  });
+
+  it('reading mode stops all motion and marks the page, and is remembered', async () => {
+    render(
+      <UiRoot>
+        <Reading />
+      </UiRoot>,
+    );
+    const button = screen.getByRole('button', { name: /reading mode/i });
+    expect(button).toHaveTextContent('(animated)');
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveTextContent('(still)');
+    expect(document.documentElement.dataset.reading).toBe('on');
+    expect(document.documentElement.dataset.motion).toBe('off');
+    expect(getPrefs().reading).toBe(true);
+  });
+
+  it('ignores a broken stored value, and still works when storage is blocked', () => {
+    window.localStorage.setItem('cs-prefs', '{not json');
+    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false });
+    window.localStorage.setItem('cs-prefs', JSON.stringify({ motion: 'yes', sound: 1 }));
+    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false });
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    act(() => setPref('sound', true));
+    expect(getPrefs().sound).toBe(true);
+    setItem.mockRestore();
+    act(() => setPref('sound', false));
   });
 });
 

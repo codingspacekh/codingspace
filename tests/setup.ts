@@ -8,3 +8,12 @@ if (!('ResizeObserver' in globalThis)) {
     disconnect() {}
   };
 }
+
+// Display choices are remembered in localStorage (src/ui/prefs-store.ts): start each test fresh.
+afterEach(() => {
+  try {
+    window.localStorage?.clear();
+  } catch {
+    // node environment: no storage
+  }
+});
