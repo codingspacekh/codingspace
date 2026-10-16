@@ -1,14 +1,6 @@
 import { AdminShell } from '@/views/admin/admin-shell';
+import { Dashboard } from '@/views/admin/dashboard';
 
 export default function AdminHome() {
-  return (
-    <AdminShell title="Dashboard">
-      {() => (
-        <>
-          <h1>Dashboard</h1>
-          <p>You’re signed in with two-step verification. Posts and the editor arrive in the next M3 steps.</p>
-        </>
-      )}
-    </AdminShell>
-  );
+  return <AdminShell title="Dashboard">{() => <Dashboard />}</AdminShell>;
 }

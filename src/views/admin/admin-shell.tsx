@@ -6,6 +6,11 @@ import { api } from '@/lib/admin-api';
 
 type Session = { email: string };
 
+const NAV = [
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/posts', label: 'Posts' },
+];
+
 /** Sends the browser to the sign-in page, remembering where it was. */
 export function toSignIn(router: ReturnType<typeof useRouter>, reason?: string) {
   const query: Record<string, string> = { next: router.asPath.split('?')[0]! };
@@ -44,6 +49,18 @@ export function AdminShell({ title, children }: { title: string; children: (sess
         <Link href="/admin" className="adm-brand">
           CodingSpace <span>admin</span>
         </Link>
+        {session && (
+          <nav aria-label="Admin" className="adm-nav">
+            {NAV.map((n) => {
+              const here = n.href === '/admin' ? router.pathname === '/admin' : router.pathname.startsWith(n.href);
+              return (
+                <Link key={n.href} href={n.href} aria-current={here ? 'page' : undefined}>
+                  {n.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
         {session && (
           <div className="adm-user">
             <span className="meta">{session.email}</span>
