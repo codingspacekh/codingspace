@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const play = { click: vi.fn(), hover: vi.fn(), assemble: vi.fn() };
+const play = { click: vi.fn(), hover: vi.fn(), start: vi.fn() };
 // Sound loads lazily (src/ui/arwes/bleeps.ts); the mock stands in for Arwes's audio.
 vi.mock('@/ui/arwes/bleeps', () => ({
   createSiteBleeps: () => ({
-    bleeps: { click: { play: play.click }, hover: { play: play.hover }, assemble: { play: play.assemble } },
+    bleeps: { click: { play: play.click }, hover: { play: play.hover }, start: { play: play.start } },
   }),
 }));
 import { act } from 'react';
@@ -90,9 +90,9 @@ describe('remembered choices (PUB-11)', () => {
 
   it('ignores a broken stored value, and still works when storage is blocked', () => {
     window.localStorage.setItem('cs-prefs', '{not json');
-    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false });
+    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false, invited: false });
     window.localStorage.setItem('cs-prefs', JSON.stringify({ motion: 'yes', sound: 1 }));
-    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false });
+    expect(getPrefs()).toEqual({ motion: true, sound: false, reading: false, invited: false });
 
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
@@ -127,7 +127,7 @@ describe('sound (PUB-11): off by default, opt-in', () => {
     expect(play.hover).not.toHaveBeenCalled();
   });
 
-  it('turning sound on confirms with a click and enables other sounds', async () => {
+  it('turning sound on confirms with the start chime and enables other sounds', async () => {
     render(
       <UiRoot motion={false}>
         <TopBar />
@@ -135,7 +135,7 @@ describe('sound (PUB-11): off by default, opt-in', () => {
       </UiRoot>,
     );
     await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
-    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(play.start).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'probe' }));
     await waitFor(() => expect(play.hover).toHaveBeenCalledTimes(1));
@@ -149,9 +149,9 @@ describe('sound (PUB-11): off by default, opt-in', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
     await userEvent.click(screen.getByRole('button', { name: /sound on/i }));
-    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
-    await new Promise((r) => setTimeout(r, 20)); // no late second click
-    expect(play.click).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(play.start).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20)); // no second chime
+    expect(play.start).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: /sound off/i })).toBeInTheDocument();
   });
 
@@ -168,7 +168,7 @@ describe('sound (PUB-11): off by default, opt-in', () => {
 describe('<Backdrop>', () => {
   // M2 Lighthouse gate: the animated Arwes canvas cost ~1.5 s of main-thread time on a phone.
   // The grid is now CSS (as in the approved prototype): decorative, hidden, no script at all.
-  it('is a decorative CSS layer with no canvas', () => {
+  it('is a decorative CSS layer with no canvas, and circuit streaks that only CSS moves', () => {
     window.requestIdleCallback = vi.fn();
     const { container } = render(
       <UiRoot>
@@ -177,6 +177,8 @@ describe('<Backdrop>', () => {
     );
     expect(screen.getByTestId('backdrop')).toHaveAttribute('aria-hidden', 'true');
     expect(container.querySelector('canvas')).toBeNull();
+    expect(container.querySelectorAll('.ui-circuit path').length).toBeGreaterThan(4);
+    expect(container.querySelectorAll('.ui-streak')).toHaveLength(6);
     expect(window.requestIdleCallback).not.toHaveBeenCalled();
   });
 });

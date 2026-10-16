@@ -122,6 +122,65 @@ p {
     linear-gradient(rgba(24, 228, 236, 0.045) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, rgba(24, 228, 236, 0.045) 1px, transparent 1px) 0 0 / 48px 48px;
 }
+/* Circuit traces and the light running along them (src/ui/backdrop.tsx). */
+.ui-circuit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ui-circuit path {
+  fill: none;
+  stroke: rgba(24, 228, 236, 0.13);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.ui-circuit circle {
+  fill: rgba(24, 228, 236, 0.35);
+}
+.ui-streak {
+  position: absolute;
+  height: 2px;
+  margin-top: -1px;
+  overflow: hidden;
+}
+.ui-streak i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 14%;
+  background: linear-gradient(90deg, transparent, rgba(24, 228, 236, 0.9), transparent);
+  transform: translateX(-100%);
+  opacity: 0;
+  animation: streak var(--duration, 8s) linear var(--delay, 0s) infinite;
+}
+@keyframes streak {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    transform: translateX(720%);
+    opacity: 0;
+  }
+}
+/* Phones: the grid only (and a lighter page). */
+@media (max-width: 700px) {
+  .ui-circuit,
+  .ui-streak {
+    display: none;
+  }
+}
+html[data-motion='off'] .ui-streak,
+html[data-reading='on'] .ui-streak {
+  display: none;
+}
 .ui-skip {
   position: absolute;
   left: var(--gutter);
@@ -2422,4 +2481,158 @@ img.ProseMirror-separator {
   padding: 0 2px;
   background: rgba(24, 228, 236, 0.18);
   color: var(--fg);
+}
+
+/* ── Page changes and sound (src/ui/page-effects.tsx), after the original Arwes sites ──────
+   Only with motion on, and only between pages: the first page a visitor opens appears at once.
+   The content is always in the HTML; these only decorate its arrival. */
+html[data-motion='on'][data-transition='out'] #main {
+  opacity: 0.15;
+  transform: translateY(6px);
+  filter: saturate(0.4);
+  transition:
+    opacity 0.18s ease-in,
+    transform 0.18s ease-in,
+    filter 0.18s;
+}
+/* A scan line sweeps down the window as the old page goes. */
+html[data-motion='on'][data-transition='out'] body::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 60;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 18px var(--cyan);
+  pointer-events: none;
+  animation: scan-down 0.45s ease-in forwards;
+}
+@keyframes scan-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100vh);
+    opacity: 0.2;
+  }
+}
+html[data-motion='on'][data-transition='in'] #main {
+  animation: page-in 0.32s ease-out both;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Frame corners draw out from nothing. */
+html[data-motion='on'][data-transition='in'] #main .frame::before,
+html[data-motion='on'][data-transition='in'] #main .frame::after {
+  animation: corners-in 0.5s ease-out 0.12s both;
+}
+/* Only "from": the corners grow to whatever size the frame normally has. */
+@keyframes corners-in {
+  from {
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+}
+/* The heading types itself in (the text is there all along: only its clipping changes). */
+html[data-motion='on'][data-transition='in'] #main h1 {
+  animation: type-in 0.55s steps(28, end) 0.08s both;
+}
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+/* Small labels flicker on, like a display warming up. */
+html[data-motion='on'][data-transition='in'] #main :is(.eyebrow, .crumbs, .tag, .meta) {
+  animation: flicker 0.4s steps(4, end) 0.1s both;
+}
+@keyframes flicker {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  45% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+/* Cards and rows arrive one after another. */
+html[data-motion='on'][data-transition='in'] #main :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips) > * {
+  animation: page-in 0.35s ease-out both;
+}
+html[data-motion='on'][data-transition='in']
+  #main
+  :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips)
+  > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+html[data-motion='on'][data-transition='in']
+  #main
+  :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips)
+  > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+html[data-motion='on'][data-transition='in']
+  #main
+  :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips)
+  > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+html[data-motion='on'][data-transition='in']
+  #main
+  :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips)
+  > :nth-child(n + 5) {
+  animation-delay: 0.24s;
+}
+html[data-reading='on'] body::after {
+  display: none;
+}
+
+/* The one-time sound offer (no gate: the page is never held back). */
+.sound-invite {
+  position: fixed;
+  right: var(--gutter-r);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  display: grid;
+  gap: 12px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border: 1px solid rgba(24, 228, 236, 0.5);
+  background: rgba(7, 24, 32, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: var(--fg);
+  font-size: 15px;
+  animation: page-in 0.3s ease-out both;
+}
+.sound-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media print {
+  .sound-invite,
+  .ui-streak,
+  .ui-circuit {
+    display: none !important;
+  }
 }

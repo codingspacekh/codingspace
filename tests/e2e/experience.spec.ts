@@ -113,3 +113,66 @@ test('print shows only the lesson, black on white', async ({ page }) => {
   });
   expect(colours).toEqual(['rgb(255, 255, 255)', 'rgb(0, 0, 0)']);
 });
+
+test.describe('page changes and the sound offer (after soulextract.com)', () => {
+  test('moving between pages animates the arrival, then leaves the page alone', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'same code; the desktop bar has the link in view');
+    const problems = await collectProblems(page);
+    await page.goto('/');
+    // Watch the attribute from inside the page: the arrival lasts under a second.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { seen: string[] }).seen = seen;
+      new MutationObserver(() => seen.push(document.documentElement.dataset.transition ?? '-')).observe(
+        document.documentElement,
+        { attributes: true, attributeFilter: ['data-transition'] },
+      );
+    });
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Projects' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
+    expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(
+      expect.arrayContaining(['out', 'in', '-']),
+    );
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  test.describe('reduced motion', () => {
+    test.use({ reducedMotion: 'reduce' });
+    test('page changes are instant', async ({ page }) => {
+      await page.goto('/');
+      await page.evaluate(() => {
+        new MutationObserver(() => ((window as unknown as { moved: boolean }).moved = true)).observe(
+          document.documentElement,
+          { attributes: true, attributeFilter: ['data-transition'] },
+        );
+      });
+      await page.goto('/projects');
+      await page.getByRole('link', { name: /Home/i }).first().click();
+      await expect(page).toHaveURL(/\/$/);
+      expect(await page.evaluate(() => (window as unknown as { moved?: boolean }).moved ?? false)).toBe(false);
+    });
+  });
+
+  test.describe('a first visit', () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test('the page is never held back; a small offer turns sound on with a chime, once', async ({ page }) => {
+      await page.goto('/');
+      // Content first: the heading is there before any offer.
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      const offer = page.getByRole('region', { name: 'Sound' });
+      await expect(offer).toBeVisible();
+      const chime = page.waitForResponse((r) => r.url().endsWith('/sounds/start.wav') && r.ok());
+      await offer.getByRole('button', { name: 'Turn on sound' }).click();
+      await chime;
+      await expect(offer).toHaveCount(0);
+      await page.reload();
+      await page.waitForTimeout(2000);
+      await expect(page.getByRole('region', { name: 'Sound' })).toHaveCount(0);
+      const burger = page.getByRole('button', { name: 'Menu' });
+      if (await burger.isVisible()) await burger.click();
+      await expect(page.getByRole('button', { name: /sound on/i })).toBeVisible();
+    });
+  });
+});

@@ -23,7 +23,6 @@ function StudyMenu({ active }: { active: boolean }) {
   const menuId = useId();
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const play = useSound();
 
   useEffect(() => {
     if (!open) return;
@@ -52,10 +51,7 @@ function StudyMenu({ active }: { active: boolean }) {
         className={`nl${active ? ' on' : ''}`}
         aria-expanded={open}
         aria-controls={menuId}
-        onClick={() => {
-          setOpen((o) => !o);
-          play('click');
-        }}
+        onClick={() => setOpen((o) => !o)}
       >
         Study
         <svg className="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
@@ -93,7 +89,7 @@ export function TopBar({ active }: { active?: NavItem }) {
   return (
     <header className="ui-bar">
       <div className="bar-inner">
-        <Link href="/" className="ui-logo" aria-label="CodingSpace home" onMouseEnter={() => play('hover')}>
+        <Link href="/" className="ui-logo" aria-label="CodingSpace home">
           <Logo />
           <span>
             Coding<b>Space</b>
@@ -129,8 +125,8 @@ export function TopBar({ active }: { active?: NavItem }) {
               aria-pressed={sound}
               onClick={() => {
                 toggleSound();
-                // Turning sound on is the user gesture that unlocks audio; confirm with a click.
-                if (!sound) play('click', true);
+                // Turning sound on is the user gesture that unlocks audio; confirm with the start chime.
+                if (!sound) play('start', true);
               }}
             >
               Sound {sound ? 'on' : 'off'}
