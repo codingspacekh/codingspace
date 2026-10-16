@@ -46,6 +46,16 @@ export function supabaseStore(db: SupabaseClient): ContentStore {
       if (rows.length) check(await db.from('timeline_items').insert(rows), 'timeline');
     },
 
+    async hasSiteContent() {
+      const counts = await Promise.all(
+        ['projects', 'profile', 'timeline_items', 'featured_problems'].map(async (t) => {
+          const { count, error } = await db.from(t).select('*', { count: 'exact', head: true });
+          if (error) throw new Error(`${t}: ${error.message}`);
+          return count ?? 0;
+        }),
+      );
+      return counts.some((n) => n > 0);
+    },
     async replaceFeaturedProblems(rows) {
       check(await db.from('featured_problems').delete().not(all, 'is', null), 'featured problems (clear)');
       if (rows.length) check(await db.from('featured_problems').insert(rows), 'featured problems');

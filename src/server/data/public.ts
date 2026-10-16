@@ -1,6 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { markdownToDoc } from '@/server/content/markdown';
-import { renderContent } from '@/server/render';
+import { renderSnippet } from '@/server/render/snippet';
 import { isSubjectId, SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
 import type { FeaturedProblem, Post, PostCard, PostPageData, Profile, Project, SectionWithLessons } from './types';
 
@@ -78,11 +77,6 @@ export async function getLatestLessons(limit = 6): Promise<PostCard[]> {
 }
 
 /** Problem statements are short Markdown with $maths$; rendered like lesson content. */
-async function renderSnippet(md: string, lang: 'en' | 'km' = 'en') {
-  if (!md.trim()) return { html: '', hasMath: false };
-  const { html, hasMath } = await renderContent(markdownToDoc(md).doc, { lang });
-  return { html, hasMath };
-}
 
 export async function getFeaturedProblem(): Promise<FeaturedProblem | null> {
   const rows = must<

@@ -90,6 +90,8 @@ export interface ContentStore {
   upsertProfile(row: ProfileRow): Promise<void>;
   replaceTimeline(rows: TimelineRow[]): Promise<void>;
   replaceFeaturedProblems(rows: FeaturedProblemRow[]): Promise<void>;
+  /** True once projects, the profile, the timeline or problems exist (e.g. edited in the admin). */
+  hasSiteContent(): Promise<boolean>;
 }
 
 export type ImportReport = {
@@ -98,6 +100,8 @@ export type ImportReport = {
   projects: number;
   timeline: number;
   featuredProblems: number;
+  /** 'kept': site content was already in the database and was left alone (M5: it is edited in the admin). */
+  siteContent: 'imported' | 'kept';
   /** Published slugs in the database that content/ no longer has. */
   notInContent: string[];
 };
@@ -106,6 +110,7 @@ export async function importContent(
   content: LoadedContent,
   store: ContentStore,
   now = new Date(),
+  { replaceSiteContent = false }: { replaceSiteContent?: boolean } = {},
 ): Promise<ImportReport> {
   const stamp = now.toISOString();
 
@@ -164,6 +169,28 @@ export async function importContent(
   }
   await store.upsertPosts(rows);
 
+  // From M5 the owner edits projects, profile, timeline and problems in the admin: only fill
+  // them in when they are empty, unless asked to overwrite.
+  const siteContent = replaceSiteContent || !(await store.hasSiteContent()) ? 'imported' : 'kept';
+  if (siteContent === 'imported') await importSiteContent(content, store, sectionId);
+
+  const inContent = new Set(content.posts.map((p) => p.slug));
+  return {
+    sections: content.sections.length,
+    posts: rows.length,
+    projects: content.projects.length,
+    timeline: content.profile.timeline.length,
+    featuredProblems: content.problems.length,
+    siteContent,
+    notInContent: [...existing.keys()].filter((slug) => !inContent.has(slug)).sort(),
+  };
+}
+
+async function importSiteContent(
+  content: LoadedContent,
+  store: ContentStore,
+  sectionId: (subject: string, slug: string | null) => string | null,
+) {
   await store.replaceProjects(
     content.projects.map((p) => ({
       slug: p.slug,
@@ -194,14 +221,4 @@ export async function importContent(
       is_current: p.current,
     })),
   );
-
-  const inContent = new Set(content.posts.map((p) => p.slug));
-  return {
-    sections: content.sections.length,
-    posts: rows.length,
-    projects: content.projects.length,
-    timeline: timeline.length,
-    featuredProblems: content.problems.length,
-    notInContent: [...existing.keys()].filter((slug) => !inContent.has(slug)).sort(),
-  };
 }
