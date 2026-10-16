@@ -232,7 +232,7 @@ erDiagram
 |---|---|
 | `subjects` | `id` (`math`/`physics`/`coding`/`it`), `name`, `glyph`, `color`, `intro`, `sort` — seeded, fixed |
 | `sections` | `id`, `subject_id`, `slug`, `title`, `description`, `sort` · unique (`subject_id`, `slug`) |
-| `posts` | `id`, `kind` (`lesson`/`life`), `slug` (unique), `subject_id?`, `section_id?`, `sort`, `level` (1–3), `minutes`, `problem_count`, `lang` (`en`/`km`), **draft fields**: `title`, `summary`, `content_json`; **live fields**: `live_title`, `live_summary`, `live_html`, `live_toc`, `live_search` (tsvector, GIN index), `status` (`draft`/`scheduled`/`published`), `scheduled_at`, `published_at`, `updated_at`, `revision` |
+| `posts` | `id`, `kind` (`lesson`/`life`), `slug` (unique), `subject_id?`, `section_id?`, `sort`, `level` (1–3), `minutes`, `problem_count`, `lang` (`en`/`km`), **draft fields**: `title`, `summary`, `content_json`; **live fields**: `live_title`, `live_summary`, `live_html`, `live_toc`, `live_search_text`, `live_search` (generated tsvector, `simple` config, GIN index), `live_has_math`, `live_has_code`, `live_updated_at`, `status` (`draft`/`scheduled`/`published`), `scheduled_at`, `published_at`, `updated_at`, `revision` |
 | `post_revisions` | `id`, `post_id`, `content_json`, `title`, `created_at` (kept: last 50 per post) |
 | `media` | `id`, `r2_key`, `kind` (`image`/`file`), `mime`, `bytes`, `sha256`, `width`, `height`, `variants` (jsonb), `alt`, `original_name`, `created_at` |
 | `post_media` | `post_id`, `media_id` (for "unused media" detection) |
@@ -242,7 +242,7 @@ erDiagram
 | `audit_events` | `id`, `actor`, `action`, `entity`, `entity_id`, `at`, `meta` |
 
 **Row-level security**
-- `anon`: `SELECT` only, and only through views that expose **published live fields** (`public_posts`, `public_sections`, …). No access to drafts, media metadata or audit data.
+- `anon`: `SELECT` only. Pages read through `security_invoker` views that expose **published live fields** (`public_posts`, `public_sections`, `public_projects`, `public_profile`, `public_timeline`, `public_featured_problems`); RLS and column grants on the tables still apply underneath. No access to drafts, past featured problems, media metadata or audit data.
 - Writes go **only** through admin API routes using a server-side client. Policies also require `auth.uid() = OWNER_ID` **and** `auth.jwt()->>'aal' = 'aal2'`, so even a leaked anon key or a non-MFA session can't write.
 
 ---
