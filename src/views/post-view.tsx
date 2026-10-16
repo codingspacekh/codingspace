@@ -64,7 +64,7 @@ export function PostView({ post, section, siblings }: PostPageData) {
           <nav aria-label="On this page" className="toc frame">
             <span className="eyebrow">On this page</span>
             {post.toc.map((t) => (
-              <a key={t.id} href={`#${t.id}`} className={t.level === 3 ? 'sub' : undefined}>
+              <a key={t.id} href={`#${t.id}`} className={t.level === 3 ? 'sub' : undefined} lang={post.lang}>
                 {t.text}
               </a>
             ))}
