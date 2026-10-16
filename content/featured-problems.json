@@ -1,0 +1,14 @@
+{
+  "dummy": true,
+  "problems": [
+    {
+      "subject": "math",
+      "section": "inequalities",
+      "weekOf": "2026-10-12",
+      "statement": "Let $a, b, c > 0$ with $abc = 1$. Prove that $a + b + c \\ge 3$.",
+      "hint": "Apply AM–GM to the three numbers.",
+      "solution": "By AM–GM, $\\frac{a+b+c}{3} \\ge \\sqrt[3]{abc} = 1$, so $a+b+c \\ge 3$, with equality when $a=b=c=1$.",
+      "current": true
+    }
+  ]
+}

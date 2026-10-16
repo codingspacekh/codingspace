@@ -1,0 +1,41 @@
+{
+  "dummy": true,
+  "projects": [
+    {
+      "slug": "pseudocode-runner",
+      "name": "Pseudocode Runner",
+      "glyph": "▶",
+      "subject": "coding",
+      "tag": "Tool",
+      "description": "Run Cambridge 9618 pseudocode in the browser and step through it line by line.",
+      "platforms": ["Web"],
+      "landingUrl": "https://example.com/pseudocode-runner",
+      "featured": true,
+      "sort": 1
+    },
+    {
+      "slug": "inequality-drills",
+      "name": "Inequality Drills",
+      "glyph": "≥",
+      "subject": "math",
+      "tag": "Practice",
+      "description": "Short daily inequality problems with hints and full solutions.",
+      "platforms": ["Web", "Android"],
+      "landingUrl": "https://example.com/inequality-drills",
+      "featured": false,
+      "sort": 2
+    },
+    {
+      "slug": "circuit-lab",
+      "name": "Circuit Lab",
+      "glyph": "Ω",
+      "subject": "physics",
+      "tag": "Simulation",
+      "description": "Build simple DC circuits and measure current and voltage.",
+      "platforms": ["Windows", "macOS"],
+      "landingUrl": "https://example.com/circuit-lab",
+      "featured": false,
+      "sort": 3
+    }
+  ]
+}

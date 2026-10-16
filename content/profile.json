@@ -1,0 +1,14 @@
+{
+  "dummy": true,
+  "name": "CodingSpace",
+  "bio": "I teach competition maths, physics, coding and Cambridge AS & A Level Computer Science (9618) and IT (9626). This site collects my lessons, problem sets and the small tools I build for my students.",
+  "years": 8,
+  "students": 500,
+  "email": "hello@codingspace.io",
+  "timeline": [
+    { "year": 2018, "text": "Started teaching maths and physics.", "sort": 1 },
+    { "year": 2021, "text": "Began coaching students for maths olympiads.", "sort": 2 },
+    { "year": 2023, "text": "Started teaching Cambridge 9618 Computer Science and 9626 IT.", "sort": 3 },
+    { "year": 2026, "text": "Launched codingspace.io.", "sort": 4 }
+  ]
+}
