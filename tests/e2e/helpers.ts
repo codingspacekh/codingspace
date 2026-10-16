@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { expect, request as playwrightRequest, type Page } from '@playwright/test';
+import { EDITOR, resetUser, serviceClient, totp } from '../support/admin-users';
 
 /** Records console errors, hydration warnings, page errors and CSP violations. */
 export async function collectProblems(page: Page) {
@@ -27,4 +28,23 @@ export async function openStudyMenu(page: Page) {
   const burger = page.getByRole('button', { name: 'Menu' });
   if (await burger.isVisible()) await burger.click();
   await page.getByRole('button', { name: 'Study' }).click();
+}
+
+/** Sets up the second test owner (EDITOR) with a fresh authenticator; returns its TOTP secret. */
+export async function enrolEditor(baseURL: string): Promise<string> {
+  await resetUser(serviceClient(), EDITOR);
+  const api = await playwrightRequest.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } });
+  await api.post('/api/auth/sign-in', { data: { email: EDITOR.email, password: EDITOR.password } });
+  const { secret } = (await (await api.post('/api/auth/mfa/enroll')).json()) as { secret: string };
+  expect((await api.post('/api/auth/mfa/verify', { data: { code: totp(secret) } })).status()).toBe(200);
+  await api.dispose();
+  return secret;
+}
+
+/** Signs the page's browser context in as EDITOR, with 2FA. */
+export async function signInEditor(page: Page, baseURL: string, secret: string) {
+  const headers = { Origin: baseURL };
+  await page.request.post('/api/auth/sign-in', { headers, data: { email: EDITOR.email, password: EDITOR.password } });
+  const verified = await page.request.post('/api/auth/mfa/verify', { headers, data: { code: totp(secret) } });
+  expect(verified.status()).toBe(200);
 }

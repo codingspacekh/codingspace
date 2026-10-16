@@ -11,6 +11,7 @@ const NAV = [
   { href: '/admin/posts', label: 'Posts' },
   { href: '/admin/sections', label: 'Study structure' },
   { href: '/admin/media', label: 'Media' },
+  { href: '/admin/projects', label: 'Projects' },
 ];
 
 /** Sends the browser to the sign-in page, remembering where it was. */
