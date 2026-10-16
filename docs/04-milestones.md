@@ -133,12 +133,12 @@ Each milestone lists the **tests written first**. They start red and define "don
 > 3. ✅ **Dashboard and posts list** (ADM-02, ADM-03): counts linking to the filtered list, recent edits, New lesson / New life post; search and filters kept in the address bar; delete with an inline confirmation, rebuilding the post's pages if it was live.
 > 4. ✅ **Editor and settings panel** (ADM-04, ADM-05): Tiptap 3 with exactly the content format's nodes (a round-trip test loads every fixture and imported lesson and expects identical JSON and HTML); toolbar and "/" menu with keyboard navigation; maths blocks and inline maths with a live KaTeX preview using the renderer's own options; code language, callout type, embeds from a pasted link; existing images and files kept (uploads in M4); settings with the dependent Section list; the URL follows the title until first publish. Save by button or Ctrl/⌘+S; a stale tab gets a conflict instead of overwriting.
 > 5. ✅ **Autosave and history** (ADM-06): saves a second after the last edit, one request at a time; retries a lost connection (2 s → 30 s); stops and says so when signed out (12 h idle) or when another tab saved first; saves when the tab is hidden. History panel: preview any kept version as students would see it, restore it after confirming; a restore first keeps the current draft (`before_restore`), so it can be undone.
-> 6. Checklist, preview, publish / update / unpublish / schedule, revalidation, cron (ADM-07…09).
+> 6. ✅ **Publishing** (ADM-07…09): "Ready to publish?" checklist (required items block, recommended ones warn); Preview in a new tab with the real lesson view; Publish / Update / Unpublish (confirmed) / Schedule / Cancel; each rebuilds the affected pages at once (measured < 10 s in the acceptance test); scheduled posts go live through `/api/cron/publish-due`, called every 5 minutes by GitHub Actions.
 > 7. Acceptance journey and docs.
 >
 > **Decisions:** autosave keeps one revision (and one audit row) per 10 minutes of editing, not one per keystroke; a post's URL can't change once published (no redirects yet); `npm run content:import` overwrites drafts, so stop using it for a post once you edit that post in the admin.
 >
-> **Deviations so far:** Turnstile on the sign-in form (03 §8.2) is not in this milestone's build list; it moves to M7 hardening. Supabase's own auth rate limits apply meanwhile.
+> **Deviations so far:** the 5-minute timer runs on GitHub Actions, not Vercel Cron: on the Hobby plan Vercel Cron runs only once a day. GitHub can start a scheduled run a few minutes late, so a scheduled post goes live within about 5–15 minutes of its time. Turnstile on the sign-in form (03 §8.2) is not in this milestone's build list; it moves to M7 hardening. Supabase's own auth rate limits apply meanwhile.
 
 **Goal:** the owner can write, preview and publish without touching code.
 

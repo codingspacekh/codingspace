@@ -1923,3 +1923,52 @@ img.ProseMirror-separator {
   overflow-y: auto;
   font-size: 14px;
 }
+.ed-panels {
+  display: flex;
+  gap: 4px;
+}
+.ed-panels .btn[aria-pressed='true'] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.ed-checklist {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ed-checklist li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+.ed-checklist .is-ok > span:first-child {
+  color: var(--lime);
+}
+.ed-checklist .is-missing > span:first-child {
+  color: var(--pink);
+}
+.ed-checklist .is-warning > span:first-child {
+  color: var(--amber);
+}
+.ed-schedule {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.adm-preview-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--amber);
+  background: #1d1405;
+  color: var(--fg);
+}
+.adm-preview-bar a {
+  color: var(--amber);
+}

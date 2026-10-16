@@ -33,6 +33,16 @@ Locally, `supabase start` seeds a test owner (see `supabase/seed.sql`); the test
 insert into private.owner (user_id) values ('<user id>');
 ```
 
+### Scheduled publishing
+
+A GitHub Actions schedule (`.github/workflows/publish-due.yml`) calls `/api/cron/publish-due` every 5 minutes; Vercel Cron on the Hobby plan runs only once a day. Set up once:
+
+1. Make a random secret of at least 32 characters, e.g. `openssl rand -hex 32`.
+2. In Vercel (Production): environment variables `CRON_SECRET` (that secret) and `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API keys), then redeploy.
+3. In GitHub (Settings → Secrets and variables → Actions): secret `CRON_SECRET` (the same value) and variable `SITE_URL` (e.g. `https://codingspace-tawny.vercel.app`).
+
+Until then the workflow skips itself, and scheduled posts wait.
+
 Under Authentication → Providers, **Email** must be enabled (it is the sign-in method) while **Allow new users to sign up** stays off. Keep the authenticator's recovery key offline.
 
 ## Tests

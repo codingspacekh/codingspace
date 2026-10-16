@@ -47,11 +47,10 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await page.getByRole('combobox', { name: 'Subject' }).selectOption('physics');
     await page.getByRole('button', { name: 'Apply' }).click();
     await expect(page).toHaveURL(/\?subject=physics$/);
+    // Only the header row lacks "Physics" once the filtered list has loaded.
     const rows = page.getByRole('table').getByRole('row');
     await expect(rows.nth(1)).toBeVisible();
-    for (const row of await rows.all()) {
-      if ((await row.getByRole('columnheader').count()) === 0) await expect(row).toContainText('Physics');
-    }
+    await expect(rows.filter({ hasNotText: 'Physics' })).toHaveCount(1);
     await expectAccessible(page);
 
     // The draft from the previous test: the newest Untitled one.
@@ -123,5 +122,108 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
         await page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: new URL(page.url()).origin } })
       ).status(),
     ).toBe(200);
+  });
+
+  // The M3 acceptance journey (04-milestones): write with maths and code → Preview → Publish →
+  // the lesson appears in its section and in Latest lessons within 10 s. Then schedule it.
+  test('acceptance: write, preview, publish, live within 10 s; unpublish; schedule', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.setTimeout(90_000);
+    const problems = await collectProblems(page);
+    const title = `E2E publish ${Date.now()}`;
+    const slug = title.toLowerCase().replace(/\s+/g, '-');
+    await page.goto('/admin');
+    await page.getByRole('button', { name: 'New lesson' }).click();
+    await page.getByRole('textbox', { name: 'Title' }).fill(title);
+    await page.getByRole('textbox', { name: 'Body' }).click();
+    await page.keyboard.type('Run this, then prove the bound.');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/code');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('print(42)');
+    // Three Enters leave a code block.
+    for (let i = 0; i < 3; i++) await page.keyboard.press('Enter');
+    await page.keyboard.type('/maths b');
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Maths block (LaTeX)').fill('a^2 + b^2 \\ge 2ab');
+    const section = page.getByRole('combobox', { name: 'Section' });
+    await section.selectOption({ index: 1 });
+    const sectionTitle = (await section.locator('option:checked').textContent())!;
+    await expect(page.getByText('All changes saved')).toBeVisible();
+
+    // Preview: a new tab, the draft exactly as students would see it.
+    const [preview] = await Promise.all([
+      context.waitForEvent('page'),
+      page.getByRole('button', { name: 'Preview' }).click(),
+    ]);
+    await expect(preview.getByRole('note')).toContainText('students can’t see this page');
+    await expect(preview.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(preview.locator('.prose .katex')).toBeVisible();
+    await expect(preview.locator('.prose pre')).toContainText('print(42)');
+    await expect(preview.getByRole('navigation', { name: 'Breadcrumb' })).toContainText(sectionTitle);
+    await preview.close();
+
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    const started = Date.now();
+    await page.getByRole('button', { name: 'Publish now' }).click();
+    await expect(page.getByText('Published. The site is updated.')).toBeVisible();
+
+    const visitor = await context.browser()!.newContext({ baseURL });
+    const student = await visitor.newPage();
+    const showsUp = async (path: string, where: (p: typeof student) => ReturnType<typeof student.locator>) =>
+      expect
+        .poll(
+          async () => {
+            await student.goto(path);
+            return where(student)
+              .getByRole('link', { name: new RegExp(title) })
+              .count();
+          },
+          { timeout: 10_000 },
+        )
+        .toBeGreaterThan(0);
+    await showsUp('/study/math', (p) => p.locator('main'));
+    await showsUp('/', (p) => p.getByRole('region', { name: 'Latest lessons' }));
+    expect(Date.now() - started).toBeLessThan(10_000);
+    await student.goto(`/posts/${slug}`);
+    await expect(student.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+    // Unpublish: the page is gone for students.
+    await page.getByRole('button', { name: 'Unpublish…' }).click();
+    await page.getByRole('group', { name: 'Confirm unpublish' }).getByRole('button', { name: 'Unpublish' }).click();
+    await expect(page.getByText(/Unpublished: students no longer see it/)).toBeVisible();
+    expect((await student.goto(`/posts/${slug}`))!.status()).toBe(404);
+
+    // Schedule, then let the timer publish it (the time is moved into the past instead of waiting).
+    const later = new Date(Date.now() + 2 * 3600_000);
+    const local = new Date(later.getTime() - later.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+    await page.getByLabel('Or publish later').fill(local);
+    await page.getByRole('button', { name: 'Schedule' }).click();
+    await expect(page.getByText(/^Scheduled for/)).toBeVisible();
+    if (process.env.CRON_SECRET) {
+      const id = page.url().split('/').pop()!;
+      await serviceClient()
+        .from('posts')
+        .update({ scheduled_at: new Date(Date.now() - 1000).toISOString() })
+        .eq('id', id);
+      const cron = await page.request.get('/api/cron/publish-due', {
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+      });
+      expect(await cron.json()).toMatchObject({ published: [slug] });
+      expect((await student.goto(`/posts/${slug}`))!.status()).toBe(200);
+    }
+    await visitor.close();
+    expect(problems).toEqual([]);
+
+    const id = page.url().split('/').pop()!;
+    await page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: baseURL! } });
+  });
+
+  test('the timer endpoint refuses calls without the secret', async ({ request }) => {
+    const res = await request.get('/api/cron/publish-due');
+    expect([401, 503]).toContain(res.status());
   });
 });

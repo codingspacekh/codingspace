@@ -193,6 +193,7 @@ export type EditablePost = {
   content_json: unknown;
   subject_id: string | null;
   section_id: string | null;
+  sort: number;
   level: number;
   minutes: number;
   problem_count: number;
@@ -210,11 +211,11 @@ export async function getPostForEdit(supabase: SupabaseClient, id: string) {
     supabase
       .from('posts')
       .select(
-        'id, kind, slug, title, summary, content_json, subject_id, section_id, level, minutes, problem_count, lang, status, revision, live_revision, published_at, scheduled_at',
+        'id, kind, slug, title, summary, content_json, subject_id, section_id, sort, level, minutes, problem_count, lang, status, revision, live_revision, published_at, scheduled_at',
       )
       .eq('id', uuid.parse(id))
       .maybeSingle(),
-    supabase.from('sections').select('id, subject_id, title, sort').order('sort'),
+    supabase.from('sections').select('id, subject_id, slug, title, sort').order('sort'),
   ]);
   if (post.error) fail(post.error, 'posts');
   if (sections.error) fail(sections.error, 'sections');
@@ -225,7 +226,7 @@ export async function getPostForEdit(supabase: SupabaseClient, id: string) {
       ...rest,
       has_unpublished_changes: rest.status === 'published' && rest.revision > (live_revision ?? 0),
     } as EditablePost,
-    sections: sections.data as { id: string; subject_id: string; title: string; sort: number }[],
+    sections: sections.data as { id: string; subject_id: string; slug: string; title: string; sort: number }[],
   };
 }
 

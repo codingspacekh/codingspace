@@ -42,13 +42,25 @@ function mockApi({
   post = basePost as Record<string, unknown>,
   revisions = [] as unknown[],
 } = {}) {
-  const calls = { puts: [] as Put[], restores: [] as unknown[], gets: 0 };
+  const calls = {
+    puts: [] as Put[],
+    restores: [] as unknown[],
+    gets: 0,
+    publishes: [] as unknown[],
+    order: [] as string[],
+  };
   let current = post;
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       const json = (status: number, data: unknown) => new Response(JSON.stringify(data), { status });
+      if (url.endsWith('/publish')) {
+        calls.publishes.push(body);
+        calls.order.push('publish');
+        current = { ...current, status: 'published', published_at: '2026-10-16T08:00:00Z' };
+        return json(200, { slug: 'am-gm', was_published: false, refreshed: ['/posts/am-gm', '/'], failed: [] });
+      }
       if (url.endsWith('/revisions')) return json(200, { revisions });
       if (/\/revisions\/\d+$/.test(url) && init?.method === 'POST') {
         calls.restores.push(body);
@@ -58,6 +70,7 @@ function mockApi({
       if (/\/revisions\/\d+$/.test(url)) return json(200, { html: '<p>old body</p>' });
       if (init?.method === 'PUT') {
         calls.puts.push(body);
+        calls.order.push('save');
         const reply = put(body);
         if (reply === 'network') throw new TypeError('Failed to fetch');
         return json(reply[0], reply[1]);
@@ -213,5 +226,36 @@ describe('EditPost history', () => {
     await waitFor(() => expect(calls.restores).toHaveLength(1));
     expect(calls.puts[0]).toMatchObject({ fields: { title: 'unsaved' } });
     expect(calls.restores[0]).toEqual({ revision: 4 });
+  });
+});
+
+describe('EditPost publishing', () => {
+  const readyPost = {
+    ...basePost,
+    title: 'AM–GM',
+    section_id: 's1',
+    content_json: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Means' }] }] },
+  };
+
+  it('saves pending edits, then publishes that revision, and says the site is updated', async () => {
+    const calls = mockApi({ post: readyPost });
+    render(<EditPost id="p1" />);
+    await user.type(await titleBox(), ' inequality');
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    await user.click(screen.getByRole('button', { name: 'Publish now' }));
+    await waitFor(() => expect(calls.publishes).toHaveLength(1));
+    expect(calls.order).toEqual(['save', 'publish']);
+    expect(calls.publishes[0]).toEqual({ revision: 4 });
+    const note = await screen.findByText(/Published\. The site is updated\./);
+    expect(within(note).getByRole('link', { name: 'View it live' })).toHaveAttribute('href', '/posts/am-gm');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument());
+  });
+
+  it('an empty draft cannot be published', async () => {
+    mockApi();
+    render(<EditPost id="p1" />);
+    await titleBox();
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    expect(screen.getByRole('button', { name: 'Publish now' })).toBeDisabled();
   });
 });

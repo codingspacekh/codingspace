@@ -1,0 +1,36 @@
+# Scheduled publishing (03 §6.1, ADM-09): every 5 minutes, ask the site to publish posts
+# whose time has come. Vercel Cron on the Hobby plan runs only once a day, so GitHub runs it.
+# GitHub may start scheduled runs a few minutes late; a post goes live within ~5–15 minutes.
+#
+# Setup (once): repository secret CRON_SECRET (same value as the CRON_SECRET env var in
+# Vercel, ≥ 32 characters) and repository variable SITE_URL (e.g. https://codingspace.io).
+name: Publish scheduled posts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: publish-due
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call /api/cron/publish-due
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$SITE_URL" ]; then
+            echo "::notice::CRON_SECRET or SITE_URL is not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/publish-due"
