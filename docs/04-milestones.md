@@ -129,12 +129,14 @@ Each milestone lists the **tests written first**. They start red and define "don
 ### M3 — Admin core (10 days) — 🚧 in progress (started 2026-10-16)
 > **Plan (one PR each):**
 > 1. ✅ **Sign-in & admin gate:** password + required TOTP, HttpOnly session cookies through our own API (the browser never calls Supabase), proxy + `withOwner()` + RLS, 12 h idle timeout and revocation in `public.admin_touch()`, sign out (everywhere), Origin check on every mutating route.
-> 2. Write-side schema: revisions, publish/unpublish/schedule as one transaction each, audit rows.
+> 2. ✅ **Write side:** every edit stays in the draft until Publish/Update, settings included (new `live_*` columns); one `admin_*` function per change (create, save, publish, unpublish, schedule, restore, delete), each with its revision and audit row; stale saves get 409; the URL is locked after the first publish; `src/server/admin/posts.ts` renders on publish and returns the pages to revalidate.
 > 3. Dashboard and posts list (ADM-02, ADM-03).
 > 4. Tiptap editor and settings panel (ADM-04, ADM-05).
 > 5. Autosave and revisions (ADM-06).
 > 6. Checklist, preview, publish / update / unpublish / schedule, revalidation, cron (ADM-07…09).
 > 7. Acceptance journey and docs.
+>
+> **Decisions:** autosave keeps one revision (and one audit row) per 10 minutes of editing, not one per keystroke; a post's URL can't change once published (no redirects yet); `npm run content:import` overwrites drafts, so stop using it for a post once you edit that post in the admin.
 >
 > **Deviations so far:** Turnstile on the sign-in form (03 §8.2) is not in this milestone's build list; it moves to M7 hardening. Supabase's own auth rate limits apply meanwhile.
 
