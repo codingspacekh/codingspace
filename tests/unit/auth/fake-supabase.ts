@@ -23,7 +23,10 @@ export function fakeSupabase({
       })),
       unenroll: vi.fn(async () => ({ error: null })),
       enroll: vi.fn(async () => ({
-        data: { id: 'factor-new', totp: { qr_code: '<svg/>', secret: 'SECRET', uri: 'otpauth://x' } },
+        data: {
+          id: 'factor-new',
+          totp: { qr_code: 'data:image/svg+xml;utf-8,<svg/>', secret: 'SECRET', uri: 'otpauth://x' },
+        },
         error: null,
       })),
       challengeAndVerify: vi.fn(async () => ({ data: {}, error: verifyError })),

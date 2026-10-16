@@ -57,7 +57,8 @@ describe('admin sign-in against Supabase Auth', () => {
     await signInWithPassword(supabase, OWNER);
     const enrolment = await startEnrolment(supabase);
     if (enrolment === 'not_allowed') throw new Error('enrolment not allowed');
-    expect(enrolment.qr).toMatch(/^data:image\/svg\+xml;utf-8,/);
+    // Exactly one data: prefix, then the encoded SVG (a double prefix was a real bug on staging).
+    expect(enrolment.qr).toMatch(/^data:image\/svg\+xml;charset=utf-8,(%3C%3Fxml|%3Csvg)/);
     expect(await verifyCode(supabase, '000000')).toBe('invalid_code');
 
     secrets.set(OWNER.id, enrolment.secret);

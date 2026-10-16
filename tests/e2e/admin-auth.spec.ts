@@ -93,7 +93,12 @@ test.describe('signed in', { tag: '@single-account' }, () => {
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(page.getByRole('heading', { name: 'Set up two-step sign-in' })).toBeVisible();
-    await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible();
+    const qr = page.getByRole('img', { name: /QR code/ });
+    await expect(qr).toBeVisible();
+    // Visible is not enough: a broken image shows its alt text. The SVG must actually decode.
+    await expect
+      .poll(() => qr.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
+      .toBeGreaterThan(0);
     secret = (await page.locator('.adm-secret').textContent())!.trim();
     await page.getByLabel('6-digit code').fill(totp(secret));
     await page.getByRole('button', { name: 'Verify' }).click();
