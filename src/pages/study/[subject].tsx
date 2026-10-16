@@ -23,7 +23,7 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
 export default function StudySubject({ subject, sections }: Props) {
   const s = SUBJECTS[subject];
   return (
-    <Layout title={`${s.name} · CodingSpace`} description={s.intro} active="study">
+    <Layout title={`${s.name} · CodingSpace`} description={s.intro} path={`/study/${subject}`} active="study">
       <div className={`c-${s.color}`}>
         <header className="phead">
           <div className="phead-copy">

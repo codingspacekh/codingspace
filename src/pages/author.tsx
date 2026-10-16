@@ -23,7 +23,7 @@ const initials = (name: string) =>
 export default function Author({ profile, timeline, lifePosts }: Props) {
   const name = profile?.name ?? 'CodingSpace';
   return (
-    <Layout title={`Author · ${name}`} description={profile?.bio} active="author">
+    <Layout title={`Author · ${name}`} description={profile?.bio || undefined} path="/author" active="author">
       <section className="frame profile c-cyan" aria-labelledby="who">
         <div className="avatar" aria-hidden="true">
           <span>{initials(name)}</span>

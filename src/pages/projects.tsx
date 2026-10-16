@@ -17,6 +17,7 @@ export default function Projects({ projects }: Props) {
     <Layout
       title="Projects · CodingSpace"
       description="Free tools for practising what we learn in class."
+      path="/projects"
       active="projects"
     >
       <header className="phead c-lime">
