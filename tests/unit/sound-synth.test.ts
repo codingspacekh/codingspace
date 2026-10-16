@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { RATE, SOUNDS, random, wav } from '../../scripts/sound-synth.mjs';
+import { ALTERNATIVES, RATE, SOUNDS, random, wav } from '../../scripts/sound-synth.mjs';
 
 // Our own interface sounds (no third-party audio): they must be valid, short, and never clip.
 describe('synthesised interface sounds', () => {
-  it.each(Object.entries(SOUNDS))('%s is short, loud enough and never clips', (_, make) => {
+  it.each(Object.entries({ ...SOUNDS, ...ALTERNATIVES }))('%s is short, loud enough and never clips', (_, make) => {
     const samples = make();
     const seconds = samples.length / RATE;
     expect(seconds).toBeGreaterThan(0.02);
@@ -20,7 +20,7 @@ describe('synthesised interface sounds', () => {
   });
 
   it('is the same every time (deterministic)', () => {
-    expect(SOUNDS.typing()).toEqual(SOUNDS.typing());
+    expect(ALTERNATIVES.typing()).toEqual(ALTERNATIVES.typing());
     const a = random(1);
     const b = random(1);
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);

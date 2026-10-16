@@ -87,6 +87,10 @@ Every pull request runs the same gates in GitHub Actions. A red check blocks the
 
 Please report security issues privately via GitHub's **Report a vulnerability** (Security tab), not in public issues.
 
+## Credits
+
+Interface sounds `click`, `type`, `deploy` and `intro` are from the [ARWES](https://github.com/arwes/arwes) project, MIT License (see `public/sounds/LICENSE-arwes.txt`).
+
 ## Licence
 
 All rights reserved. The code is public for transparency and learning, but it is not licensed for reuse.
