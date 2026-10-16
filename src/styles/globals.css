@@ -1339,6 +1339,11 @@ html[data-motion='off'] *::after {
   outline: 2px solid var(--cyan);
   outline-offset: 1px;
 }
+.adm-hint {
+  margin-top: -10px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .adm-error {
   padding: 10px 12px;
   border-left: 3px solid var(--pink);
