@@ -76,13 +76,23 @@ describe('<PostView>', () => {
     expect(within(side).getByRole('link', { name: 'The AM–GM inequality' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('marks Khmer posts with lang="km"', () => {
+  it('marks Khmer posts with lang="km", table of contents included', () => {
     renderPost({
-      post: { ...base.post, kind: 'life', subject: null, lang: 'km', title: 'គន្លឹះសិក្សា', toc: [] },
+      post: {
+        ...base.post,
+        kind: 'life',
+        subject: null,
+        lang: 'km',
+        title: 'គន្លឹះសិក្សា',
+        toc: [{ id: 'រៀនរាល់ថ្ងៃ', text: 'រៀនរាល់ថ្ងៃ', level: 2 }],
+      },
       section: null,
       siblings: [],
     });
     expect(screen.getByRole('article')).toHaveAttribute('lang', 'km');
+    // The TOC sits outside the article, so its Khmer links need their own lang.
+    const toc = screen.getByRole('navigation', { name: 'On this page' });
+    expect(within(toc).getByRole('link', { name: 'រៀនរាល់ថ្ងៃ' })).toHaveAttribute('lang', 'km');
   });
 
   it('puts life posts under the Author page', () => {
