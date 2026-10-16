@@ -10,6 +10,12 @@ export const OWNER = {
   email: 'owner@codingspace.test',
   password: 'Owner-Test-Passw0rd!',
 };
+/** A second allow-listed account, for E2E files other than admin-auth.spec.ts. */
+export const EDITOR = {
+  id: 'c0de0000-0000-4000-8000-0000000000a2',
+  email: 'editor@codingspace.test',
+  password: 'Editor-Test-Passw0rd!',
+};
 export const OTHER = {
   id: 'c0de0000-0000-4000-8000-0000000000b1',
   email: 'other@codingspace.test',

@@ -10,6 +10,7 @@ import {
   schedulePost,
   unpublishPost,
 } from '@/server/admin/posts';
+import { dashboard, listPosts } from '@/server/admin/list';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // The write side against a real database (03 ADM-03, ADM-05…09): every change commits
@@ -85,7 +86,7 @@ describe('writing and publishing a lesson', () => {
     const before = await auditCount(id);
     const result = await publishPost(owner, id, 2);
     expect(result).toMatchObject({ slug: 'it-test-am-gm', subject: 'math', was_published: false });
-    expect(result.paths).toEqual(['/posts/it-test-am-gm', '/', '/study/math', '/sitemap.xml', '/rss.xml']);
+    expect(result.paths).toEqual(['/posts/it-test-am-gm', '/', '/study/math']);
     expect(await live('it-test-am-gm')).toMatchObject({ title: 'IT test: AM–GM', level: 2 });
     expect((await live('it-test-am-gm'))!.html).toContain('Version one');
     expect(await auditCount(id)).toBe(before + 1);
@@ -157,5 +158,45 @@ describe('writing and publishing a lesson', () => {
   it('visitors cannot call any of it', async () => {
     const { error } = await anon.rpc('admin_save_post', { p_id: id, p_revision: 1, p_fields: {} });
     expect(error?.code).toBe('42501');
+  });
+});
+
+describe('the posts list and dashboard', () => {
+  beforeAll(async () => {
+    const a = await createPost(owner, {
+      kind: 'lesson',
+      title: 'IT test list: Cauchy',
+      subject_id: 'math',
+      section_id: sectionId,
+    });
+    await createPost(owner, { kind: 'life', title: 'IT test list: holidays' });
+    await savePost(owner, a.id, 1, { content_json: doc('x') });
+    await publishPost(owner, a.id, 2);
+  });
+
+  it('filters by search text, type, subject and status', async () => {
+    const titles = async (f: Parameters<typeof listPosts>[1]) => (await listPosts(owner, f)).map((p) => p.title);
+    expect(await titles({ q: 'it test list' })).toEqual(
+      expect.arrayContaining(['IT test list: Cauchy', 'IT test list: holidays']),
+    );
+    expect(await titles({ q: 'IT test list', kind: 'life' })).toEqual(['IT test list: holidays']);
+    expect(await titles({ q: 'IT test list', subject: 'math', status: 'published' })).toEqual(['IT test list: Cauchy']);
+    expect(await titles({ q: 'it-test-list-cauchy' })).toEqual(['IT test list: Cauchy']);
+    expect(await titles({ q: 'IT test list', status: 'changes' })).toEqual([]);
+    // Filter syntax in the search box is just text.
+    expect(await titles({ q: 'x),status.eq.draft,(title.ilike.*' })).toEqual([]);
+  });
+
+  it('counts posts for the dashboard and lists the latest edits', async () => {
+    const d = await dashboard(owner);
+    expect(d.counts.published).toBeGreaterThanOrEqual(1);
+    expect(d.counts.life).toBeGreaterThanOrEqual(1);
+    expect(d.recent.length).toBeLessThanOrEqual(5);
+    expect(d.recent[0]!.title).toMatch(/^IT test list/);
+  });
+
+  it('shows nothing to a visitor', async () => {
+    const { data } = await anon.from('admin_posts').select('id');
+    expect(data ?? []).toEqual([]);
   });
 });

@@ -78,13 +78,11 @@ describe('scheduleProblem', () => {
 });
 
 describe('revalidationPaths', () => {
-  it('a lesson: its page, its subject, home, sitemap and RSS', () => {
+  it('a lesson: its page, home and its subject', () => {
     expect(revalidationPaths({ slug: 'am-gm', kind: 'lesson', subject: 'math', previous_subject: null })).toEqual([
       '/posts/am-gm',
       '/',
       '/study/math',
-      '/sitemap.xml',
-      '/rss.xml',
     ]);
   });
   it('a lesson that moved subject also refreshes the old subject page', () => {
@@ -93,12 +91,6 @@ describe('revalidationPaths', () => {
     );
   });
   it('a life post refreshes the Author page instead', () => {
-    expect(revalidationPaths({ slug: 'hello', kind: 'life', subject: null })).toEqual([
-      '/posts/hello',
-      '/',
-      '/author',
-      '/sitemap.xml',
-      '/rss.xml',
-    ]);
+    expect(revalidationPaths({ slug: 'hello', kind: 'life', subject: null })).toEqual(['/posts/hello', '/', '/author']);
   });
 });

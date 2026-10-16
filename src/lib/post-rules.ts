@@ -96,11 +96,13 @@ export type PublishedRef = {
   previous_subject?: string | null;
 };
 
-/** Static pages that show a post, to rebuild after publish / update / unpublish / delete (03 §6.3). */
+/**
+ * Static (ISR) pages that show a post, to rebuild after publish / update / unpublish / delete
+ * (03 §6.3). sitemap.xml and rss.xml are server-rendered with a 10-minute CDN cache instead.
+ */
 export function revalidationPaths(p: PublishedRef): string[] {
   const paths = [`/posts/${p.slug}`, '/'];
   if (p.kind === 'life') paths.push('/author');
   for (const s of [p.subject, p.previous_subject]) if (s) paths.push(`/study/${s}`);
-  paths.push('/sitemap.xml', '/rss.xml');
   return [...new Set(paths)];
 }

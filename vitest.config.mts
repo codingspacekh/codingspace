@@ -19,6 +19,7 @@ export default defineConfig({
         'src/server/content/supabase-store.ts',
         'src/server/data/public.ts',
         'src/server/admin/posts.ts',
+        'src/server/admin/list.ts',
       ],
       // NFR-MAINT-1: ≥ 90 % for src/lib and src/config, ≥ 70 % overall
       thresholds: {
