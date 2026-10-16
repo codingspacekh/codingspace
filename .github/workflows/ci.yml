@@ -111,6 +111,8 @@ jobs:
       - run: npm run build
         env:
           SITE_INDEXABLE: 'true'
+      # NFR-PERF-2: first-load JavaScript per page (gzipped) within budget.
+      - run: npm run check:bundle
       - run: tools/lighthouse/node_modules/.bin/lhci autorun --config=tools/lighthouse/lighthouserc.cjs
         env:
           SITE_INDEXABLE: 'true'

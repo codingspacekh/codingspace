@@ -4,5 +4,6 @@
 export { UiRoot, usePrefs, useSound, type BleepName } from './arwes/prefs';
 export { Decipher, Frame, Stagger } from './arwes/components';
 export { Backdrop } from './backdrop';
+export { OrbitHero } from './orbit/orbit-hero';
 export { TopBar, type NavItem } from './top-bar';
 export { SkipLink } from './skip-link';

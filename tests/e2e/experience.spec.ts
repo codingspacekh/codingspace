@@ -15,6 +15,33 @@ test('no sound file is requested until the visitor turns sound on', async ({ pag
   expect(sounds).toEqual([]);
 });
 
+/** Two pictures of the orbit canvas, half a second apart. */
+async function orbitFrames(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await page.locator('.orbit.is-ready').waitFor({ timeout: 10_000 });
+  const snap = () => page.locator('.orbit canvas').evaluate((c: HTMLCanvasElement) => c.toDataURL());
+  const a = await snap();
+  await page.waitForTimeout(500);
+  return [a, await snap()];
+}
+
+test('the orbit hero moves when motion is on', async ({ page }) => {
+  const problems = await collectProblems(page);
+  const [a, b] = await orbitFrames(page);
+  expect(a).not.toBe(b);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test.describe('a visitor whose device asks for reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('the orbit is drawn once and stays still', async ({ page }) => {
+    const [a, b] = await orbitFrames(page);
+    expect(a).toBe(b);
+    await expect(page.getByTestId('orbit')).toContainText('T+PAUSED');
+  });
+});
+
 test.describe('a visitor whose device asks for reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 

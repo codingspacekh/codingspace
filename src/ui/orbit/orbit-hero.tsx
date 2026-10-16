@@ -1,0 +1,127 @@
+import { useRouter } from 'next/router';
+import { useEffect, useRef, useState } from 'react';
+import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { usePrefs, useSound } from '../arwes/prefs';
+import type { Orbit } from './engine';
+
+const COLORS: Record<string, string> = { cyan: '#18e4ec', violet: '#9b8cff', amber: '#ffb84a', lime: '#7dff9b' };
+
+const NODES = SUBJECT_IDS.map((id) => ({
+  id,
+  name: SUBJECTS[id].name,
+  glyph: SUBJECTS[id].glyph,
+  color: COLORS[SUBJECTS[id].color] ?? COLORS.cyan!,
+}));
+
+const clock = (s: number) =>
+  'T+' + [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+
+/** Waits until the browser is idle and the element is (nearly) on screen: the orbit never delays first paint. */
+function whenIdleAndVisible(el: Element, run: () => void): () => void {
+  let cancelled = false;
+  let idle = 0;
+  const io =
+    typeof IntersectionObserver === 'undefined'
+      ? null
+      : new IntersectionObserver(
+          ([entry]) => {
+            if (!entry?.isIntersecting) return;
+            io?.disconnect();
+            const go = () => !cancelled && run();
+            // Safari has no requestIdleCallback.
+            if (typeof window.requestIdleCallback === 'function')
+              idle = window.requestIdleCallback(go, { timeout: 2500 });
+            else idle = setTimeout(go, 200) as unknown as number;
+          },
+          { rootMargin: '200px' },
+        );
+  if (io) io.observe(el);
+  else run();
+  return () => {
+    cancelled = true;
+    io?.disconnect();
+    if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idle);
+    else clearTimeout(idle);
+  };
+}
+
+/**
+ * The orbit hero (04 M6): the four subjects circling a wireframe core; click one to open it.
+ * Decoration with a pointer shortcut: the same subjects are ordinary links in Study below,
+ * so the whole thing is hidden from assistive technology and keyboard focus.
+ * The engine (./engine.ts) is downloaded only after the page is idle and the hero is on
+ * screen, so Home's first-load JavaScript doesn't grow (NFR-PERF-2).
+ */
+export function OrbitHero() {
+  const { animate } = usePrefs();
+  const play = useSound();
+  const router = useRouter();
+  const box = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const orbit = useRef<Orbit | null>(null);
+  const animateRef = useRef(animate);
+  const [target, setTarget] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const [ready, setReady] = useState(false);
+
+  // Callbacks the engine keeps: read the latest values through refs.
+  const playRef = useRef(play);
+  const routerRef = useRef(router);
+  useEffect(() => {
+    playRef.current = play;
+    routerRef.current = router;
+    animateRef.current = animate;
+  });
+
+  useEffect(() => {
+    const el = box.current;
+    const cv = canvas.current;
+    if (!el || !cv) return;
+    let alive = true;
+    const cancel = whenIdleAndVisible(el, () => {
+      void import('./engine').then(({ startOrbit }) => {
+        if (!alive) return;
+        const font = getComputedStyle(cv).getPropertyValue('--font-mono').trim() || 'monospace';
+        orbit.current = startOrbit(cv, {
+          nodes: NODES,
+          motion: animateRef.current,
+          font: `${font}, ui-monospace, monospace`,
+          onHover: (id) => {
+            setTarget(id);
+            if (id) playRef.current('hover');
+          },
+          onSelect: (id) => {
+            playRef.current('click');
+            void routerRef.current.push(`/study/${id}`);
+          },
+          onTick: setSeconds,
+        });
+        setReady(true);
+      });
+    });
+    return () => {
+      alive = false;
+      cancel();
+      orbit.current?.stop();
+      orbit.current = null;
+    };
+  }, []);
+
+  useEffect(() => orbit.current?.setMotion(animate), [animate]);
+
+  return (
+    <div ref={box} className={`orbit${ready ? ' is-ready' : ''}`} aria-hidden="true" data-testid="orbit">
+      <canvas ref={canvas} />
+      <div className="hud hud-tl">
+        SYS // ORBITAL INDEX
+        <br />
+        <b>{animate ? clock(seconds) : 'T+PAUSED'}</b>
+      </div>
+      <div className="hud hud-br">
+        TARGET <b>{target ? SUBJECTS[target as keyof typeof SUBJECTS].name.toUpperCase() : '—'}</b>
+        <br />
+        {NODES.length} TRACKS
+      </div>
+    </div>
+  );
+}

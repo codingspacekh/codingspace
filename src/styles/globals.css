@@ -556,8 +556,73 @@ main:focus {
 /* ── Home ── */
 .hero {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: 24px;
+  align-items: center;
   padding-top: 24px;
+}
+.hero-copy {
+  display: grid;
+  gap: 24px;
+  align-content: center;
+  position: relative;
+  z-index: 1;
+}
+.hint {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The orbit (src/ui/orbit): a square box reserved up front, so nothing moves when it starts. */
+.orbit {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: radial-gradient(closest-side, rgba(24, 228, 236, 0.1), transparent 70%);
+}
+.orbit canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+.orbit .hud {
+  position: absolute;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  pointer-events: none;
+}
+.orbit .hud-tl {
+  top: 4%;
+  left: 2%;
+}
+.orbit .hud-br {
+  right: 2%;
+  bottom: 4%;
+  text-align: right;
+}
+.orbit .hud b {
+  color: var(--cyan);
+  font-weight: 500;
+}
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .orbit {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+}
+@media print {
+  .orbit,
+  .hint {
+    display: none !important;
+  }
 }
 .headline {
   font-family: var(--font-display), var(--font-body), sans-serif;

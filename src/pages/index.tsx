@@ -5,7 +5,7 @@ import { REVALIDATE } from '@/lib/isr';
 import { SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
 import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects } from '@/server/data/public';
 import type { FeaturedProblem, PostCard, Project } from '@/server/data/types';
-import { Decipher, Stagger } from '@/ui';
+import { Decipher, OrbitHero, Stagger } from '@/ui';
 import { PostTile, ProjectCard, SubjectTrack } from '@/views/cards';
 import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 
@@ -35,27 +35,33 @@ export default function Home({ counts, latest, problem, projects }: Props) {
       active="home"
     >
       <section className="hero">
-        <span className="eyebrow">Link established · student terminal</span>
-        <h1 className="headline" aria-label="Prove it. Model it. Code it.">
-          <Stagger>
-            <Decipher className="w1">Prove it.</Decipher>
-            <Decipher className="w2">Model it.</Decipher>
-            <Decipher className="w3">Code it.</Decipher>
-          </Stagger>
-        </h1>
-        {/* Body copy is never wrapped in an animator: readable on first paint. */}
-        <p className="intro" data-testid="intro">
-          Competition maths, physics, programming and Cambridge IT. Lessons I teach in class, written up so you can
-          review them anytime. Plus the tools I build for my students.
-        </p>
-        <div className="cta">
-          <Link className="btn pri" href="/study/math">
-            Start studying →
-          </Link>
-          <Link className="btn" href="/author">
-            Meet the author →
-          </Link>
+        <div className="hero-copy">
+          <span className="eyebrow">Link established · student terminal</span>
+          <h1 className="headline" aria-label="Prove it. Model it. Code it.">
+            <Stagger>
+              <Decipher className="w1">Prove it.</Decipher>
+              <Decipher className="w2">Model it.</Decipher>
+              <Decipher className="w3">Code it.</Decipher>
+            </Stagger>
+          </h1>
+          {/* Body copy is never wrapped in an animator: readable on first paint. */}
+          <p className="intro" data-testid="intro">
+            Competition maths, physics, programming and Cambridge IT. Lessons I teach in class, written up so you can
+            review them anytime. Plus the tools I build for my students.
+          </p>
+          <div className="cta">
+            <Link className="btn pri" href="/study/math">
+              Start studying →
+            </Link>
+            <Link className="btn" href="/author">
+              Meet the author →
+            </Link>
+          </div>
+          <p className="hint" aria-hidden="true">
+            ↘ The orbit is live: tap a subject to open it
+          </p>
         </div>
+        <OrbitHero />
       </section>
 
       <section className="section" aria-labelledby="study">
