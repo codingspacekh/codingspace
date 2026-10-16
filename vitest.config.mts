@@ -8,6 +8,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    // Unit tests expect the default media address, whatever the shell or CI job has set.
+    env: { NEXT_PUBLIC_MEDIA_BASE_URL: '', MEDIA_STORE: '' },
     include: ['tests/unit/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',

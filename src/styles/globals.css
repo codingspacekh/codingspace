@@ -1811,6 +1811,30 @@ img.ProseMirror-separator {
   max-height: 240px;
   margin-bottom: 8px;
 }
+.ed-uploads {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ed-uploads:empty {
+  display: none;
+}
+.ed-upload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  color: var(--fg2);
+  font-size: 14px;
+}
+.ed-upload--error {
+  border-color: var(--pink);
+  color: var(--fg);
+}
 .ed-slash {
   position: fixed;
   z-index: 10;

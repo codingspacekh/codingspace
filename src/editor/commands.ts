@@ -32,6 +32,18 @@ export const BLOCK_ITEMS: BlockItem[] = [
     keywords: ['callout', 'box', 'note', 'tip', variant],
   })),
   {
+    id: 'image',
+    label: 'Image',
+    keywords: ['picture', 'photo', 'diagram', 'figure', 'upload', 'png', 'jpg'],
+    hint: 'Upload; or paste / drop one into the text',
+  },
+  {
+    id: 'file',
+    label: 'File',
+    keywords: ['attachment', 'download', 'pdf', 'worksheet', 'upload', 'document'],
+    hint: 'A download: PDF, Office, ZIP, code…',
+  },
+  {
     id: 'embed',
     label: 'Embed',
     keywords: ['youtube', 'video', 'desmos', 'geogebra', 'graph'],
@@ -55,6 +67,9 @@ export function filterBlockItems(query: string, items = BLOCK_ITEMS): BlockItem[
 
 /** Asks the owner for a value (an embed link…); null means cancelled. */
 export type Ask = (question: string) => string | null;
+
+/** Blocks that start with choosing a file to upload (the editor opens a file picker). */
+export const UPLOAD_ITEMS = { image: 'image', file: 'file' } as const;
 
 /**
  * Inserts or converts to the block. Returns an error message for the owner, or null.
