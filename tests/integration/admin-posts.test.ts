@@ -3,10 +3,12 @@ import {
   createPost,
   deletePost,
   getPostForEdit,
+  listRevisions,
   PostError,
   publishDuePosts,
   publishPost,
   restoreRevision,
+  revisionPreview,
   saveDraft,
   savePost,
   schedulePost,
@@ -264,5 +266,38 @@ describe('editing a draft (the editor’s save)', () => {
 
   it('a missing post is 404', async () => {
     await expect(getPostForEdit(owner, '00000000-0000-4000-8000-00000000dead')).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('revision history', () => {
+  it('lists versions newest first, previews one as students would see it, and a restore can be undone', async () => {
+    const { id } = await createPost(owner, { kind: 'life', title: 'IT test history' });
+    await saveDraft(owner, id, 1, { content_json: doc('First body') });
+    await saveDraft(owner, id, 2, { title: 'IT test history, edited', content_json: doc('Latest body') });
+
+    const [first] = await listRevisions(owner, id);
+    expect(first).toMatchObject({ reason: 'autosave', title: 'IT test history' });
+    const preview = await revisionPreview(owner, id, first!.id);
+    expect(preview.html).toContain('First body');
+
+    expect(await restoreRevision(owner, id, 3, first!.id)).toBe(4);
+    const after = await listRevisions(owner, id);
+    expect(after.map((r) => r.reason)).toEqual(['restore', 'before_restore', 'autosave']);
+    const undo = after.find((r) => r.reason === 'before_restore')!;
+    expect((await revisionPreview(owner, id, undo.id)).html).toContain('Latest body');
+  });
+
+  it('a revision of another post, or a bad id, is not found', async () => {
+    const a = await createPost(owner, { kind: 'life', title: 'IT test history A' });
+    const b = await createPost(owner, { kind: 'life', title: 'IT test history B' });
+    await saveDraft(owner, a.id, 1, { content_json: doc('A') });
+    const [revA] = await listRevisions(owner, a.id);
+    await expect(revisionPreview(owner, b.id, revA!.id)).rejects.toMatchObject({ status: 404 });
+    await expect(revisionPreview(owner, b.id, 'x')).rejects.toThrow();
+  });
+
+  it('visitors cannot read revisions', async () => {
+    const { data } = await anon.from('post_revisions').select('id');
+    expect(data ?? []).toEqual([]);
   });
 });

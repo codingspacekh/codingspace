@@ -282,3 +282,41 @@ async function freeSlug(supabase: SupabaseClient, base: string, except: string):
   }
   throw new PostError(409, 'could not find a free URL for this title');
 }
+
+export type RevisionItem = {
+  id: number;
+  revision: number;
+  reason: 'autosave' | 'publish' | 'restore' | 'before_restore';
+  title: string;
+  created_at: string;
+};
+
+/** The draft's history, newest first (03 ADM-06; the database keeps the last 50). */
+export async function listRevisions(supabase: SupabaseClient, postId: string): Promise<RevisionItem[]> {
+  const { data, error } = await supabase
+    .from('post_revisions')
+    .select('id, revision, reason, title, created_at')
+    .eq('post_id', uuid.parse(postId))
+    .order('id', { ascending: false });
+  if (error) fail(error, 'post_revisions');
+  return data as RevisionItem[];
+}
+
+const revisionId = z.coerce.number().int().positive();
+
+/** One revision, rendered exactly as students would see it, to compare before restoring. */
+export async function revisionPreview(supabase: SupabaseClient, postId: string, id: unknown) {
+  const { data, error } = await supabase
+    .from('post_revisions')
+    .select('id, revision, reason, title, summary, content_json, created_at, posts!inner(lang)')
+    .eq('post_id', uuid.parse(postId))
+    .eq('id', revisionId.parse(id))
+    .maybeSingle();
+  if (error) fail(error, 'post_revisions');
+  if (!data) throw new PostError(404, 'revision not found');
+  const { content_json, posts, ...meta } = data as typeof data & { posts: { lang: 'en' | 'km' } };
+  const { html } = await renderContent(content_json, { lang: posts.lang });
+  return { revision: meta as RevisionItem & { summary: string }, html };
+}
+
+export { revisionId };
