@@ -2,7 +2,11 @@
 // download it. Uses Arwes's framework-free bleeps manager; no React provider needed.
 import { createBleepsManager } from '@arwes/bleeps';
 
-/** Our own synthesised sounds (scripts/sound-synth.mjs). */
+/**
+ * The ARWES sound set (MIT, public/sounds/LICENSE-arwes.txt), the family soulextract.com's
+ * sounds come from, plus our own hover tick and page-leave whoosh (scripts/sound-synth.mjs),
+ * which ARWES has no sound for.
+ */
 export type BleepName = 'click' | 'hover' | 'typing' | 'deploy' | 'transition' | 'start';
 
 export function createSiteBleeps() {
@@ -11,15 +15,15 @@ export function createSiteBleeps() {
     common: { preload: false, muteOnWindowBlur: true },
     bleeps: {
       hover: { sources: [{ src: '/sounds/hover.wav', type: 'audio/wav' }], category: 'interaction', volume: 0.4 },
-      click: { sources: [{ src: '/sounds/click.wav', type: 'audio/wav' }], category: 'interaction' },
-      typing: { sources: [{ src: '/sounds/typing.wav', type: 'audio/wav' }], category: 'transition', volume: 0.5 },
-      deploy: { sources: [{ src: '/sounds/deploy.wav', type: 'audio/wav' }], category: 'transition', volume: 0.7 },
+      click: { sources: [{ src: '/sounds/click.mp3', type: 'audio/mpeg' }], category: 'interaction' },
+      typing: { sources: [{ src: '/sounds/type.mp3', type: 'audio/mpeg' }], category: 'transition', volume: 0.6 },
+      deploy: { sources: [{ src: '/sounds/deploy.mp3', type: 'audio/mpeg' }], category: 'transition', volume: 0.8 },
       transition: {
         sources: [{ src: '/sounds/transition.wav', type: 'audio/wav' }],
         category: 'transition',
-        volume: 0.6,
+        volume: 0.5,
       },
-      start: { sources: [{ src: '/sounds/start.wav', type: 'audio/wav' }], category: 'notification', volume: 0.8 },
+      start: { sources: [{ src: '/sounds/intro.mp3', type: 'audio/mpeg' }], category: 'notification', volume: 0.8 },
     },
   });
 }

@@ -11,8 +11,6 @@ export declare function noise(
   seed: number,
   options?: { from?: number; to?: number; vol?: number; attackMs?: number; decay?: number },
 ): Float32Array;
-export declare const SOUNDS: Record<
-  'hover' | 'click' | 'typing' | 'deploy' | 'transition' | 'start',
-  () => Float32Array
->;
+export declare const SOUNDS: Record<'hover' | 'transition', () => Float32Array>;
+export declare const ALTERNATIVES: Record<'click' | 'typing' | 'deploy' | 'start', () => Float32Array>;
 export declare function wav(samples: Float32Array | number[]): Buffer;

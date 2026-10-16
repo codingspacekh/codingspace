@@ -162,7 +162,10 @@ export function start() {
   return finish(echo(out, 120, 0.3, 3), 0.7);
 }
 
-export const SOUNDS = { hover, click, typing, deploy, transition, start };
+/** The ones the site uses: ARWES has no hover or page-leave sound (the rest are ARWES's, see
+ * public/sounds/LICENSE-arwes.txt); click, typing, deploy and start stay here for reference. */
+export const SOUNDS = { hover, transition };
+export const ALTERNATIVES = { click, typing, deploy, start };
 
 /** 16-bit mono PCM WAV. */
 export function wav(samples) {

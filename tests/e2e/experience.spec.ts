@@ -163,7 +163,7 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       const offer = page.getByRole('region', { name: 'Sound' });
       await expect(offer).toBeVisible();
-      const chime = page.waitForResponse((r) => r.url().endsWith('/sounds/start.wav') && r.ok());
+      const chime = page.waitForResponse((r) => r.url().endsWith('/sounds/intro.mp3') && r.ok());
       await offer.getByRole('button', { name: 'Turn on sound' }).click();
       await chime;
       await expect(offer).toHaveCount(0);
