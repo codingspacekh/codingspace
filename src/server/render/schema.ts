@@ -39,7 +39,17 @@ export type BlockNode =
       attrs: { src: string; alt: string; caption?: string; width?: number; height?: number };
     }
   | { type: 'file'; attrs: { href: string; name: string; size?: number } }
-  | { type: 'embed'; attrs: { provider: EmbedProvider; id: string; title?: string } };
+  | { type: 'embed'; attrs: { provider: EmbedProvider; id: string; title?: string } }
+  | { type: 'table'; content: TableRowNode[] };
+
+/** A first row made only of header cells becomes the table's header. */
+export type TableRowNode = { type: 'tableRow'; content: TableCellNode[] };
+
+export type TableCellNode = {
+  type: 'tableCell' | 'tableHeader';
+  attrs?: { colspan?: number; rowspan?: number };
+  content: BlockNode[];
+};
 
 export type ListItemNode = { type: 'listItem'; content: BlockNode[] };
 

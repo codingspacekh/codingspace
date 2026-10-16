@@ -142,6 +142,57 @@ describe('renderer: code', () => {
   });
 });
 
+describe('renderer: tables', () => {
+  const cell = (type: string, t: string, attrs?: unknown) => ({ type, attrs, content: [p(text(t))] });
+  const row = (...cells: unknown[]) => ({ type: 'tableRow', content: cells });
+
+  it('renders a header row as thead and keeps cells compact', async () => {
+    expect(
+      await html({
+        type: 'table',
+        content: [
+          row(cell('tableHeader', 'Type'), cell('tableHeader', 'Example')),
+          row(cell('tableCell', 'int'), cell('tableCell', '42')),
+        ],
+      }),
+    ).toBe(
+      '<div class="table-wrap" tabindex="0"><table>' +
+        '<thead><tr><th scope="col">Type</th><th scope="col">Example</th></tr></thead>' +
+        '<tbody><tr><td>int</td><td>42</td></tr></tbody></table></div>',
+    );
+  });
+
+  it('renders a table without a header row and row headers', async () => {
+    expect(await html({ type: 'table', content: [row(cell('tableHeader', 'Best'), cell('tableCell', 'O(1)'))] })).toBe(
+      '<div class="table-wrap" tabindex="0"><table><tbody>' +
+        '<tr><th scope="row">Best</th><td>O(1)</td></tr></tbody></table></div>',
+    );
+  });
+
+  it('keeps valid colspan and rowspan, and paragraphs when a cell has several', async () => {
+    const out = await html({
+      type: 'table',
+      content: [
+        row(cell('tableCell', 'a', { colspan: 2, rowspan: 3 }), {
+          type: 'tableCell',
+          content: [p(text('x')), p(text('y'))],
+        }),
+      ],
+    });
+    expect(out).toContain('<td colspan="2" rowspan="3">a</td>');
+    expect(out).toContain('<td><p>x</p><p>y</p></td>');
+  });
+
+  it('drops empty tables and rows', async () => {
+    expect(await html({ type: 'table', content: [] }, { type: 'table', content: [row()] })).toBe('');
+  });
+
+  it('includes cell text in the search text', async () => {
+    const out = await renderContent(doc({ type: 'table', content: [row(cell('tableCell', 'float'))] }));
+    expect(out.searchText).toBe('float');
+  });
+});
+
 describe('renderer: media', () => {
   it('renders an image from the media origin as a figure with caption', async () => {
     expect(

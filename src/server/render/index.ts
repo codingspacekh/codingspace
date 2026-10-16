@@ -163,6 +163,32 @@ async function renderListItems(node: Node, ctx: Context, depth: number): Promise
   return out;
 }
 
+const span = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 1 && v <= 20 ? v : null);
+
+async function renderCell(cell: Node, inHead: boolean, ctx: Context, depth: number): Promise<string> {
+  if (cell.type !== 'tableCell' && cell.type !== 'tableHeader') return '';
+  const a = attrs(cell);
+  const colspan = span(a.colspan);
+  const rowspan = span(a.rowspan);
+  const tag = cell.type === 'tableHeader' ? 'th' : 'td';
+  const scope = tag === 'th' ? ` scope="${inHead ? 'col' : 'row'}"` : '';
+  const spans = (colspan ? ` colspan="${colspan}"` : '') + (rowspan ? ` rowspan="${rowspan}"` : '');
+
+  // A cell with one paragraph renders its text directly, which keeps tables compact.
+  const blocks = children(cell);
+  const only = blocks.length === 1 ? blocks[0] : undefined;
+  let inner: string;
+  if (only?.type === 'paragraph') {
+    const [html, text] = renderInline(children(only), ctx);
+    ctx.blocks.push(text);
+    ctx.prose.push(text);
+    inner = html;
+  } else {
+    inner = await renderBlocks(blocks, ctx, depth + 1);
+  }
+  return `<${tag}${scope}${spans}>${inner}</${tag}>`;
+}
+
 async function renderBlock(node: Node, ctx: Context, depth: number): Promise<string> {
   const a = attrs(node);
   switch (node.type) {
@@ -201,6 +227,30 @@ async function renderBlock(node: Node, ctx: Context, depth: number): Promise<str
     case 'blockquote': {
       const inner = await renderBlocks(children(node), ctx, depth + 1);
       return inner && `<blockquote>${inner}</blockquote>`;
+    }
+
+    case 'table': {
+      const rows = children(node).filter((r) => r.type === 'tableRow' && children(r).length > 0);
+      const first = rows[0];
+      if (!first) return '';
+      const isHeaderRow = (r: Node) => children(r).every((c) => c.type === 'tableHeader');
+      const head = isHeaderRow(first) ? first : null;
+      const body = head ? rows.slice(1) : rows;
+      // Cells render in order, so search text and heading ids follow the document.
+      const renderRow = async (r: Node, inHead: boolean) => {
+        let cells = '';
+        for (const c of children(r)) cells += await renderCell(c, inHead, ctx, depth);
+        return `<tr>${cells}</tr>`;
+      };
+      let html = '';
+      if (head) html += `<thead>${await renderRow(head, true)}</thead>`;
+      if (body.length) {
+        let rowsHtml = '';
+        for (const r of body) rowsHtml += await renderRow(r, false);
+        html += `<tbody>${rowsHtml}</tbody>`;
+      }
+      // tabindex lets keyboard users scroll a wide table on a phone.
+      return `<div class="table-wrap" tabindex="0"><table>${html}</table></div>`;
     }
 
     case 'horizontalRule':
