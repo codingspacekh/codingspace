@@ -1,17 +1,13 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const play = { click: vi.fn(), hover: vi.fn(), assemble: vi.fn() };
-vi.mock('@arwes/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@arwes/react')>();
-  return {
-    ...actual,
-    useBleeps: () => ({ click: { play: play.click }, hover: { play: play.hover }, assemble: { play: play.assemble } }),
-  };
-});
-// The canvas backdrop is mocked: we test *when* it mounts, not Arwes' drawing.
-vi.mock('@/ui/arwes/backdrop-canvas', () => ({ default: () => <canvas data-testid="backdrop-canvas" /> }));
-
+// Sound loads lazily (src/ui/arwes/bleeps.ts); the mock stands in for Arwes's audio.
+vi.mock('@/ui/arwes/bleeps', () => ({
+  createSiteBleeps: () => ({
+    bleeps: { click: { play: play.click }, hover: { play: play.hover }, assemble: { play: play.assemble } },
+  }),
+}));
 import { Backdrop, TopBar, UiRoot, useSound } from '@/ui';
 
 function mockReducedMotion(reduce: boolean) {
@@ -72,10 +68,10 @@ describe('sound (PUB-11): off by default, opt-in', () => {
       </UiRoot>,
     );
     await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
-    expect(play.click).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'probe' }));
-    expect(play.hover).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(play.hover).toHaveBeenCalledTimes(1));
   });
 
   it('turning sound off again plays no confirmation', async () => {
@@ -86,6 +82,8 @@ describe('sound (PUB-11): off by default, opt-in', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
     await userEvent.click(screen.getByRole('button', { name: /sound on/i }));
+    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20)); // no late second click
     expect(play.click).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: /sound off/i })).toBeInTheDocument();
   });
@@ -100,24 +98,18 @@ describe('sound (PUB-11): off by default, opt-in', () => {
   });
 });
 
-describe('<Backdrop> (ADR 0001 finding 7)', () => {
-  it('waits for the browser to be idle before mounting the canvas', async () => {
-    let idle: (() => void) | undefined;
-    window.requestIdleCallback = vi.fn((cb: IdleRequestCallback) => {
-      idle = () => cb({} as IdleDeadline);
-      return 1;
-    });
-    window.cancelIdleCallback = vi.fn();
-
-    render(
-      <UiRoot motion={false}>
+describe('<Backdrop>', () => {
+  // M2 Lighthouse gate: the animated Arwes canvas cost ~1.5 s of main-thread time on a phone.
+  // The grid is now CSS (as in the approved prototype): decorative, hidden, no script at all.
+  it('is a decorative CSS layer with no canvas', () => {
+    window.requestIdleCallback = vi.fn();
+    const { container } = render(
+      <UiRoot>
         <Backdrop />
       </UiRoot>,
     );
     expect(screen.getByTestId('backdrop')).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.queryByTestId('backdrop-canvas')).toBeNull();
-
-    await act(async () => idle?.());
-    expect(await screen.findByTestId('backdrop-canvas')).toBeInTheDocument();
+    expect(container.querySelector('canvas')).toBeNull();
+    expect(window.requestIdleCallback).not.toHaveBeenCalled();
   });
 });

@@ -79,3 +79,20 @@ Lighthouse 12.6, mobile, simulated throttling, on a local production build (Inte
   - Investigate lesson LCP (2.7 s lab): preload the title font weight, inline critical CSS, and check the KaTeX font load.
   - Confirm numbers on Vercel preview builds (Linux) instead of a laptop.
 - **Fallback if Arwes ever breaks:** the clickable prototype shows a CSS-only version of the same look. Because Arwes is isolated in `src/ui/arwes/`, swapping it out stays contained.
+
+## Addendum (M2, 2026-10-16): Arwes only where it animates
+
+The M2 Lighthouse gate first failed on real pages: Performance 0.70–0.72, TBT 1.3–3.4 s. Causes found in the reports:
+
+- **Arwes in the app shell.** `UiRoot` wrapped every page in `AnimatorGeneralProvider` and `BleepsProvider`, so all of `@arwes/react` (≈ 97 KB raw in `_app`) was parsed and run on every page, including lessons that animate nothing.
+- **The animated backdrop.** The `GridLines` + `Dots` canvas kept drawing during load: ≈ 1.5 s of main-thread time under 4× CPU throttling, even though it was mounted on idle.
+- **Five preloaded fonts** were dependencies of the first paint in Lighthouse's simulation.
+
+**Decision:**
+
+- `UiRoot` is plain React (motion and sound state). The Arwes animator settings live inside `Stagger` and `Frame`, so only pages that render them (Home, error pages) download Arwes.
+- Sound effects use `@arwes/bleeps`' framework-free manager, imported the first time a visitor turns sound on (off by default).
+- The backdrop is the prototype's CSS grid and dots: no script, same look. Animated effects return in M6 with the orbit, under this same budget.
+- Only the body font is preloaded; the mono, display and Khmer faces swap in.
+
+**Result** (same machine, Lighthouse 12.6 mobile, median of 3): `_app` 97 KB → 2 KB; TBT 15–40 ms; Performance 0.87–0.99; Accessibility, SEO and Best practices 1.0 on Home, a subject page, a maths lesson and a code lesson. The CI job `Lighthouse (lab budgets)` enforces the gate on every PR.

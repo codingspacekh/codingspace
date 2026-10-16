@@ -1,0 +1,9 @@
+{
+  "name": "codingspace-lighthouse",
+  "private": true,
+  "description": "Lighthouse CI tooling, kept out of the app's dependencies: @lhci/cli pulls in puppeteer helpers with open advisories (extract-zip, tmp, basic-ftp). It only runs in the CI Lighthouse job against localhost.",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@lhci/cli": "0.15.1"
+  }
+}

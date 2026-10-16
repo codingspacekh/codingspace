@@ -26,5 +26,5 @@ export default tseslint.config(
     files: ['src/ui/arwes/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': 'off' },
   },
-  { files: ['**/*.{mjs,js}'], languageOptions: { globals: globals.node } },
+  { files: ['**/*.{mjs,cjs,js}'], languageOptions: { globals: globals.node } },
 );

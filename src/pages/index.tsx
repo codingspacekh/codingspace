@@ -7,7 +7,7 @@ import { formatDate } from '@/lib/format';
 import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
 import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects } from '@/server/data/public';
 import type { FeaturedProblem, PostCard, Project } from '@/server/data/types';
-import { Decipher } from '@/ui';
+import { Decipher, Stagger } from '@/ui';
 import { PostTile, ProjectCard, SubjectTrack } from '@/views/cards';
 
 type Props = {
@@ -79,9 +79,11 @@ export default function Home({ counts, latest, problem, projects }: Props) {
       <section className="hero">
         <span className="eyebrow">Link established · student terminal</span>
         <h1 className="headline" aria-label="Prove it. Model it. Code it.">
-          <Decipher className="w1">Prove it.</Decipher>
-          <Decipher className="w2">Model it.</Decipher>
-          <Decipher className="w3">Code it.</Decipher>
+          <Stagger>
+            <Decipher className="w1">Prove it.</Decipher>
+            <Decipher className="w2">Model it.</Decipher>
+            <Decipher className="w3">Code it.</Decipher>
+          </Stagger>
         </h1>
         {/* Body copy is never wrapped in an animator: readable on first paint. */}
         <p className="intro" data-testid="intro">

@@ -34,3 +34,7 @@ spikes/m0-arwes-r19/
 
 # copied from node_modules at build (scripts/copy-katex.mjs)
 public/katex/
+
+# Lighthouse CI reports
+.lighthouseci/
+tools/lighthouse/node_modules/
