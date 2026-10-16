@@ -41,3 +41,6 @@ tools/lighthouse/node_modules/
 
 # Local screenshots and notes (may show sign-in secrets)
 report/
+
+# Uploads in local runs and E2E (MEDIA_STORE=local)
+/.media-local/
