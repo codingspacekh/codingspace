@@ -67,8 +67,10 @@ describe('buildRobots', () => {
     expect(buildRobots(false, BASE)).toBe('User-agent: *\nDisallow: /\n');
   });
 
-  it('allows crawling and points to the sitemap once indexable', () => {
-    expect(buildRobots(true, BASE)).toBe('User-agent: *\nAllow: /\n\nSitemap: https://codingspace.io/sitemap.xml\n');
+  it('allows crawling (except the admin and APIs) and points to the sitemap once indexable', () => {
+    expect(buildRobots(true, BASE)).toBe(
+      'User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: https://codingspace.io/sitemap.xml\n',
+    );
   });
 });
 

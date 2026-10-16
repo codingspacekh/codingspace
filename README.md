@@ -22,6 +22,19 @@ cp .env.example .env.local  # fill in values from `npm run db:start`
 npm run dev                 # http://localhost:3000
 ```
 
+## Admin
+
+`/admin` is for the site owner only: email + password, then a 6-digit code from an authenticator app (TOTP, required). The first sign-in shows a QR code to set one up. Sessions end after 12 hours without activity; **Sign out everywhere** ends every session at once.
+
+Locally, `supabase start` seeds a test owner (see `supabase/seed.sql`); the tests create its account. On a real Supabase project, add the owner once, in the SQL editor:
+
+```sql
+-- The owner's user id: Authentication → Users (create the user there; sign-ups stay disabled).
+insert into private.owner (user_id) values ('<user id>');
+```
+
+Under Authentication → Providers, **Email** must be enabled (it is the sign-in method) while **Allow new users to sign up** stays off. Keep the authenticator's recovery key offline.
+
 ## Tests
 
 ```bash
@@ -30,6 +43,7 @@ npm run test:coverage  # unit + component tests with coverage gates
 npm run test:e2e       # Playwright + axe against a production build
 npm run db:start       # local Supabase (Docker)
 npm run db:test        # pgTAP row-level-security tests
+npm run test:int       # integration tests against the local database (content import, admin sign-in)
 ```
 
 Every pull request runs the same gates in GitHub Actions. A red check blocks the merge.
