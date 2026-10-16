@@ -2,7 +2,7 @@
 // Only pages that render these components (Home, error pages) download Arwes.
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animator, AnimatorGeneralProvider, FrameCorners, Text } from '@arwes/react';
-import { usePrefs, useSound } from './prefs';
+import { usePrefs } from './prefs';
 
 /** Arwes animation settings; disabled when motion is off (OS setting, the top-bar toggle) or in reading mode. */
 function ArwesScope({ children }: { children: ReactNode }) {
@@ -17,12 +17,10 @@ function ArwesScope({ children }: { children: ReactNode }) {
 /** A panel with Arwes corner brackets. Content inside is ordinary, always-visible markup. */
 export function Frame({ children, className }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const play = useSound();
   // The frame is decoration: hide its SVG from assistive technology.
   useEffect(() => {
     ref.current?.querySelector('svg.arwes-frames-frame')?.setAttribute('aria-hidden', 'true');
   });
-  useEffect(() => play('assemble'), [play]);
   return (
     <ArwesScope>
       <Animator>

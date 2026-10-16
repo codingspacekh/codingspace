@@ -29,7 +29,7 @@ const PrefsContext = createContext<PrefsContextValue>({
 export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode; motion?: boolean }) {
   const stored = useSyncExternalStore(subscribe, getPrefs, getServerPrefs);
   const motion = forcedMotion ?? stored.motion;
-  const { sound, reading } = stored;
+  const { sound, reading, invited } = stored;
   const animate = motion && !reading;
   const toggleSound = useCallback(() => setPref('sound', !getPrefs().sound), []);
   const toggleMotion = useCallback(() => setPref('motion', !getPrefs().motion), []);
@@ -42,7 +42,9 @@ export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode
   }, [animate, reading]);
 
   return (
-    <PrefsContext.Provider value={{ motion, sound, reading, animate, toggleSound, toggleMotion, toggleReading }}>
+    <PrefsContext.Provider
+      value={{ motion, sound, reading, invited, animate, toggleSound, toggleMotion, toggleReading }}
+    >
       {children}
     </PrefsContext.Provider>
   );

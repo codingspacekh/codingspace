@@ -1,6 +1,6 @@
 import type { AppProps } from 'next/app';
 import localFont from 'next/font/local';
-import { UiRoot } from '@/ui';
+import { PageEffects, UiRoot } from '@/ui';
 import '@/styles/globals.css';
 
 // Fonts are self-hosted from the Fontsource packages (SIL OFL 1.1), not fetched from Google at
@@ -58,6 +58,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <div className={`app ${body.variable} ${mono.variable} ${display.variable} ${khmer.variable}`}>
       <UiRoot>
         <Component {...pageProps} />
+        <PageEffects />
       </UiRoot>
     </div>
   );

@@ -16,7 +16,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
-  use: { baseURL, trace: 'retain-on-failure' },
+  use: {
+    baseURL,
+    trace: 'retain-on-failure',
+    // The one-time sound offer is answered already, so it never covers what a test clicks.
+    // (tests/e2e/experience.spec.ts tests the offer itself with a fresh browser.)
+    storageState: {
+      cookies: [],
+      origins: [{ origin: new URL(baseURL).origin, localStorage: [{ name: 'cs-prefs', value: '{"invited":true}' }] }],
+    },
+  },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: CHANGES_CONTENT },
     // @single-account tests share one admin account and authenticator: one project runs them.
