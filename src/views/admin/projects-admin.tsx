@@ -96,7 +96,7 @@ export function ProjectsAdmin() {
   return (
     <>
       <h1>Projects</h1>
-      <p className="adm-hint">
+      <p className="adm-lead">
         Shown on the Projects page in this order. The featured one goes first there, and on Home with the next one.
       </p>
       <p className="adm-live" role="status">
@@ -190,7 +190,7 @@ function ProjectCard({
       <h2 id={`${id}-t`}>
         {p.glyph && <span aria-hidden="true">{p.glyph} </span>}
         {p.name}
-        {p.is_featured && <span className="adm-status adm-status--published"> Featured</span>}
+        {p.is_featured && <span className="adm-status adm-status--published">Featured</span>}
       </h2>
       {editing ? (
         <ProjectForm

@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
 import { isSubjectId, SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
-import { getSubjectSections } from '@/server/data/public';
-import type { SectionWithLessons } from '@/server/data/types';
+import { getFeaturedProblem, getSubjectSections } from '@/server/data/public';
+import type { FeaturedProblem, SectionWithLessons } from '@/server/data/types';
 import { LessonRow } from '@/views/cards';
+import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 
-type Props = { subject: SubjectId; sections: SectionWithLessons[] };
+type Props = { subject: SubjectId; sections: SectionWithLessons[]; problem: FeaturedProblem | null };
 
 export const getStaticPaths: GetStaticPaths = async () => ({
   paths: SUBJECT_IDS.map((subject) => ({ params: { subject } })),
@@ -17,10 +18,11 @@ export const getStaticPaths: GetStaticPaths = async () => ({
 export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
   const subject = params?.subject;
   if (!isSubjectId(subject)) return { notFound: true };
-  return { props: { subject, sections: await getSubjectSections(subject) }, revalidate: REVALIDATE };
+  const [sections, problem] = await Promise.all([getSubjectSections(subject), getFeaturedProblem(subject)]);
+  return { props: { subject, sections, problem }, revalidate: REVALIDATE };
 };
 
-export default function StudySubject({ subject, sections }: Props) {
+export default function StudySubject({ subject, sections, problem }: Props) {
   const s = SUBJECTS[subject];
   return (
     <Layout title={`${s.name} · CodingSpace`} description={s.intro} path={`/study/${subject}`} active="study">
@@ -46,6 +48,9 @@ export default function StudySubject({ subject, sections }: Props) {
             ))}
           </nav>
         )}
+
+        {/* 03 PUB-05: the subject's problem of the week (Math has one; any subject can). */}
+        {problem && <ProblemOfTheWeek problem={problem} />}
 
         {sections.map((sec, i) => (
           <section key={sec.slug} id={sec.slug} className="cat" aria-labelledby={`${sec.slug}-title`}>
