@@ -53,7 +53,7 @@ The owner teaches competition mathematics, physics, programming and Cambridge AS
 | D8 | **No comments in v1** | Owner decision; removes the biggest abuse surface. |
 | D9 | **Domain `codingspace.io`, brand "CodingSpace"** | Owner decision. |
 | D10 | **TDD** is the core process (§10) | Owner preference; also the main quality and security safety net for a solo developer. |
-| D11 | **Vercel** hosting (Hobby to start) | First-class Next.js ISR, CDN and cron. |
+| D11 | **Vercel** hosting (Hobby to start) | First-class Next.js ISR and CDN. *M3: on Hobby, Vercel Cron runs only once a day, so the 5-minute scheduled-publish timer is a GitHub Actions workflow calling `/api/cron/publish-due` with a secret.* |
 
 ---
 
