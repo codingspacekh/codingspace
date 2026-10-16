@@ -13,7 +13,13 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}', 'patches/**/*.mjs'],
       // Database adapters are exercised by tests/integration (npm run test:int), not unit tests.
-      exclude: ['src/pages/**', '**/*.d.ts', 'src/server/content/supabase-store.ts', 'src/server/data/public.ts'],
+      exclude: [
+        'src/pages/**',
+        '**/*.d.ts',
+        'src/server/content/supabase-store.ts',
+        'src/server/data/public.ts',
+        'src/server/admin/posts.ts',
+      ],
       // NFR-MAINT-1: ≥ 90 % for src/lib and src/config, ≥ 70 % overall
       thresholds: {
         lines: 70,

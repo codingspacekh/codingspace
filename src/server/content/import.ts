@@ -6,6 +6,8 @@ import type { LoadedContent } from './load';
  * and writes database rows through a ContentStore. Safe to run again: rows are matched
  * by slug, and a post keeps its first publish date. Posts missing from content/ are
  * reported, never deleted.
+ *
+ * It overwrites drafts too: once a post is edited in the admin, re-importing it replaces those edits.
  */
 
 export type SectionRow = { subject_id: string; slug: string; title: string; description: string; sort: number };
@@ -33,6 +35,15 @@ export type PostRow = {
   live_has_code: boolean;
   published_at: string;
   live_updated_at: string;
+  // The import publishes what it writes: draft and live are the same revision.
+  revision: 1;
+  live_revision: 1;
+  live_subject_id: string | null;
+  live_section_id: string | null;
+  live_level: number;
+  live_minutes: number;
+  live_problem_count: number;
+  live_lang: 'en' | 'km';
 };
 
 export type ProjectRow = {
@@ -115,16 +126,19 @@ export async function importContent(
   // Sequential: rendering is CPU-bound and keeps memory flat.
   for (const post of content.posts) {
     const out = await renderContent(post.doc, { lang: post.lang });
-    rows.push({
-      slug: post.slug,
-      kind: post.kind,
+    const settings = {
       subject_id: post.subject,
       section_id: sectionId(post.subject, post.section),
-      sort: post.sort,
       level: post.level,
       minutes: out.readingMinutes,
       problem_count: post.problemCount,
       lang: post.lang,
+    };
+    rows.push({
+      slug: post.slug,
+      kind: post.kind,
+      sort: post.sort,
+      ...settings,
       status: 'published',
       title: post.title,
       summary: post.summary,
@@ -138,6 +152,14 @@ export async function importContent(
       live_has_code: out.hasCode,
       published_at: existing.get(post.slug) ?? stamp,
       live_updated_at: stamp,
+      revision: 1,
+      live_revision: 1,
+      live_subject_id: settings.subject_id,
+      live_section_id: settings.section_id,
+      live_level: settings.level,
+      live_minutes: settings.minutes,
+      live_problem_count: settings.problem_count,
+      live_lang: settings.lang,
     });
   }
   await store.upsertPosts(rows);

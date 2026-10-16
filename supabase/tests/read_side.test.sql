@@ -57,13 +57,19 @@ insert into public.sections (id, subject_id, slug, title, sort)
          ('10000000-0000-0000-0000-000000000002', 'math', 'sequences', 'Sequences', 2);
 insert into public.posts (kind, slug, subject_id, section_id, sort, level, status, title,
                           live_title, live_summary, live_html, live_search_text, published_at)
-  values ('lesson', 'am-gm', 'math', '10000000-0000-0000-0000-000000000001', 1, 1, 'published',
-          'draft title', 'AM–GM', 'Means', '<p>x</p>', 'arithmetic mean geometric mean', now()),
-         ('lesson', 'cauchy', 'math', '10000000-0000-0000-0000-000000000001', 2, 2, 'published',
-          'draft', 'Cauchy–Schwarz', 'Sums', '<p>y</p>', 'sum of products', now()),
+  values ('lesson', 'am-gm', 'math', '10000000-0000-0000-0000-000000000001', 1, 1, 'draft',
+          'draft title', 'AM–GM', 'Means', '<p>x</p>', 'arithmetic mean geometric mean', null),
+         ('lesson', 'cauchy', 'math', '10000000-0000-0000-0000-000000000001', 2, 2, 'draft',
+          'draft', 'Cauchy–Schwarz', 'Sums', '<p>y</p>', 'sum of products', null),
          ('lesson', 'hidden', 'math', '10000000-0000-0000-0000-000000000001', 3, 1, 'draft',
           'Hidden draft', null, null, null, 'secret words', null),
-         ('life', 'hello', null, null, 0, 1, 'published', 'x', 'Hello', 'Hi', '<p>hi</p>', 'hello', now());
+         ('life', 'hello', null, null, 0, 1, 'draft', 'x', 'Hello', 'Hi', '<p>hi</p>', 'hello', null);
+-- Published as the import does it (M3 adds live copies of the settings).
+update public.posts
+  set status = 'published', published_at = now(), live_revision = revision, live_subject_id = subject_id,
+      live_section_id = section_id, live_level = level, live_minutes = minutes,
+      live_problem_count = problem_count, live_lang = lang
+  where slug in ('am-gm', 'cauchy', 'hello');
 
 insert into public.featured_problems (subject_id, section_id, week_of, statement, hint, solution, is_current)
   values ('math', '10000000-0000-0000-0000-000000000001', '2026-10-05', 'Old problem', 'h', 's', false),

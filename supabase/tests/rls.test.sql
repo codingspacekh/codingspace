@@ -22,11 +22,15 @@ select results_eq('select id from public.subjects order by sort',
 insert into private.owner (user_id) values ('00000000-0000-0000-0000-00000000000a');
 insert into public.sections (id, subject_id, slug, title, sort)
   values ('10000000-0000-0000-0000-000000000001', 'math', 'inequalities', 'Inequalities', 0);
-insert into public.posts (id, kind, slug, subject_id, section_id, status, title, live_title, published_at)
+insert into public.posts (id, kind, slug, subject_id, section_id, status, title, live_title, published_at,
+                          live_revision, live_subject_id, live_section_id, live_level, live_minutes,
+                          live_problem_count, live_lang)
   values ('20000000-0000-0000-0000-000000000001', 'lesson', 'am-gm', 'math',
-          '10000000-0000-0000-0000-000000000001', 'published', 'AM–GM draft edits', 'AM–GM', now()),
+          '10000000-0000-0000-0000-000000000001', 'published', 'AM–GM draft edits', 'AM–GM', now(),
+          1, 'math', '10000000-0000-0000-0000-000000000001', 1, 1, 0, 'en'),
          ('20000000-0000-0000-0000-000000000002', 'lesson', 'secret-draft', 'math',
-          '10000000-0000-0000-0000-000000000001', 'draft', 'Unpublished lesson', null, null);
+          '10000000-0000-0000-0000-000000000001', 'draft', 'Unpublished lesson', null, null,
+          null, null, null, null, null, null, null);
 
 -- ── Anonymous visitor ─────────────────────────────────────────────────────
 set local role anon;
