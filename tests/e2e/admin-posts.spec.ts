@@ -1,4 +1,5 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test';
+import sharp from 'sharp';
 import { EDITOR, resetUser, serviceClient, totp } from '../support/admin-users';
 import { collectProblems, expectAccessible } from './helpers';
 
@@ -283,5 +284,88 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await expect(student.getByText(`${name} renamed`)).toHaveCount(0);
     await student.context().close();
     expect(problems).toEqual([]);
+  });
+
+  const cleanups: (() => Promise<unknown>)[] = [];
+  test.afterEach(async () => {
+    for (const undo of cleanups.splice(0)) await undo();
+  });
+
+  // M4 (04-milestones): paste an image, add a caption, publish; the image loads from the media
+  // address with srcset. Needs uploads: MEDIA_STORE=local and NEXT_PUBLIC_MEDIA_BASE_URL (CI sets both).
+  test('media: paste an image and attach a file, publish; the lesson serves variants and a download', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.skip(!process.env.NEXT_PUBLIC_MEDIA_BASE_URL, 'uploads need a media store (see README "Media (R2)")');
+    test.setTimeout(90_000);
+    const problems = await collectProblems(page);
+    const title = `E2E media ${Date.now()}`;
+    const slug = title.toLowerCase().replace(/\s+/g, '-');
+    await page.goto('/admin');
+    await page.getByRole('button', { name: 'New lesson' }).click();
+    await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+    const id = page.url().split('/').pop()!;
+    // Even if a step fails: a leftover published post would change the sitemap test's count.
+    cleanups.push(() => page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: baseURL! } }));
+    await page.getByRole('textbox', { name: 'Title' }).fill(title);
+    await page.getByRole('combobox', { name: 'Section' }).selectOption({ index: 1 });
+    await page.getByRole('textbox', { name: 'Body' }).click();
+    await page.keyboard.type('The diagram:');
+    await page.keyboard.press('Enter');
+
+    // A screenshot on the clipboard, pasted into the text (a unique colour: never a duplicate).
+    const png = await sharp({
+      create: { width: 1200, height: 600, channels: 3, background: { r: Date.now() % 256, g: 90, b: 160 } },
+    })
+      .png()
+      .toBuffer();
+    await page.getByRole('textbox', { name: 'Body' }).evaluate((body, bytes) => {
+      const data = new DataTransfer();
+      data.items.add(new File([new Uint8Array(bytes)], 'diagram.png', { type: 'image/png' }));
+      body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    }, Array.from(png));
+    await page.getByLabel(/^Alt text/).fill('A coloured rectangle');
+    await page.getByLabel(/^Caption/).fill('Figure 1: the setup');
+    await expect(page.locator('img.ed-image')).toHaveJSProperty('complete', true);
+
+    // A worksheet from the Insert menu.
+    await page.getByRole('combobox', { name: 'Insert' }).selectOption('file');
+    await page.getByLabel('Upload a file').setInputFiles({
+      name: `worksheet-${Date.now()}.pdf`,
+      mimeType: 'application/pdf',
+      buffer: Buffer.from(`%PDF-1.4\n% E2E ${Date.now()}\n`),
+    });
+    await page.getByLabel('Link text').fill('Worksheet (PDF)');
+    await expect(page.getByText('All changes saved')).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish now' }).click();
+    await expect(page.getByText('Published. The site is updated.')).toBeVisible();
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    const studentProblems = await collectProblems(student);
+    await student.goto(`/posts/${slug}`);
+    const img = student.locator('.prose figure picture img');
+    await img.scrollIntoViewIfNeeded();
+    await expect(img).toHaveAttribute('alt', 'A coloured rectangle');
+    await expect(student.locator('.prose figcaption')).toHaveText('Figure 1: the setup');
+    const base = process.env.NEXT_PUBLIC_MEDIA_BASE_URL!.replace(/\/+$/, '');
+    expect(await img.getAttribute('src')).toMatch(new RegExp(`^${base}/i/[0-9a-f-]{36}/960\\.webp$`));
+    expect(await img.getAttribute('srcset')).toMatch(/480w, .+960w, .+1200w$/);
+    await expect(student.locator('.prose picture source[type="image/avif"]')).toHaveAttribute('srcset', /480w/);
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+
+    const download = student.getByRole('link', { name: /Worksheet \(PDF\)/ });
+    const href = (await download.getAttribute('href'))!;
+    expect(href).toMatch(new RegExp(`^${base}/f/[0-9a-f-]{36}$`));
+    const file = await student.request.get(href);
+    expect(file.headers()['content-type']).toBe('application/pdf');
+    expect(file.headers()['content-disposition']).toMatch(/^attachment; filename="worksheet-\d+\.pdf"/);
+    await student.context().close();
+    expect(problems).toEqual([]);
+    expect(studentProblems).toEqual([]);
   });
 });

@@ -4,6 +4,8 @@ import { useCallback, useId, useMemo } from 'react';
 import CodeBlock from '@tiptap/extension-code-block';
 import { CODE_LANGUAGE_CHOICES } from '@/lib/code-languages';
 import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
+import { formatBytes } from '@/lib/media-rules';
+import { imageKey, isMediaId, mediaUrl, mediaWidths } from '@/lib/media-urls';
 import { CALLOUT_VARIANTS } from '@/server/render/schema';
 import { Callout, Embed, FileNode, Image, MathBlock, MathInline } from './nodes';
 
@@ -152,19 +154,27 @@ function EmbedView({ node, updateAttributes, selected }: ReactNodeViewProps) {
   );
 }
 
+/** The smallest variant of an uploaded image (or an imported image's URL), for the editor. */
+export function previewSrc(attrs: { media?: unknown; widths?: unknown; src?: unknown }): string {
+  const widths = mediaWidths(attrs.widths);
+  if (isMediaId(attrs.media) && widths) return mediaUrl(imageKey(attrs.media, widths[0]!, 'webp'));
+  return typeof attrs.src === 'string' ? attrs.src : '';
+}
+
 function ImageView({ node, updateAttributes, selected }: ReactNodeViewProps) {
   const id = useId();
-  const { src, alt, caption } = node.attrs as { src: string; alt: string; caption: string | null };
+  const { alt, caption } = node.attrs as { alt: string; caption: string | null };
+  const src = previewSrc(node.attrs);
   return (
-    <NodeViewWrapper className={`ed-block ed-card${selected ? ' is-selected' : ''}`} contentEditable={false}>
-      {/* Only images on the files domain load (CSP img-src); uploads arrive in M4. */}
-      <img src={src} alt="" className="ed-image" />
+    <NodeViewWrapper className={`ed-block ed-card ed-figure${selected ? ' is-selected' : ''}`} contentEditable={false}>
+      {/* The alt text is in the field below; the preview itself is decoration here. */}
+      {src ? <img src={src} alt="" className="ed-image" /> : <span className="ed-label">Image missing</span>}
       <label htmlFor={`${id}-alt`} className="ed-label">
-        Alt text
+        Alt text (what the image shows, for screen readers)
       </label>
       <input id={`${id}-alt`} value={alt} onChange={(e) => updateAttributes({ alt: e.target.value })} />
       <label htmlFor={`${id}-cap`} className="ed-label">
-        Caption
+        Caption (optional)
       </label>
       <input
         id={`${id}-cap`}
@@ -175,11 +185,16 @@ function ImageView({ node, updateAttributes, selected }: ReactNodeViewProps) {
   );
 }
 
-function FileView({ node, selected }: ReactNodeViewProps) {
-  const { name } = node.attrs as { name: string };
+function FileView({ node, updateAttributes, selected }: ReactNodeViewProps) {
+  const id = useId();
+  const { name, size } = node.attrs as { name: string; size: number | null };
   return (
     <NodeViewWrapper className={`ed-block ed-card${selected ? ' is-selected' : ''}`} contentEditable={false}>
-      <span className="ed-label">File</span> {name}
+      <span className="ed-label">File download{typeof size === 'number' ? ` · ${formatBytes(size)}` : ''}</span>
+      <label htmlFor={id} className="ed-label">
+        Link text
+      </label>
+      <input id={id} value={name} onChange={(e) => updateAttributes({ name: e.target.value })} />
     </NodeViewWrapper>
   );
 }

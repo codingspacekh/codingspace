@@ -1,8 +1,11 @@
+import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { normalizeDoc } from '@/lib/content-json';
+import { extensionOf, FILE_ACCEPT, IMAGE_ACCEPT, UPLOAD_TYPES, type MediaKind } from '@/lib/media-rules';
+import { mediaNode, uploadMedia, type UploadedMedia } from '@/lib/media-upload';
 import { safeLinkHref } from '@/server/render/policy';
-import { BLOCK_ITEMS, filterBlockItems, runBlockItem, type Ask, type BlockItem } from './commands';
+import { BLOCK_ITEMS, filterBlockItems, runBlockItem, UPLOAD_ITEMS, type Ask, type BlockItem } from './commands';
 import { contentExtensions } from './nodes';
 import { viewExtensions } from './views';
 
@@ -23,9 +26,17 @@ function slashAt(editor: Editor): Omit<Slash, 'index' | 'items' | 'top' | 'left'
 
 const ask: Ask = (q) => (typeof window === 'undefined' ? null : window.prompt(q));
 
+export type Upload = (file: File, kind: MediaKind) => Promise<UploadedMedia>;
+
+/** Pasted or dropped files: images become image blocks, anything else a file block. */
+const kindOf = (file: File): MediaKind => (UPLOAD_TYPES[extensionOf(file.name)]?.kind === 'image' ? 'image' : 'file');
+
+type Pending = { key: number; name: string; error?: string };
+let uploadCount = 0;
+
 /**
  * The block editor (03 ADM-04). `onChange` gets the canonical content JSON (D6) after every edit.
- * Uploads (image, file) come in M4.
+ * Images and files are uploaded from the Insert and "/" menus, or pasted / dropped in (03 ADM-10).
  */
 export function PostEditor({
   initial,
@@ -33,18 +44,46 @@ export function PostEditor({
   onChange,
   onMessage,
   askValue = ask,
+  upload = uploadMedia,
 }: {
   initial: unknown;
   lang: 'en' | 'km';
   onChange: (doc: Doc) => void;
   onMessage: (text: string) => void;
   askValue?: Ask;
+  upload?: Upload;
 }) {
   const menuId = useId();
   const [slash, setSlash] = useState<Slash | null>(null);
   const slashRef = useRef<Slash | null>(null);
   const onChangeRef = useRef(onChange);
   const editorRef = useRef<Editor | null>(null);
+  const [pending, setPending] = useState<Pending[]>([]);
+  const imageInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  /** Uploads one by one, each inserted where the cursor is when it finishes. */
+  const uploadFiles = useCallback(
+    async (files: File[], kind?: MediaKind) => {
+      for (const file of files) {
+        const key = ++uploadCount;
+        setPending((p) => [...p, { key, name: file.name }]);
+        try {
+          const media = await upload(file, kind ?? kindOf(file));
+          const editor = editorRef.current;
+          // After the selection, never in place of it: a just-inserted image is still selected.
+          if (editor) editor.chain().focus().insertContentAt(editor.state.selection.to, mediaNode(media)).run();
+          setPending((p) => p.filter((u) => u.key !== key));
+          if (media.duplicate) onMessage(`“${file.name}” was uploaded before: the library copy is used.`);
+        } catch (e) {
+          const error = e instanceof Error ? e.message : 'The upload failed.';
+          setPending((p) => p.map((u) => (u.key === key ? { ...u, error } : u)));
+        }
+      }
+    },
+    [upload, onMessage],
+  );
+  const uploadRef = useRef(uploadFiles);
 
   const updateSlash = useCallback((editor: Editor) => {
     const found = slashAt(editor);
@@ -60,15 +99,25 @@ export function PostEditor({
     }));
   }, []);
 
+  /** Image and File open a file picker; the rest are editor commands. */
+  const runItem = useCallback(
+    (editor: Editor, id: string) => {
+      if (id === UPLOAD_ITEMS.image) return imageInput.current?.click();
+      if (id === UPLOAD_ITEMS.file) return fileInput.current?.click();
+      const error = runBlockItem(editor, id, askValue);
+      if (error) onMessage(error);
+    },
+    [askValue, onMessage],
+  );
+
   const choose = useCallback(
     (editor: Editor, item: BlockItem) => {
       const s = slashRef.current;
       if (s) editor.chain().focus().deleteRange({ from: s.from, to: s.to }).run();
       setSlash(null);
-      const error = runBlockItem(editor, item.id, askValue);
-      if (error) onMessage(error);
+      runItem(editor, item.id);
     },
-    [askValue, onMessage],
+    [runItem],
   );
 
   const editor = useEditor({
@@ -105,6 +154,23 @@ export function PostEditor({
         }
         return false;
       },
+      // A pasted screenshot or copied image file is uploaded; pasted text works as before.
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        if (!files.length) return false;
+        void uploadRef.current(files);
+        return true;
+      },
+      // Files dropped from the computer are uploaded where they land.
+      handleDrop: (view, event, _slice, moved) => {
+        const files = Array.from(event.dataTransfer?.files ?? []);
+        if (moved || !files.length) return false;
+        event.preventDefault();
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        if (at) view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(at.pos))));
+        void uploadRef.current(files);
+        return true;
+      },
     },
     onUpdate: ({ editor }) => {
       onChangeRef.current(normalizeDoc(editor.getJSON()));
@@ -117,6 +183,7 @@ export function PostEditor({
     slashRef.current = slash;
     onChangeRef.current = onChange;
     editorRef.current = editor;
+    uploadRef.current = uploadFiles;
   });
 
   // Screen readers follow the highlighted menu item while focus stays in the text.
@@ -136,9 +203,55 @@ export function PostEditor({
 
   if (!editor) return <p aria-live="polite">Loading the editor…</p>;
 
+  const picked = (kind: MediaKind) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    void uploadFiles(files, kind);
+  };
+
   return (
     <div className="ed">
-      <Toolbar editor={editor} onMessage={onMessage} askValue={askValue} />
+      <Toolbar editor={editor} onMessage={onMessage} askValue={askValue} runItem={runItem} />
+      <input
+        ref={imageInput}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        multiple
+        hidden
+        aria-label="Upload an image"
+        onChange={picked('image')}
+      />
+      <input
+        ref={fileInput}
+        type="file"
+        accept={FILE_ACCEPT}
+        multiple
+        hidden
+        aria-label="Upload a file"
+        onChange={picked('file')}
+      />
+      <ul className="ed-uploads" aria-live="polite" aria-label="Uploads">
+        {pending.map((u) => (
+          <li key={u.key} className={u.error ? 'ed-upload ed-upload--error' : 'ed-upload'}>
+            {u.error ? (
+              <>
+                <span role="alert">
+                  Couldn’t upload “{u.name}”: {u.error}
+                </span>
+                <button
+                  type="button"
+                  className="ed-tool"
+                  onClick={() => setPending((p) => p.filter((x) => x.key !== u.key))}
+                >
+                  Dismiss
+                </button>
+              </>
+            ) : (
+              <span>Uploading “{u.name}”…</span>
+            )}
+          </li>
+        ))}
+      </ul>
       <EditorContent editor={editor} />
       {slash && (
         <ul
@@ -181,7 +294,17 @@ const STYLE_OPTIONS = [
   { value: 'heading4', label: 'Heading 4' },
 ];
 
-function Toolbar({ editor, onMessage, askValue }: { editor: Editor; onMessage: (t: string) => void; askValue: Ask }) {
+function Toolbar({
+  editor,
+  onMessage,
+  askValue,
+  runItem,
+}: {
+  editor: Editor;
+  onMessage: (t: string) => void;
+  askValue: Ask;
+  runItem: (editor: Editor, id: string) => void;
+}) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -306,14 +429,7 @@ function Toolbar({ editor, onMessage, askValue }: { editor: Editor; onMessage: (
       >
         ❝
       </button>
-      <select
-        aria-label="Insert"
-        value=""
-        onChange={(e) => {
-          const error = runBlockItem(editor, e.target.value, askValue);
-          if (error) onMessage(error);
-        }}
-      >
+      <select aria-label="Insert" value="" onChange={(e) => runItem(editor, e.target.value)}>
         <option value="">Insert…</option>
         {BLOCK_ITEMS.filter((i) => !STYLE_OPTIONS.some((s) => s.value === i.id)).map((i) => (
           <option key={i.id} value={i.id}>
