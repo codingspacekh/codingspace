@@ -90,7 +90,20 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** a pull request with a failing test cannot merge; a passing one deploys a preview automatically.
 
-### M2 — Public read path (8 days)
+### M2 — Public read path (8 days) — ✅ DONE 2026-10-16 (placeholder content)
+> **Result:**
+> - **Renderer** (`src/server/render`): Tiptap JSON → allow-listed HTML with KaTeX, Shiki, callouts, tables, figures, files and checked embeds; TOC, search text, reading time. XSS corpus of ~60 payloads, Khmer round-trip, 3 reference-lesson snapshots.
+> - **Read schema:** lesson metadata, projects, profile, timeline, featured problems; six `security_invoker` `public_*` views; 44 more pgTAP tests.
+> - **Content import** (`npm run content:import`): Markdown → editor JSON → database, validated with file and line in every error; integration-tested against a local Supabase in CI.
+> - **Pages from the database:** Home, `/study/[subject]`, `/posts/[slug]` (TOC, prev/next, section side-nav, code copy), Projects, Author, 404/500; Study ▾ menu; Khmer font for `lang="km"`; static with 5-minute ISR.
+> - **SEO:** canonical URLs, OpenGraph, `Article` JSON-LD, `sitemap.xml`, `rss.xml`, `robots.txt` (blocked until launch, like the `noindex` header).
+> - **Budgets:** new CI job `Lighthouse (lab budgets)` on every PR. On the CI runner: Performance 0.96–0.98, TBT 15–35 ms, LCP 2.3–2.7 s, Accessibility/SEO/Best practices 1.0.
+> - **Deviations:**
+>   - Content is **placeholder** (owner's choice): 9 lessons and 2 life posts marked `dummy: true`. The exit criterion "at least 5 real lessons" is open until real lessons replace them.
+>   - The animated Arwes backdrop became the prototype's CSS grid, and Arwes now loads only on pages that animate (ADR 0001 addendum). Animated effects return in M6 under the same budget.
+>   - `@lhci/cli` lives in `tools/lighthouse/` with its own lockfile (its puppeteer helpers carry advisories with no fix).
+>   - `og:image` is deferred to M6, with the final visual design.
+
 **Goal:** students can browse real content (seeded) with the final page structure.
 
 **Build:**
