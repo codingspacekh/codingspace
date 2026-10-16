@@ -36,7 +36,7 @@ flowchart LR
 | **M3** ✅ | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule, study structure | ADM-01…09, ADM-12 | 10 days |
 | **M4** | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
-| **M5** | Site-content admin | Problem of the week, study structure, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
+| **M5** | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
 | **M6** | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
 | — | **R2: public launch** | `codingspace.io` live and indexed | | |
