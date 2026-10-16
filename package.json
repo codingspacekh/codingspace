@@ -33,7 +33,8 @@
     "audit:ci": "npm audit --audit-level=high",
     "content:import": "tsx --env-file-if-exists=.env.local scripts/import-content.ts",
     "test:int": "vitest run --config vitest.integration.config.mts",
-    "predev": "node scripts/copy-katex.mjs"
+    "predev": "node scripts/copy-katex.mjs",
+    "check:bundle": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "@arwes/bleeps": "1.0.0-next.25020502",
