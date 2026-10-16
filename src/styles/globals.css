@@ -1265,12 +1265,101 @@ html[data-motion='off'] *::after {
   animation: none !important;
   transition: none !important;
 }
+/* The OS setting applies until the visitor turns motion on in the top bar. */
 @media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='on']) *,
+  html:not([data-motion='on']) *::before,
+  html:not([data-motion='on']) *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Reading mode (PUB-11): a calm page for long lessons. No backdrop, glow or motion. */
+.read-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+html[data-reading='on'] .ui-backdrop {
+  display: none;
+}
+html[data-reading='on'] body {
+  background: var(--bg);
+}
+html[data-reading='on'] *,
+html[data-reading='on'] *::before,
+html[data-reading='on'] *::after {
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+html[data-reading='on'] .prose p,
+html[data-reading='on'] .prose li {
+  color: var(--fg);
+}
+
+/* Print (PUB-11): the lesson only, black on white, links spelled out. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .ui-bar,
+  .ui-backdrop,
+  .ui-skip,
+  .site-footer,
+  .toc,
+  .rail,
+  .pn,
+  .crumbs,
+  .read-tools,
+  .code-copy,
+  .embed {
+    display: none !important;
+  }
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    background: transparent !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    border-color: #999 !important;
+  }
+  .wrap,
+  .lay {
+    display: block !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .frame::before,
+  .frame::after {
+    display: none !important;
+  }
+  .prose a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    overflow-wrap: anywhere;
+  }
+  figure,
+  pre,
+  table,
+  .callout,
+  .katex-display,
+  .potw {
+    break-inside: avoid;
+  }
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+  }
+  img {
+    max-width: 100% !important;
   }
 }
 

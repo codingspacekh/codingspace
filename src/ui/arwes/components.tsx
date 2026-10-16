@@ -4,11 +4,11 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Animator, AnimatorGeneralProvider, FrameCorners, Text } from '@arwes/react';
 import { usePrefs, useSound } from './prefs';
 
-/** Arwes animation settings; disabled when motion is off (OS setting or the top-bar toggle). */
+/** Arwes animation settings; disabled when motion is off (OS setting, the top-bar toggle) or in reading mode. */
 function ArwesScope({ children }: { children: ReactNode }) {
-  const { motion } = usePrefs();
+  const { animate } = usePrefs();
   return (
-    <AnimatorGeneralProvider disabled={!motion} duration={{ enter: 0.4, exit: 0.3, stagger: 0.08 }}>
+    <AnimatorGeneralProvider disabled={!animate} duration={{ enter: 0.4, exit: 0.3, stagger: 0.08 }}>
       {children}
     </AnimatorGeneralProvider>
   );

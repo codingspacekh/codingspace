@@ -102,3 +102,37 @@ describe('<PostView>', () => {
     expect(screen.queryByText('Beginner')).toBeNull();
   });
 });
+
+describe('reading mode and print (PUB-11)', () => {
+  it('reading mode is a remembered toggle that calms the page', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    renderPost(base);
+    const toggle = screen.getByRole('button', { name: 'Reading mode off' });
+    await userEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Reading mode on' })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.reading).toBe('on');
+    expect(JSON.parse(window.localStorage.getItem('cs-prefs')!)).toMatchObject({ reading: true });
+  });
+
+  it('Print opens the browser print dialog', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderPost(base);
+    await userEvent.click(screen.getByRole('button', { name: 'Print' }));
+    expect(print).toHaveBeenCalled();
+    print.mockRestore();
+  });
+
+  it('printing opens hints and solutions, and closes them again afterwards', () => {
+    renderPost({
+      ...base,
+      post: { ...base.post, html: '<details><summary>Show the solution</summary><p>x = 2</p></details>' },
+    });
+    const details = document.querySelector('.prose details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    window.dispatchEvent(new Event('beforeprint'));
+    expect(details.open).toBe(true);
+    window.dispatchEvent(new Event('afterprint'));
+    expect(details.open).toBe(false);
+  });
+});

@@ -1,36 +1,51 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { getPrefs, getServerPrefs, setPref, SERVER_PREFS, subscribe, type Prefs } from '../prefs-store';
 import type { BleepName } from './bleeps';
 
 export type { BleepName };
 
-type Prefs = { motion: boolean; sound: boolean; toggleSound: () => void; toggleMotion: () => void };
-const PrefsContext = createContext<Prefs>({
+type PrefsContextValue = Prefs & {
+  /** Motion that actually runs: the visitor's choice, and never in reading mode. */
+  animate: boolean;
+  toggleSound: () => void;
+  toggleMotion: () => void;
+  toggleReading: () => void;
+};
+const PrefsContext = createContext<PrefsContextValue>({
+  ...SERVER_PREFS,
   motion: false,
-  sound: false,
+  animate: false,
   toggleSound: () => {},
   toggleMotion: () => {},
+  toggleReading: () => {},
 });
 
-function osAllowsMotion() {
-  return typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 /**
- * Root of all UI state: motion (starts from the OS setting, overridable in tests, and
- * switchable from the top bar) and sound (off by default).
- * Plain React on purpose: no Arwes code runs on pages that don't animate (M2 Lighthouse gate).
+ * Root of all UI state (03 PUB-11): motion (follows the OS setting until the visitor picks),
+ * sound (off by default) and reading mode, remembered in this browser (./prefs-store.ts).
+ * `motion` forces motion on or off (tests). Plain React on purpose: no Arwes code runs on
+ * pages that don't animate (M2 Lighthouse gate).
  */
 export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode; motion?: boolean }) {
-  const [motion, setMotion] = useState(() => forcedMotion ?? osAllowsMotion());
-  const [sound, setSound] = useState(false);
-  const toggleSound = useCallback(() => setSound((s) => !s), []);
-  const toggleMotion = useCallback(() => setMotion((m) => !m), []);
+  const stored = useSyncExternalStore(subscribe, getPrefs, getServerPrefs);
+  const motion = forcedMotion ?? stored.motion;
+  const { sound, reading } = stored;
+  const animate = motion && !reading;
+  const toggleSound = useCallback(() => setPref('sound', !getPrefs().sound), []);
+  const toggleMotion = useCallback(() => setPref('motion', !getPrefs().motion), []);
+  const toggleReading = useCallback(() => setPref('reading', !getPrefs().reading), []);
 
   useEffect(() => {
-    document.documentElement.dataset.motion = motion ? 'on' : 'off';
-  }, [motion]);
+    const root = document.documentElement.dataset;
+    root.motion = animate ? 'on' : 'off';
+    root.reading = reading ? 'on' : 'off';
+  }, [animate, reading]);
 
-  return <PrefsContext.Provider value={{ motion, sound, toggleSound, toggleMotion }}>{children}</PrefsContext.Provider>;
+  return (
+    <PrefsContext.Provider value={{ motion, sound, reading, animate, toggleSound, toggleMotion, toggleReading }}>
+      {children}
+    </PrefsContext.Provider>
+  );
 }
 
 export const usePrefs = () => useContext(PrefsContext);
