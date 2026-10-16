@@ -20,6 +20,8 @@ export default defineConfig({
         'src/server/data/public.ts',
         'src/server/admin/posts.ts',
         'src/server/admin/list.ts',
+        'src/server/admin/sections.ts',
+        'src/server/admin/preview.ts',
       ],
       // NFR-MAINT-1: ≥ 90 % for src/lib and src/config, ≥ 70 % overall
       thresholds: {

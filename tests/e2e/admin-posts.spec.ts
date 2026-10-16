@@ -84,8 +84,13 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await latex.fill('\\frac{a+b}{2} \\ge \\sqrt{ab}');
     await expect(page.getByRole('img', { name: 'Preview' }).locator('.katex')).toBeVisible();
 
+    // A new section, made from the Section menu, is selected straight away.
+    const sectionName = `E2E section ${Date.now()}`;
+    await page.getByRole('button', { name: 'New section…' }).click();
+    await page.getByRole('textbox', { name: 'New section title' }).fill(sectionName);
+    await page.getByRole('button', { name: 'Add section' }).click();
     const section = page.getByRole('combobox', { name: 'Section' });
-    await section.selectOption({ index: 1 });
+    await expect(section.locator('option:checked')).toHaveText(sectionName);
     const sectionId = await section.inputValue();
     await expect(page.getByRole('status').filter({ hasText: 'Unsaved changes' })).toBeVisible();
     await expectAccessible(page);
@@ -122,6 +127,8 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
         await page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: new URL(page.url()).origin } })
       ).status(),
     ).toBe(200);
+    // Sections can't be deleted from the admin until M5.
+    await serviceClient().from('sections').delete().eq('id', sectionId);
   });
 
   // The M3 acceptance journey (04-milestones): write with maths and code → Preview → Publish →
@@ -229,5 +236,52 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
   test('the timer endpoint refuses calls without the secret', async ({ request }) => {
     const res = await request.get('/api/cron/publish-due');
     expect([401, 503]).toContain(res.status());
+  });
+
+  test('study structure: add, rename, move and delete a section; the subject page follows', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const name = `E2E struct ${Date.now()}`;
+    await page.goto('/admin/sections?subject=it');
+    await expect(page.getByRole('heading', { level: 1, name: 'Study structure' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'IT', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+    const add = page.getByRole('form', { name: 'Add a section to IT' });
+    await add.getByRole('textbox', { name: 'Title' }).fill(name);
+    await add.getByRole('button', { name: 'Add section' }).click();
+    await expect(page.getByRole('status')).toHaveText(`Added “${name}” at the end.`);
+    await expectAccessible(page);
+
+    await page.getByRole('button', { name: `Edit ${name}` }).click();
+    const form = page.getByRole('form', { name: `Edit ${name}` });
+    await form.getByRole('textbox', { name: 'Title' }).fill(`${name} renamed`);
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: `${name} renamed` })).toBeVisible();
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    await student.goto('/study/it');
+    await expect(student.getByText(`${name} renamed`).first()).toBeVisible();
+
+    const titles = () => page.getByRole('list').first().getByRole('heading', { level: 2 }).allTextContents();
+    const before = await titles();
+    if (before.length > 1) {
+      await page.getByRole('button', { name: `Move ${name} renamed up` }).click();
+      await expect(page.getByRole('status')).toContainText('up');
+      expect((await titles()).indexOf(`${name} renamed`)).toBe(before.length - 2);
+    }
+
+    await page.getByRole('button', { name: `Delete ${name} renamed` }).click();
+    await page
+      .getByRole('group', { name: 'Confirm delete' })
+      .getByRole('button', { name: 'Delete permanently' })
+      .click();
+    await expect(page.getByRole('heading', { level: 2, name: `${name} renamed` })).toHaveCount(0);
+    await student.goto('/study/it');
+    await expect(student.getByText(`${name} renamed`)).toHaveCount(0);
+    await student.context().close();
+    expect(problems).toEqual([]);
   });
 });

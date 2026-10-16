@@ -15,6 +15,14 @@ import {
   unpublishPost,
 } from '@/server/admin/posts';
 import { dashboard, listPosts } from '@/server/admin/list';
+import {
+  createSection,
+  deleteSection,
+  listStructure,
+  reorderLessons,
+  reorderSections,
+  updateSection,
+} from '@/server/admin/sections';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // The write side against a real database (03 ADM-03, ADM-05…09): every change commits
@@ -334,5 +342,86 @@ describe('a new lesson in an existing section', () => {
 
     const off = await unpublishPost(owner, second.id);
     expect(off.paths).toContain('/posts/it-test-order-first');
+  });
+});
+
+describe('adding a section', () => {
+  afterAll(async () => {
+    await service.from('sections').delete().like('slug', 'it-test-new%');
+    await service.from('sections').delete().like('title', 'វិ%');
+  });
+
+  it('goes last in its subject, with a free address from its title', async () => {
+    const a = await createSection(owner, { subject_id: 'coding', title: 'IT test new: Recursion' });
+    const b = await createSection(owner, { subject_id: 'coding', title: 'IT test new: Recursion' });
+    expect(a.slug).toBe('it-test-new-recursion');
+    expect(b.slug).toBe('it-test-new-recursion-2');
+    expect(b.sort).toBeGreaterThan(a.sort);
+    const khmer = await createSection(owner, { subject_id: 'coding', title: 'វិសមភាព' });
+    expect(khmer.slug).toMatch(/^section-\d+$/);
+    await expect(createSection(owner, { subject_id: 'coding', title: '  ' })).rejects.toMatchObject({ status: 422 });
+    await expect(createSection(owner, { subject_id: 'art', title: 'X' })).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('visitors cannot add sections', async () => {
+    const { error } = await anon.rpc('admin_create_section', {
+      p_subject_id: 'math',
+      p_title: 'x',
+      p_slug: 'x',
+      p_description: '',
+    });
+    expect(error?.code).toBe('42501');
+  });
+});
+
+describe('study structure', () => {
+  it('rename, reorder sections and lessons, delete an empty one; each returns the pages to rebuild', async () => {
+    const a = await createSection(owner, { subject_id: 'it', title: 'IT test struct A' });
+    const b = await createSection(owner, { subject_id: 'it', title: 'IT test struct B' });
+    const one = await createPost(owner, {
+      kind: 'lesson',
+      title: 'IT test struct: one',
+      subject_id: 'it',
+      section_id: a.id,
+    });
+    const two = await createPost(owner, {
+      kind: 'lesson',
+      title: 'IT test struct: two',
+      subject_id: 'it',
+      section_id: a.id,
+    });
+    await saveDraft(owner, one.id, 1, { content_json: doc('1') });
+    await publishPost(owner, one.id, 2);
+
+    const renamed = await updateSection(owner, a.id, { title: 'IT test struct A, renamed', description: 'about A' });
+    expect(renamed.paths).toEqual(['/study/it', '/posts/it-test-struct-one']);
+
+    let structure = await listStructure(owner, 'it');
+    const ids = structure.map((s) => s.id);
+    const reordered = [...ids.filter((x) => x !== b.id), b.id].reverse();
+    await reorderSections(owner, { subject_id: 'it', ids: reordered });
+    structure = await listStructure(owner, 'it');
+    expect(structure.map((s) => s.id)).toEqual(reordered);
+    const sectionA = structure.find((s) => s.id === a.id)!;
+    expect(sectionA).toMatchObject({ title: 'IT test struct A, renamed', description: 'about A' });
+    expect(sectionA.lessons.map((l) => l.title)).toEqual(['IT test struct: one', 'IT test struct: two']);
+
+    const lessons = await reorderLessons(owner, a.id, { ids: [two.id, one.id] });
+    expect(lessons.paths).toContain('/posts/it-test-struct-one');
+    expect((await listStructure(owner, 'it')).find((s) => s.id === a.id)!.lessons.map((l) => l.title)).toEqual([
+      'IT test struct: two',
+      'IT test struct: one',
+    ]);
+
+    await expect(deleteSection(owner, a.id)).rejects.toMatchObject({ status: 409 });
+    expect((await deleteSection(owner, b.id)).paths).toEqual(['/study/it']);
+    // Listing a section twice (or leaving one out) is refused.
+    await expect(reorderSections(owner, { subject_id: 'it', ids: [a.id, a.id] })).rejects.toMatchObject({
+      status: 422,
+    });
+    await expect(updateSection(owner, a.id, { title: ' ' })).rejects.toMatchObject({ status: 422 });
+
+    await service.from('posts').delete().in('id', [one.id, two.id]);
+    await deleteSection(owner, a.id);
   });
 });

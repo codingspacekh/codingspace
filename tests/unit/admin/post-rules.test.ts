@@ -1,4 +1,4 @@
-import { postSlug, publishChecklist, revalidationPaths, scheduleProblem } from '@/lib/post-rules';
+import { moveItem, postSlug, publishChecklist, revalidationPaths, scheduleProblem } from '@/lib/post-rules';
 
 describe('postSlug', () => {
   it('makes a URL slug from an English title', () => {
@@ -98,5 +98,20 @@ describe('revalidationPaths', () => {
 
   it('a life post refreshes the Author page instead', () => {
     expect(revalidationPaths({ slug: 'hello', kind: 'life', subject: null })).toEqual(['/posts/hello', '/', '/author']);
+  });
+});
+
+describe('moveItem', () => {
+  it('swaps with the neighbour, and does nothing at the ends', () => {
+    expect(moveItem(['a', 'b', 'c'], 1, -1)).toEqual(['b', 'a', 'c']);
+    expect(moveItem(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'c', 'b']);
+    expect(moveItem(['a', 'b', 'c'], 0, -1)).toEqual(['a', 'b', 'c']);
+    expect(moveItem(['a', 'b', 'c'], 2, 1)).toEqual(['a', 'b', 'c']);
+    expect(moveItem(['a'], 5, 1)).toEqual(['a']);
+  });
+  it('never mutates the input', () => {
+    const list = ['a', 'b'];
+    moveItem(list, 0, 1);
+    expect(list).toEqual(['a', 'b']);
   });
 });
