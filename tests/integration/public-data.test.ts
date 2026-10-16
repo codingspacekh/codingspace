@@ -4,13 +4,16 @@ import { importContent } from '@/server/content/import';
 import { loadContent } from '@/server/content/load';
 import { supabaseStore } from '@/server/content/supabase-store';
 import {
+  getAuthorName,
   getAuthorPage,
   getFeaturedProblem,
+  getFeedPosts,
   getLatestLessons,
   getLessonCounts,
   getPostPage,
   getPostSlugs,
   getProjects,
+  getSitemapPosts,
   getSubjectSections,
 } from '@/server/data/public';
 
@@ -86,5 +89,21 @@ describe('public page data', () => {
     expect(author.profile?.name).toBe('CodingSpace');
     expect(author.timeline).toHaveLength(4);
     expect(author.lifePosts.map((p) => p.slug).sort()).toEqual(['study-tips-km', 'why-i-started-codingspace']);
+  });
+
+  it('lists every post with its last update for the sitemap', async () => {
+    const posts = await getSitemapPosts();
+    expect(posts).toHaveLength(11);
+    expect(posts.every((p) => !Number.isNaN(Date.parse(p.updatedAt)))).toBe(true);
+  });
+
+  it('feeds the newest posts, life posts included', async () => {
+    const feed = await getFeedPosts(20);
+    expect(feed).toHaveLength(11);
+    expect(feed.some((p) => p.slug === 'why-i-started-codingspace')).toBe(true);
+  });
+
+  it('reads the author name', async () => {
+    expect(await getAuthorName()).toBe('CodingSpace');
   });
 });

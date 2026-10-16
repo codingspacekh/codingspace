@@ -16,6 +16,9 @@ const content = loadContent(join(__dirname, '../../content'));
 
 describe('content import into a real database', () => {
   beforeAll(async () => {
+    // Start from no posts, so publish dates don't depend on which integration file ran first.
+    const { error } = await admin.from('posts').delete().not('id', 'is', null);
+    if (error) throw new Error(error.message);
     // Twice: the second run must update in place, not duplicate or fail on constraints.
     await importContent(content, supabaseStore(admin), new Date('2026-10-16T08:00:00Z'));
     await importContent(content, supabaseStore(admin), new Date('2026-10-20T08:00:00Z'));

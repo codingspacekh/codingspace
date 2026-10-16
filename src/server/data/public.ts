@@ -264,3 +264,26 @@ export async function getAuthorPage(): Promise<{
     lifePosts: must<CardRow[]>(life, 'life posts').map(toCard),
   };
 }
+
+// ---------- SEO: sitemap, feed, author name ----------
+
+export async function getSitemapPosts(): Promise<{ slug: string; updatedAt: string }[]> {
+  const rows = must<{ slug: string; updated_at: string }[]>(
+    await db().from('public_posts').select('slug, updated_at').order('slug'),
+    'sitemap posts',
+  );
+  return rows.map((r) => ({ slug: r.slug, updatedAt: r.updated_at }));
+}
+
+export async function getFeedPosts(limit = 20): Promise<PostCard[]> {
+  const rows = must<CardRow[]>(
+    await db().from('public_posts').select(CARD_COLUMNS).order('published_at', { ascending: false }).limit(limit),
+    'feed',
+  );
+  return rows.map(toCard);
+}
+
+export async function getAuthorName(): Promise<string | null> {
+  const row = must<{ name: string } | null>(await db().from('public_profile').select('name').maybeSingle(), 'author');
+  return row?.name ?? null;
+}
