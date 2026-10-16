@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { normalizeDoc } from '@/lib/content-json';
 import { postSlug, revalidationPaths, scheduleProblem, type PublishedRef } from '@/lib/post-rules';
 import { renderContent } from '@/server/render';
 
@@ -181,4 +182,103 @@ export async function publishDuePosts(service: SupabaseClient, now = new Date())
     }
   }
   return { published, failed };
+}
+
+export type EditablePost = {
+  id: string;
+  kind: 'lesson' | 'life';
+  slug: string;
+  title: string;
+  summary: string;
+  content_json: unknown;
+  subject_id: string | null;
+  section_id: string | null;
+  level: number;
+  minutes: number;
+  problem_count: number;
+  lang: 'en' | 'km';
+  status: 'draft' | 'scheduled' | 'published';
+  revision: number;
+  published_at: string | null;
+  scheduled_at: string | null;
+  has_unpublished_changes: boolean;
+};
+
+/** The draft for the editor, with every section (for the dependent Section menu). */
+export async function getPostForEdit(supabase: SupabaseClient, id: string) {
+  const [post, sections] = await Promise.all([
+    supabase
+      .from('posts')
+      .select(
+        'id, kind, slug, title, summary, content_json, subject_id, section_id, level, minutes, problem_count, lang, status, revision, live_revision, published_at, scheduled_at',
+      )
+      .eq('id', uuid.parse(id))
+      .maybeSingle(),
+    supabase.from('sections').select('id, subject_id, title, sort').order('sort'),
+  ]);
+  if (post.error) fail(post.error, 'posts');
+  if (sections.error) fail(sections.error, 'sections');
+  if (!post.data) throw new PostError(404, 'post not found');
+  const { live_revision, ...rest } = post.data;
+  return {
+    post: {
+      ...rest,
+      has_unpublished_changes: rest.status === 'published' && rest.revision > (live_revision ?? 0),
+    } as EditablePost,
+    sections: sections.data as { id: string; subject_id: string; title: string; sort: number }[],
+  };
+}
+
+/**
+ * Saves the editor's draft. Until the first publish the URL follows the title (a free
+ * slug: -2, -3… if taken); after it, the URL is fixed and the title can change freely.
+ */
+export async function saveDraft(
+  supabase: SupabaseClient,
+  id: string,
+  revision: number,
+  fields: unknown,
+): Promise<{ revision: number; slug: string }> {
+  const parsed = draftFields.safeParse(fields);
+  if (!parsed.success) throw new PostError(422, z.prettifyError(parsed.error));
+  // The slug is the server's to set (below), never the client's.
+  const data = { ...parsed.data };
+  delete data.slug;
+  if (data.content_json) data.content_json = normalizeDoc(data.content_json);
+
+  const { data: current, error } = await supabase
+    .from('posts')
+    .select('slug, published_at')
+    .eq('id', uuid.parse(id))
+    .maybeSingle();
+  if (error) fail(error, 'posts');
+  if (!current) throw new PostError(404, 'post not found');
+
+  let slug = current.slug as string;
+  if (data.title !== undefined && current.published_at === null) {
+    const wanted = postSlug(data.title, slug);
+    // Already this title's slug, or its -2/-3 variant: keep it.
+    const matches = slug === wanted || new RegExp(`^${wanted}-\\d+$`).test(slug);
+    if (!matches) slug = await freeSlug(supabase, wanted, id);
+  }
+  const next = await savePost(supabase, id, revision, slug === current.slug ? data : { ...data, slug });
+  return { revision: next, slug };
+}
+
+async function slugTaken(supabase: SupabaseClient, slug: string, except: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('slug', slug)
+    .neq('id', except);
+  if (error) fail(error, 'posts');
+  return (count ?? 0) > 0;
+}
+
+async function freeSlug(supabase: SupabaseClient, base: string, except: string): Promise<string> {
+  for (let n = 1; n <= 50; n++) {
+    const slug = n === 1 ? base : `${base}-${n}`;
+    if (!(await slugTaken(supabase, slug, except))) return slug;
+  }
+  throw new PostError(409, 'could not find a free URL for this title');
 }
