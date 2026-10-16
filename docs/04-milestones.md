@@ -33,10 +33,10 @@ flowchart LR
 | **M0** | Arwes & stack spike | Go/no-go on Arwes inside Next.js Pages Router; CSP and performance numbers measured | D1, D2, NFR-PERF-2 | 3 days |
 | **M1** | Walking skeleton | Repo, CI gates, Supabase local + RLS baseline, security headers, preview deploys, first green E2E | NFR-SEC-2, NFR-MAINT-1 | 4 days |
 | **M2** | Public read path | Home, Study ×4, lesson, Projects, Author pages from the DB; renderer; SEO; content import script | PUB-01…08, 10, 12 | 8 days |
-| **M3** | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule | ADM-01…09 | 10 days |
+| **M3** ✅ | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule, study structure | ADM-01…09, ADM-12 | 10 days |
 | **M4** | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
-| **M5** | Site-content admin | Problem of the week, study structure, projects, profile editors | ADM-11…14, PUB-05…07 | 5 days |
+| **M5** | Site-content admin | Problem of the week, study structure, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
 | **M6** | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
 | — | **R2: public launch** | `codingspace.io` live and indexed | | |
@@ -126,20 +126,42 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** all public pages render from the DB on preview; budgets pass; content import works for at least 5 real lessons.
 
-### M3 — Admin core (10 days) — 🚧 in progress (started 2026-10-16)
-> **Plan (one PR each):**
-> 1. ✅ **Sign-in & admin gate:** password + required TOTP, HttpOnly session cookies through our own API (the browser never calls Supabase), proxy + `withOwner()` + RLS, 12 h idle timeout and revocation in `public.admin_touch()`, sign out (everywhere), Origin check on every mutating route.
-> 2. ✅ **Write side:** every edit stays in the draft until Publish/Update, settings included (new `live_*` columns); one `admin_*` function per change (create, save, publish, unpublish, schedule, restore, delete), each with its revision and audit row; stale saves get 409; the URL is locked after the first publish; `src/server/admin/posts.ts` renders on publish and returns the pages to revalidate.
-> 3. ✅ **Dashboard and posts list** (ADM-02, ADM-03): counts linking to the filtered list, recent edits, New lesson / New life post; search and filters kept in the address bar; delete with an inline confirmation, rebuilding the post's pages if it was live.
-> 4. ✅ **Editor and settings panel** (ADM-04, ADM-05): Tiptap 3 with exactly the content format's nodes (a round-trip test loads every fixture and imported lesson and expects identical JSON and HTML); toolbar and "/" menu with keyboard navigation; maths blocks and inline maths with a live KaTeX preview using the renderer's own options; code language, callout type, embeds from a pasted link; existing images and files kept (uploads in M4); settings with the dependent Section list; the URL follows the title until first publish. Save by button or Ctrl/⌘+S; a stale tab gets a conflict instead of overwriting.
-> 5. ✅ **Autosave and history** (ADM-06): saves a second after the last edit, one request at a time; retries a lost connection (2 s → 30 s); stops and says so when signed out (12 h idle) or when another tab saved first; saves when the tab is hidden. History panel: preview any kept version as students would see it, restore it after confirming; a restore first keeps the current draft (`before_restore`), so it can be undone.
-> 6. ✅ **Publishing** (ADM-07…09): "Ready to publish?" checklist (required items block, recommended ones warn); Preview in a new tab with the real lesson view; Publish / Update / Unpublish (confirmed) / Schedule / Cancel; each rebuilds the affected pages at once (measured < 10 s in the acceptance test); scheduled posts go live through `/api/cron/publish-due`, called every 5 minutes by GitHub Actions.
-> - ✅ **Brought forward from M5 at the owner's request: Study structure (ADM-12).** A Study structure page per subject: add, rename and describe sections (the address stays), move them up and down, delete empty ones, and order the lessons inside each; plus "New section…" in the editor's Section menu. Every change rebuilds the subject page and the affected lesson pages.
-> 7. Acceptance journey and docs.
->
-> **Decisions:** autosave keeps one revision (and one audit row) per 10 minutes of editing, not one per keystroke; a post's URL can't change once published (no redirects yet); `npm run content:import` overwrites drafts, so stop using it for a post once you edit that post in the admin.
->
-> **Deviations so far:** the 5-minute timer runs on GitHub Actions, not Vercel Cron: on the Hobby plan Vercel Cron runs only once a day. GitHub can start a scheduled run a few minutes late, so a scheduled post goes live within about 5–15 minutes of its time. Turnstile on the sign-in form (03 §8.2) is not in this milestone's build list; it moves to M7 hardening. Supabase's own auth rate limits apply meanwhile.
+### M3 — Admin core (10 days) — ✅ DONE 2026-10-16
+> **Result** (PRs #16–#25):
+> - **Sign-in and the admin gate** (ADM-01):
+>   - Email + password, then a required TOTP code; the first sign-in sets up the authenticator.
+>   - Session cookies are HttpOnly: all auth goes through our own `/api/auth/*`, so the browser never calls Supabase and CSP `connect-src` stays `'self'`.
+>   - Three layers: `src/proxy.ts` (session + AAL2) → `withOwner()` on every `/api/admin` route (owner allow-list, revoked session, 12 h idle in `public.admin_touch()`) → RLS.
+>   - Sign out, and sign out everywhere (takes effect at once); Origin check on every mutating route.
+> - **Write side:** a draft and a live snapshot for every post, settings included (`live_*` columns).
+>   - Every change is one `admin_*` database function: one transaction with its revision and audit row; 409 for a stale tab.
+>   - The URL is locked after the first publish; new lessons go last in their section.
+> - **Dashboard and posts list** (ADM-02, ADM-03), and **Study structure** (ADM-12, brought forward from M5 at the owner's request): add, rename, describe, reorder and delete-if-empty sections; order the lessons in each.
+> - **Editor** (ADM-04, ADM-05): Tiptap 3 with exactly the content format's nodes.
+>   - A round-trip test checks every fixture and imported lesson comes back with identical JSON and HTML.
+>   - Toolbar and "/" menu; maths with a live KaTeX preview (the renderer's own options); code languages, callouts, embeds, tables.
+>   - Settings with the dependent Section menu and "New section…".
+> - **Autosave and history** (ADM-06): 1 s after the last edit; retries offline; stops on sign-out or conflict. Preview and restore any kept version; a restore can be undone.
+> - **Publishing** (ADM-07…09): checklist, Preview (the real lesson view), Publish / Update / Unpublish / Schedule.
+>   - Each action rebuilds the post's page, its subject, Home and every lesson page in its section.
+>   - Scheduled posts go live through `/api/cron/publish-due`.
+> - **Exit criteria:**
+>   - The acceptance journey is green in CI, against a production build with a local database. It measures the lesson in its section and in Latest lessons in under 10 s, then unpublish → 404 and schedule → timer → live.
+>   - The owner published a test lesson end to end on staging (2026-10-16).
+> - **Tests at the end of M3:** 197 pgTAP, 395 unit and component, 52 integration, 70 E2E (axe and a CSP-violation check on every admin page).
+> - **Found and fixed by testing:**
+>   - The CLI's `[auth.email] enable_signup = false` switched off the whole email provider.
+>   - React reused the password `<input>` for the TOTP code.
+>   - supabase-js already prefixes the QR code's `data:` URL.
+>   - zod probes `eval()` when it loads, so it is kept out of the browser.
+>   - From the owner's staging test: new lessons went to the top of their section, and neighbouring lesson pages weren't rebuilt.
+> - **Deviations:**
+>   - The 5-minute timer runs on **GitHub Actions** (`.github/workflows/publish-due.yml`), not Vercel Cron, which runs once a day on Hobby. A scheduled post goes live within about 5–15 minutes of its time.
+>   - Turnstile on the sign-in form moves to M7; Supabase's auth rate limits apply meanwhile.
+> - **Decisions:**
+>   - Autosave keeps one revision (and one audit row) per 10 minutes of editing.
+>   - `npm run content:import` overwrites drafts, so don't re-import a post after editing it in the admin.
+>   - A section's slug never changes, so `/study/…#slug` links keep working.
 
 **Goal:** the owner can write, preview and publish without touching code.
 
@@ -271,8 +293,9 @@ Each milestone lists the **tests written first**. They start red and define "don
 | PUB-11 Sound/motion/reading/print | M2 (stubs), M6 |
 | PUB-12 Error pages | M2 |
 | ADM-01…09 | M3 |
+| ADM-12 Study structure | M3 (brought forward from M5) |
 | ADM-10 Media | M4 |
-| ADM-11…14 | M5 |
+| ADM-11, ADM-13, ADM-14 | M5 |
 | ADM-15 Audit log view | M7 (events recorded from M3) |
 | ADM-16 Export | M7 |
 | NFR-PERF-* | Budgets from M1, verified each milestone |
