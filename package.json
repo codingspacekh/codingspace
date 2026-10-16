@@ -27,7 +27,9 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "prebuild": "node patches/apply-arwes-patch.mjs",
     "pretest": "node patches/apply-arwes-patch.mjs",
-    "audit:ci": "npm audit --audit-level=high"
+    "audit:ci": "npm audit --audit-level=high",
+    "content:import": "tsx --env-file-if-exists=.env.local scripts/import-content.ts",
+    "test:int": "vitest run --config vitest.integration.config.mts"
   },
   "dependencies": {
     "@arwes/react": "1.0.0-next.25020502",
@@ -47,6 +49,7 @@
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
+    "@types/mdast": "4.0.4",
     "@types/node": "22.20.4",
     "@types/react": "18.3.20",
     "@types/react-dom": "18.3.6",
@@ -60,9 +63,20 @@
     "msw": "2.15.0",
     "playwright-core": "1.63.0",
     "prettier": "3.9.9",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
     "supabase": "2.119.0",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
-    "vitest": "4.1.11"
+    "unified": "11.0.5",
+    "vitest": "4.1.11",
+    "yaml": "2.9.1"
+  },
+  "overrides": {
+    "micromark-extension-math": {
+      "katex": "$katex"
+    }
   }
 }
