@@ -5,6 +5,8 @@ import type { Doc } from '@/editor/post-editor';
 import { PostEditor } from '@/editor/post-editor';
 import type { EditablePost } from '@/server/admin/posts';
 import { StatusBadge } from './posts-browser';
+import { publishChecklist } from '@/lib/post-rules';
+import { PublishPanel } from './publish-panel';
 import { RevisionHistory } from './revision-history';
 import { SettingsPanel, type Section, type Settings } from './settings-panel';
 
@@ -37,10 +39,14 @@ export function EditPost({ id }: { id: string }) {
   const [state, setState] = useState<SaveState>('saved');
   const [edits, setEdits] = useState(0);
   const [message, setMessage] = useState('');
-  const [panel, setPanel] = useState<'settings' | 'history'>('settings');
+  const [panel, setPanel] = useState<'settings' | 'history' | 'publish'>('settings');
+  const [busy, setBusy] = useState(false);
+  const [liveLink, setLiveLink] = useState<string | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const [saves, setSaves] = useState(0);
   const doc = useRef<Doc | null>(null);
+  // The same document as state, for the checklist (refs can't be read while rendering).
+  const [currentDoc, setCurrentDoc] = useState<Doc | null>(null);
   const revision = useRef(0);
   const inFlight = useRef<Promise<boolean> | null>(null);
   const retries = useRef(0);
@@ -70,6 +76,7 @@ export function EditPost({ id }: { id: string }) {
     });
     revision.current = p.revision;
     doc.current = null;
+    setCurrentDoc(null);
     setEditorKey((k) => k + 1);
     setState('saved');
   }, [id]);
@@ -187,6 +194,90 @@ export function EditPost({ id }: { id: string }) {
     [id, load, save, state],
   );
 
+  /** Status, address and "changes" after a publish action, without reloading the editor. */
+  const refreshMeta = useCallback(async () => {
+    const { status, data } = await api<{ post?: EditablePost }>(`/api/admin/posts/${id}`);
+    if (status !== 200 || !data.post) return;
+    const p = data.post;
+    setPost((old) =>
+      old
+        ? {
+            ...old,
+            status: p.status,
+            slug: p.slug,
+            published_at: p.published_at,
+            scheduled_at: p.scheduled_at,
+            has_unpublished_changes: p.has_unpublished_changes,
+          }
+        : old,
+    );
+  }, [id]);
+
+  /** Saves pending edits, then runs a publish action. 03 ADM-09. */
+  const act = useCallback(
+    async (
+      run: () => Promise<{ status: number; data: { error?: string; slug?: string; failed?: string[] } }>,
+      done: (slug?: string, failed?: string[]) => string,
+      live = false,
+    ) => {
+      if (state === 'conflict') return;
+      setBusy(true);
+      setLiveLink(null);
+      try {
+        if (state !== 'saved' && !(await save()))
+          return setMessage('Save your changes first (see the message above), then try again.');
+        const { status, data } = await run();
+        if (status === 409) {
+          setState('conflict');
+          return;
+        }
+        if (status !== 200) return setMessage(data.error ? `Not done: ${data.error}.` : 'Not done. Try again.');
+        setMessage(done(data.slug, data.failed));
+        if (live && data.slug) setLiveLink(`/posts/${data.slug}`);
+        await refreshMeta();
+        setSaves((n) => n + 1);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [refreshMeta, save, state],
+  );
+
+  const refreshNote = (failed?: string[]) =>
+    failed?.length ? ` ${failed.length} page(s) will catch up within 5 minutes.` : ' The site is updated.';
+
+  const publish = () =>
+    act(
+      () => api(`/api/admin/posts/${id}/publish`, { method: 'POST', body: { revision: revision.current } }),
+      (_slug, failed) => `${post?.status === 'published' ? 'Updated.' : 'Published.'}${refreshNote(failed)}`,
+      true,
+    );
+  const unpublish = () =>
+    act(
+      () => api(`/api/admin/posts/${id}/unpublish`, { method: 'POST' }),
+      (_slug, failed) => `Unpublished: students no longer see it.${refreshNote(failed)}`,
+    );
+  const schedule = (at: Date) =>
+    act(
+      () =>
+        api(`/api/admin/posts/${id}/schedule`, {
+          method: 'POST',
+          body: { revision: revision.current, at: at.toISOString() },
+        }),
+      () => 'Scheduled.',
+    );
+  const unschedule = () =>
+    act(
+      () => api(`/api/admin/posts/${id}/schedule`, { method: 'DELETE' }),
+      () => 'Schedule cancelled: it is a draft again.',
+    );
+
+  /** Opens the preview in a new tab, after saving, so it shows what is on screen. */
+  async function preview() {
+    if (state !== 'saved' && state !== 'conflict') await save();
+    window.open(`/admin/posts/${id}/preview`, '_blank', 'noopener');
+  }
+
   if (loadError)
     return (
       <>
@@ -206,14 +297,22 @@ export function EditPost({ id }: { id: string }) {
         <p className={`ed-save ed-save--${state}`} role="status">
           {SAVE_TEXT[state]}
         </p>
-        <button
-          type="button"
-          className="btn"
-          aria-expanded={panel === 'history'}
-          aria-controls="ed-side"
-          onClick={() => setPanel((p) => (p === 'history' ? 'settings' : 'history'))}
-        >
-          {panel === 'history' ? 'Settings' : 'History'}
+        <div role="group" aria-label="Side panel" className="ed-panels">
+          {(['settings', 'history', 'publish'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="btn"
+              aria-pressed={panel === p}
+              aria-controls="ed-side"
+              onClick={() => setPanel(p)}
+            >
+              {p === 'settings' ? 'Settings' : p === 'history' ? 'History' : 'Publish'}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn" onClick={() => void preview()}>
+          Preview
         </button>
         <button
           type="button"
@@ -225,8 +324,16 @@ export function EditPost({ id }: { id: string }) {
         </button>
       </div>
       {message && (
-        <p role="alert" className={state === 'rejected' ? 'adm-error' : 'adm-note'}>
+        <p role="alert" className={state === 'rejected' || message.startsWith('Not done') ? 'adm-error' : 'adm-note'}>
           {message}
+          {liveLink && (
+            <>
+              {' '}
+              <a href={liveLink} target="_blank" rel="noopener">
+                View it live
+              </a>
+            </>
+          )}
         </p>
       )}
       <div className="ed-layout">
@@ -252,6 +359,7 @@ export function EditPost({ id }: { id: string }) {
             lang={settings.lang}
             onChange={(d) => {
               doc.current = d;
+              setCurrentDoc(d);
               changed();
             }}
             onMessage={setMessage}
@@ -260,6 +368,29 @@ export function EditPost({ id }: { id: string }) {
         <div id="ed-side">
           {panel === 'history' ? (
             <RevisionHistory postId={id} refreshKey={saves} onRestore={restore} />
+          ) : panel === 'publish' ? (
+            <PublishPanel
+              state={{
+                status: post.status,
+                slug: post.slug,
+                scheduled_at: post.scheduled_at,
+                changes: post.has_unpublished_changes || (state !== 'saved' && state !== 'conflict'),
+              }}
+              items={
+                publishChecklist({
+                  kind: post.kind,
+                  title,
+                  summary: settings.summary,
+                  section_id: settings.section_id,
+                  content_json: currentDoc ?? post.content_json,
+                }).items
+              }
+              busy={busy || state === 'conflict'}
+              onPublish={publish}
+              onUnpublish={unpublish}
+              onSchedule={schedule}
+              onUnschedule={unschedule}
+            />
           ) : (
             <SettingsPanel
               kind={post.kind}
