@@ -285,6 +285,36 @@ describe('PostEditor', () => {
       await waitFor(() => expect(onMessage).toHaveBeenCalledWith(expect.stringMatching(/uploaded before/)));
     });
 
+    it('"/" → From the media library inserts an earlier upload with its default alt text', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(
+              JSON.stringify({
+                items: [{ ...image, alt: 'Saved alt', use_count: 1, created_at: '2026-10-16T00:00:00Z' }],
+                more: false,
+              }),
+            ),
+        ),
+      );
+      const { editor, body, last, upload } = await setup();
+      await type(editor, '/library');
+      await screen.findByRole('listbox');
+      await key(body, 'Enter');
+      const list = await screen.findByRole('list', { name: 'Media to insert' });
+      await userEvent.setup().click(within(list).getByRole('button', { name: /Insert graph\.png/ }));
+      await waitFor(() =>
+        expect(last()!.content).toContainEqual({
+          type: 'image',
+          attrs: { media: ID, widths: [480, 960, 1200], width: 1200, height: 600, alt: 'Saved alt' },
+        }),
+      );
+      expect(screen.queryByRole('heading', { name: 'Insert from the media library' })).toBeNull();
+      expect(upload).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+
     it('pasting text is not an upload', async () => {
       const upload = vi.fn<Upload>();
       const { body } = await setup(empty, undefined, upload);

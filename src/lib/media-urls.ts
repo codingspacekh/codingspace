@@ -37,3 +37,9 @@ export function fallbackWidth(widths: number[]): number {
 export function srcset(id: string, widths: number[], format: ImageFormat): string {
   return widths.map((w) => `${mediaUrl(imageKey(id, w, format))} ${w}w`).join(', ');
 }
+
+/** The smallest variant: thumbnails in the editor and the library. */
+export function thumbnailUrl(id: string, widths: unknown): string | null {
+  const w = mediaWidths(widths);
+  return isMediaId(id) && w ? mediaUrl(imageKey(id, w[0]!, 'webp')) : null;
+}

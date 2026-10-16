@@ -10,6 +10,7 @@ const NAV = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/posts', label: 'Posts' },
   { href: '/admin/sections', label: 'Study structure' },
+  { href: '/admin/media', label: 'Media' },
 ];
 
 /** Sends the browser to the sign-in page, remembering where it was. */

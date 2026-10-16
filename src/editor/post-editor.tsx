@@ -5,6 +5,7 @@ import { normalizeDoc } from '@/lib/content-json';
 import { extensionOf, FILE_ACCEPT, IMAGE_ACCEPT, UPLOAD_TYPES, type MediaKind } from '@/lib/media-rules';
 import { mediaNode, uploadMedia, type UploadedMedia } from '@/lib/media-upload';
 import { safeLinkHref } from '@/server/render/policy';
+import { MediaPicker } from '@/views/admin/media-library';
 import { BLOCK_ITEMS, filterBlockItems, runBlockItem, UPLOAD_ITEMS, type Ask, type BlockItem } from './commands';
 import { contentExtensions } from './nodes';
 import { viewExtensions } from './views';
@@ -59,8 +60,15 @@ export function PostEditor({
   const onChangeRef = useRef(onChange);
   const editorRef = useRef<Editor | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
+  const [picking, setPicking] = useState(false);
   const imageInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const insertMedia = useCallback((media: UploadedMedia) => {
+    const editor = editorRef.current;
+    // After the selection, never in place of it: a just-inserted image is still selected.
+    if (editor) editor.chain().focus().insertContentAt(editor.state.selection.to, mediaNode(media)).run();
+  }, []);
 
   /** Uploads one by one, each inserted where the cursor is when it finishes. */
   const uploadFiles = useCallback(
@@ -70,9 +78,7 @@ export function PostEditor({
         setPending((p) => [...p, { key, name: file.name }]);
         try {
           const media = await upload(file, kind ?? kindOf(file));
-          const editor = editorRef.current;
-          // After the selection, never in place of it: a just-inserted image is still selected.
-          if (editor) editor.chain().focus().insertContentAt(editor.state.selection.to, mediaNode(media)).run();
+          insertMedia(media);
           setPending((p) => p.filter((u) => u.key !== key));
           if (media.duplicate) onMessage(`“${file.name}” was uploaded before: the library copy is used.`);
         } catch (e) {
@@ -81,7 +87,7 @@ export function PostEditor({
         }
       }
     },
-    [upload, onMessage],
+    [upload, onMessage, insertMedia],
   );
   const uploadRef = useRef(uploadFiles);
 
@@ -104,6 +110,7 @@ export function PostEditor({
     (editor: Editor, id: string) => {
       if (id === UPLOAD_ITEMS.image) return imageInput.current?.click();
       if (id === UPLOAD_ITEMS.file) return fileInput.current?.click();
+      if (id === UPLOAD_ITEMS.library) return setPicking(true);
       const error = runBlockItem(editor, id, askValue);
       if (error) onMessage(error);
     },
@@ -252,6 +259,18 @@ export function PostEditor({
           </li>
         ))}
       </ul>
+      {picking && (
+        <MediaPicker
+          onPick={(m) => {
+            setPicking(false);
+            insertMedia(m);
+          }}
+          onClose={() => {
+            setPicking(false);
+            editor.commands.focus();
+          }}
+        />
+      )}
       <EditorContent editor={editor} />
       {slash && (
         <ul

@@ -2050,3 +2050,80 @@ img.ProseMirror-separator {
   color: var(--muted);
   font-family: var(--font-mono), monospace;
 }
+
+/* media library (03 ADM-10) and the editor's library picker */
+.adm-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.adm-media > li.is-open {
+  grid-column: 1 / -1;
+}
+.adm-media-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.adm-media-item:focus-visible {
+  outline: 2px solid var(--cyan);
+}
+.adm-media-item img,
+.adm-media-ext {
+  width: 160px;
+  max-width: 100%;
+  height: 110px;
+  object-fit: contain;
+  background: var(--surface);
+}
+.adm-media-ext {
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  font-family: var(--font-mono), monospace;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+.adm-media-name {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.adm-media-detail {
+  display: grid;
+  gap: 12px;
+  padding: 0 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.adm-media-detail h3 {
+  margin: 4px 0 0;
+  font-size: 16px;
+}
+.adm-media-detail code {
+  overflow-wrap: anywhere;
+}
+.adm-filters .adm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+.ed-picker {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+.ed-picker h2 {
+  margin: 0;
+  font-size: 18px;
+  outline: none;
+}
