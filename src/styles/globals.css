@@ -1338,7 +1338,18 @@ html[data-motion='off'] *::after {
   font: inherit;
   font-size: 16px;
 }
-.adm-form input:focus-visible {
+.adm-form textarea,
+.adm-form select {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px;
+}
+.adm-form input:focus-visible,
+.adm-form textarea:focus-visible,
+.adm-form select:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 1px;
 }
@@ -2126,4 +2137,44 @@ img.ProseMirror-separator {
   margin: 0;
   font-size: 18px;
   outline: none;
+}
+
+/* author page admin (03 ADM-14) */
+.adm-author {
+  max-width: 760px;
+}
+.adm-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.adm-timeline {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+.adm-timeline legend {
+  padding: 0 6px;
+  color: var(--fg2);
+}
+.adm-timeline ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-timeline li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+.adm-timeline .adm-year {
+  width: 6.5em;
+}
+.adm-timeline .adm-grow {
+  flex: 1 1 260px;
 }

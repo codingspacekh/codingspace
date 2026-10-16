@@ -62,4 +62,37 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await student.context().close();
     expect(problems).toEqual([]);
   });
+
+  test('author: edit the bio and add a timeline entry → the Author page shows them; then put them back', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const original = await (await page.request.get('/api/admin/author')).json();
+    const marker = `E2E ${Date.now()}`;
+
+    await page.goto('/admin/author');
+    const bio = page.getByRole('textbox', { name: 'About you' });
+    await bio.fill(`${original.profile.bio} ${marker}`);
+    await page.getByRole('button', { name: 'Add an entry' }).click();
+    const n = original.timeline.length + 1;
+    await page.getByRole('textbox', { name: `Year of entry ${n}` }).fill('2030');
+    await page.getByRole('textbox', { name: `What happened, entry ${n}` }).fill(`Timeline ${marker}`);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved. The Author page is updated.');
+    await expectAccessible(page);
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    await student.goto('/author');
+    await expect(student.getByText(marker, { exact: false }).first()).toBeVisible();
+    await expect(student.getByText(`Timeline ${marker}`)).toBeVisible();
+
+    const put = await page.request.put('/api/admin/author', { headers: { Origin: baseURL! }, data: original });
+    expect(put.status()).toBe(200);
+    await student.goto('/author');
+    await expect(student.getByText(marker)).toHaveCount(0);
+    await student.context().close();
+    expect(problems).toEqual([]);
+  });
 });
