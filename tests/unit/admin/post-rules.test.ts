@@ -90,6 +90,12 @@ describe('revalidationPaths', () => {
       '/study/math',
     );
   });
+  it('also rebuilds the other lessons in the section (their prev/next links and section list)', () => {
+    expect(
+      revalidationPaths({ slug: 'am-gm', kind: 'lesson', subject: 'math' }, ['cauchy', 'am-gm', 'jensen']),
+    ).toEqual(['/posts/am-gm', '/', '/study/math', '/posts/cauchy', '/posts/jensen']);
+  });
+
   it('a life post refreshes the Author page instead', () => {
     expect(revalidationPaths({ slug: 'hello', kind: 'life', subject: null })).toEqual(['/posts/hello', '/', '/author']);
   });

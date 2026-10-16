@@ -127,12 +127,21 @@ export async function publishPost(supabase: SupabaseClient, id: string, revision
       has_code: out.hasCode,
     },
   });
-  return { ...result, paths: revalidationPaths(result) };
+  return { ...result, paths: revalidationPaths(result, await sectionLessons(supabase, result)) };
+}
+
+/** Live lessons in the post's section(s), whose pages list it (prev/next, section list). */
+async function sectionLessons(supabase: SupabaseClient, ref: PublishedRef): Promise<string[]> {
+  const sections = [...new Set([ref.section, ref.previous_section].filter((s): s is string => !!s))];
+  if (!sections.length) return [];
+  const { data, error } = await supabase.from('public_posts').select('slug').in('section_id', sections);
+  if (error) fail(error, 'public_posts');
+  return (data ?? []).map((r) => r.slug as string);
 }
 
 export async function unpublishPost(supabase: SupabaseClient, id: string) {
   const result = await call<PublishedRef>(supabase, 'admin_unpublish_post', { p_id: uuid.parse(id) });
-  return { ...result, paths: revalidationPaths(result) };
+  return { ...result, paths: revalidationPaths(result, await sectionLessons(supabase, result)) };
 }
 
 export async function schedulePost(supabase: SupabaseClient, id: string, revision: number, at: Date, now = new Date()) {
@@ -157,7 +166,10 @@ export async function deletePost(supabase: SupabaseClient, id: string) {
   const result = await call<PublishedRef & { was_published: boolean }>(supabase, 'admin_delete_post', {
     p_id: uuid.parse(id),
   });
-  return { ...result, paths: result.was_published ? revalidationPaths(result) : [] };
+  return {
+    ...result,
+    paths: result.was_published ? revalidationPaths(result, await sectionLessons(supabase, result)) : [],
+  };
 }
 
 /**
