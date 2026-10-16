@@ -415,7 +415,10 @@ describe('study structure', () => {
 
     await expect(deleteSection(owner, a.id)).rejects.toMatchObject({ status: 409 });
     expect((await deleteSection(owner, b.id)).paths).toEqual(['/study/it']);
-    await expect(reorderSections(owner, { subject_id: 'it', ids: [a.id] })).rejects.toMatchObject({ status: 422 });
+    // Listing a section twice (or leaving one out) is refused.
+    await expect(reorderSections(owner, { subject_id: 'it', ids: [a.id, a.id] })).rejects.toMatchObject({
+      status: 422,
+    });
     await expect(updateSection(owner, a.id, { title: ' ' })).rejects.toMatchObject({ status: 422 });
 
     await service.from('posts').delete().in('id', [one.id, two.id]);
