@@ -5,7 +5,7 @@ exports[`reference lesson: code > renders to the reviewed HTML and metadata 2`] 
   "hasCode": true,
   "hasMath": false,
   "readingMinutes": 1,
-  "searchText": "A linear search checks each item in turn. In 9618 pseudocode: FOR Index ← 1 TO 10 IF Items[Index] = Target THEN RETURN Index ENDIF NEXT Index In Python def linear_search(items, target): for i, item in enumerate(items): if item == target: return i return -1 Arrays in pseudocode start at 1 unless the question says otherwise. Best case: O(1) Worst case: O(n)",
+  "searchText": "A linear search checks each item in turn. In 9618 pseudocode: FOR Index ← 1 TO 10 IF Items[Index] = Target THEN RETURN Index ENDIF NEXT Index In Python def linear_search(items, target): for i, item in enumerate(items): if item == target: return i return -1 Arrays in pseudocode start at 1 unless the question says otherwise. Best case: O(1) Worst case: O(n) Case Comparisons Best 1 Worst n",
   "toc": [
     {
       "id": "in-python",

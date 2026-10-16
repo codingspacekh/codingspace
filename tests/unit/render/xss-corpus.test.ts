@@ -108,6 +108,25 @@ const CORPUS: [string, unknown][] = [
     'file name html',
     doc({ type: 'file', attrs: { href: 'https://files.codingspace.io/a.pdf', name: '<script>alert(1)</script>' } }),
   ],
+  [
+    'table cell attribute break-out',
+    doc({
+      type: 'table',
+      content: [
+        {
+          type: 'tableRow',
+          content: [
+            {
+              type: 'tableCell',
+              attrs: { colspan: '2" onclick="alert(1)', style: 'background:url(x)' },
+              content: [p(text('x'))],
+            },
+          ],
+        },
+      ],
+    }),
+  ],
+  ['unknown node inside a table', doc({ type: 'table', content: [{ type: 'script', content: [text('alert(1)')] }] })],
   ['prototype keys', JSON.parse('{"type":"doc","content":[{"type":"__proto__","attrs":{"polluted":true}}]}')],
 ];
 
