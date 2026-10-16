@@ -114,6 +114,13 @@ p {
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  /* corner glows, 48px grid lines and dots at the crossings (prototype backdrop, no script) */
+  background:
+    radial-gradient(900px 600px at 85% -10%, rgba(24, 228, 236, 0.1), transparent 60%),
+    radial-gradient(700px 500px at -10% 90%, rgba(155, 140, 255, 0.08), transparent 60%),
+    radial-gradient(circle, rgba(24, 228, 236, 0.16) 1.2px, transparent 1.6px) -24px -24px / 48px 48px,
+    linear-gradient(rgba(24, 228, 236, 0.045) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, rgba(24, 228, 236, 0.045) 1px, transparent 1px) 0 0 / 48px 48px;
 }
 .ui-skip {
   position: absolute;

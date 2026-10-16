@@ -303,7 +303,7 @@ erDiagram
 | Layer | Technique |
 |---|---|
 | HTML | Static generation + on-demand ISR; `Cache-Control: s-maxage=31536000, stale-while-revalidate` |
-| JS | Admin code split from public bundles; orbit and backdrop loaded with `next/dynamic`; no editor, KaTeX or Shiki JS on public pages |
+| JS | Admin code split from public bundles; Arwes only on pages that animate, sound loaded on first use, CSS backdrop, orbit loaded with `next/dynamic` (ADR 0001 addendum); no editor, KaTeX or Shiki JS on public pages |
 | CSS | Token-based CSS modules; KaTeX CSS only on pages with maths |
 | Fonts | `next/font` self-hosted, `display: swap`, subsets (Latin + Khmer) |
 | Images | Variants at upload (480/960/1600, WebP + AVIF), `srcset`, explicit width/height, lazy below the fold |

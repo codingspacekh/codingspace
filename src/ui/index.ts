@@ -1,5 +1,8 @@
 // Public UI surface. Pages import from '@/ui', never from '@arwes/*' (decision D2, enforced by ESLint).
+// package.json "sideEffects" lets webpack drop what a page doesn't use, so Arwes stays out of pages that
+// don't render Frame, Decipher or Stagger.
 export { UiRoot, usePrefs, useSound, type BleepName } from './arwes/prefs';
-export { Backdrop, Decipher, Frame, Stagger } from './arwes/components';
+export { Decipher, Frame, Stagger } from './arwes/components';
+export { Backdrop } from './backdrop';
 export { TopBar, type NavItem } from './top-bar';
 export { SkipLink } from './skip-link';

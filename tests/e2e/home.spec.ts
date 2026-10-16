@@ -50,3 +50,16 @@ test('unknown pages return the styled 404', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Signal lost');
   await expect(page.getByRole('link', { name: /back to home/i })).toBeVisible();
 });
+
+test('turning sound on loads the sound module without errors', async ({ page }) => {
+  const problems = await collectProblems(page);
+  await page.goto('/posts/linear-search');
+  const burger = page.getByRole('button', { name: 'Menu' });
+  if (await burger.isVisible()) await burger.click();
+  // Listen before clicking: the module and the sound load within milliseconds of the click.
+  const click = page.waitForResponse((r) => r.url().endsWith('/sounds/click.wav') && r.ok());
+  await page.getByRole('button', { name: /sound off/i }).click();
+  await expect(page.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
+  await click;
+  expect(problems, problems.join('\n')).toEqual([]);
+});

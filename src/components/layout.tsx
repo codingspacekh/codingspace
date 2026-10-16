@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from '@/lib/seo';
 import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
-import { Backdrop, SkipLink, Stagger, TopBar, type NavItem } from '@/ui';
+import { Backdrop, SkipLink, TopBar, type NavItem } from '@/ui';
 
 export function Layout({
   title,
@@ -41,13 +41,11 @@ export function Layout({
         <link rel="alternate" type="application/rss+xml" title={`${SITE_NAME} lessons`} href="/rss.xml" />
       </Head>
       <SkipLink />
-      <Stagger>
-        <Backdrop />
-        <TopBar active={active} />
-        <main id="main" tabIndex={-1} className="wrap">
-          {children}
-        </main>
-      </Stagger>
+      <Backdrop />
+      <TopBar active={active} />
+      <main id="main" tabIndex={-1} className="wrap">
+        {children}
+      </main>
       <footer className="site-footer">
         <div className="footer-inner">
           <span>© 2026 codingspace.io · Teach · Build · Live</span>
