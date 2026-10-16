@@ -38,6 +38,9 @@ class MemoryStore implements ContentStore {
   async replaceFeaturedProblems(rows: unknown[]) {
     this.problems = rows;
   }
+  async hasSiteContent() {
+    return this.projects.length > 0 || this.profile !== null || this.timeline.length > 0 || this.problems.length > 0;
+  }
 }
 
 const FIRST = new Date('2026-10-16T08:00:00Z');
@@ -111,7 +114,27 @@ describe('importContent', () => {
         is_current: true,
       }),
     ]);
-    expect(report).toMatchObject({ sections: 14, projects: 3, timeline: 4, featuredProblems: 1 });
+    expect(report).toMatchObject({
+      sections: 14,
+      projects: 3,
+      timeline: 4,
+      featuredProblems: 1,
+      siteContent: 'imported',
+    });
+  });
+
+  it('keeps site content edited in the admin when importing again, unless told to replace it', async () => {
+    const store = new MemoryStore();
+    await importContent(content, store, FIRST);
+    store.projects = [{ slug: 'edited-in-admin' }];
+    expect(await importContent(content, store, LATER)).toMatchObject({ siteContent: 'kept' });
+    expect(store.projects).toEqual([{ slug: 'edited-in-admin' }]);
+    expect(store.posts.size).toBeGreaterThan(0);
+
+    expect(await importContent(content, store, LATER, { replaceSiteContent: true })).toMatchObject({
+      siteContent: 'imported',
+    });
+    expect(store.projects).toHaveLength(3);
   });
 
   it('lists published posts that are no longer in content/ without deleting them', async () => {

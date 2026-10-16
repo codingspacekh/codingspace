@@ -26,6 +26,7 @@ export default defineConfig({
         'src/server/admin/preview.ts',
         'src/server/media/uploads.ts',
         'src/server/media/library.ts',
+        'src/server/admin/site.ts',
       ],
       // NFR-MAINT-1: ≥ 90 % for src/lib and src/config, ≥ 70 % overall
       thresholds: {

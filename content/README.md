@@ -9,8 +9,10 @@ npm run content:import                # publish to NEXT_PUBLIC_SUPABASE_URL
 
 The import needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. It is safe to run again:
 posts are matched by slug and keep their first publish date. Posts that are in the
-database but no longer here are listed, never deleted. Projects, the timeline and
-featured problems are replaced by what these files say.
+database but no longer here are listed, never deleted. Projects, the profile, the
+timeline and featured problems are only filled in while the database has none: from M5
+they are edited in the admin, and a later import keeps those edits. To overwrite them
+with these files anyway: `npm run content:import -- --replace-site-content`.
 
 **Everything here marked `dummy: true` is placeholder content** — replace it with real
 lessons, then delete the dummy files.

@@ -2,6 +2,9 @@
  * Loads content/ into the database (M2). Usage:
  *   npm run content:import -- --dry-run   validate and render only, no database
  *   npm run content:import                write to NEXT_PUBLIC_SUPABASE_URL
+ *   npm run content:import -- --replace-site-content
+ *                                         also overwrite projects, profile, timeline and problems
+ *                                         (normally kept once they exist: they are edited in the admin)
  * Needs SUPABASE_SERVICE_ROLE_KEY (from .env.local, or the environment).
  */
 import { join } from 'node:path';
@@ -13,6 +16,7 @@ import { renderContent } from '@/server/render';
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
+  const replaceSiteContent = process.argv.includes('--replace-site-content');
   const content = loadContent(join(process.cwd(), 'content'));
   console.log(
     `content/: ${content.posts.length} posts, ${content.sections.length} sections, ` +
@@ -32,11 +36,17 @@ async function main() {
   console.log(`importing into ${new URL(url).host} …`);
 
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const report = await importContent(content, supabaseStore(db));
+  const report = await importContent(content, supabaseStore(db), new Date(), { replaceSiteContent });
   console.log(
     `done: ${report.posts} posts published, ${report.sections} sections, ${report.projects} projects, ` +
       `${report.timeline} timeline items, ${report.featuredProblems} featured problems`,
   );
+  if (report.siteContent === 'kept') {
+    console.log(
+      'kept: projects, profile, timeline and problems were already in the database (edited in the admin). ' +
+        'Add --replace-site-content to overwrite them with content/.',
+    );
+  }
   if (report.notInContent.length) {
     console.warn(`note: in the database but not in content/ (left unchanged): ${report.notInContent.join(', ')}`);
   }
