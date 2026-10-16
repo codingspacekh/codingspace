@@ -1,0 +1,61 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "A " },
+        { "type": "text", "text": "linear search", "marks": [{ "type": "italic" }] },
+        { "type": "text", "text": " checks each item in turn. In 9618 pseudocode:" }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "pseudocode" },
+      "content": [
+        {
+          "type": "text",
+          "text": "FOR Index ← 1 TO 10\n    IF Items[Index] = Target THEN\n        RETURN Index\n    ENDIF\nNEXT Index"
+        }
+      ]
+    },
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "In Python" }] },
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "python" },
+      "content": [
+        {
+          "type": "text",
+          "text": "def linear_search(items, target):\n    for i, item in enumerate(items):\n        if item == target:\n            return i\n    return -1"
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "attrs": { "variant": "exam-tip" },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "Arrays in pseudocode start at " },
+            { "type": "text", "text": "1", "marks": [{ "type": "code" }] },
+            { "type": "text", "text": " unless the question says otherwise." }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Best case: O(1)" }] }]
+        },
+        {
+          "type": "listItem",
+          "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Worst case: O(n)" }] }]
+        }
+      ]
+    }
+  ]
+}

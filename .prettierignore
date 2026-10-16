@@ -7,3 +7,6 @@ spikes
 package-lock.json
 supabase/.temp
 docs
+
+# Renderer output snapshots are compared byte for byte
+tests/unit/render/__snapshots__/
