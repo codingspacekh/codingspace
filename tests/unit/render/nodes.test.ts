@@ -226,6 +226,50 @@ describe('renderer: media', () => {
     );
   });
 
+  const ID = '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f';
+  const variant = (w: number, f: string) => `https://files.codingspace.io/i/${ID}/${w}.${f}`;
+
+  it('renders an uploaded image as AVIF and WebP variants with srcset (03 §7)', async () => {
+    const out = await html({
+      type: 'image',
+      attrs: { media: ID, widths: [480, 960, 1600], width: 2400, height: 1200, alt: 'Graph', caption: 'Fig. 2' },
+    });
+    const sizes = 'sizes="(min-width: 1100px) 720px, 100vw"';
+    expect(out).toBe(
+      '<figure class="figure"><picture>' +
+        `<source type="image/avif" srcset="${variant(480, 'avif')} 480w, ${variant(960, 'avif')} 960w, ${variant(1600, 'avif')} 1600w" ${sizes}>` +
+        `<img src="${variant(960, 'webp')}" srcset="${variant(480, 'webp')} 480w, ${variant(960, 'webp')} 960w, ${variant(1600, 'webp')} 1600w" ${sizes}` +
+        ' alt="Graph" width="2400" height="1200" loading="lazy" decoding="async"></picture>' +
+        '<figcaption>Fig. 2</figcaption></figure>',
+    );
+  });
+
+  it('uses the largest variant up to 960 px as the fallback src', async () => {
+    const out = await html({ type: 'image', attrs: { media: ID, widths: [300], width: 300, height: 200, alt: '' } });
+    expect(out).toContain(`<img src="${variant(300, 'webp')}"`);
+  });
+
+  it.each([
+    ['no widths', {}],
+    ['empty widths', { widths: [] }],
+    ['unsorted widths', { widths: [960, 480] }],
+    ['a width that is not a number', { widths: ['480"><script>'] }],
+  ])('drops an uploaded image with %s', async (_, extra) => {
+    expect(await html({ type: 'image', attrs: { media: ID, alt: 'a', ...extra } })).toBe('');
+  });
+
+  it('ignores a media id that is not a uuid and falls back to src', async () => {
+    const out = await html({ type: 'image', attrs: { media: '../x', widths: [480], alt: 'a' } });
+    expect(out).toBe('');
+  });
+
+  it('renders an uploaded file as a download from the media address', async () => {
+    expect(await html({ type: 'file', attrs: { media: ID, name: 'Worksheet 1.pdf', size: 245_760 } })).toBe(
+      `<p class="file-row"><a href="https://files.codingspace.io/f/${ID}" rel="noopener">` +
+        '<span class="file-name">Worksheet 1.pdf</span> <span class="file-size">240 KB</span></a></p>',
+    );
+  });
+
   it.each([
     ['youtube', 'dQw4w9WgXcQ', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'],
     ['desmos', 'abcde12345', 'https://www.desmos.com/calculator/abcde12345?embed'],

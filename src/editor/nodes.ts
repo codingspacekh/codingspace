@@ -63,12 +63,14 @@ export const Embed = Node.create({
   renderHTML: ({ HTMLAttributes }) => ['div', mergeAttributes(HTMLAttributes, { 'data-embed': '' })],
 });
 
-// Images and files are uploaded in M4; until then the editor keeps the ones a post already has.
+// Uploaded images and files carry a media id (src/lib/media-urls.ts); imported ones a URL.
 export const Image = Node.create({
   name: 'image',
   group: 'block',
   atom: true,
   addAttributes: () => ({
+    media: attr('media'),
+    widths: { default: null },
     src: attr('src', ''),
     alt: attr('alt', ''),
     caption: attr('caption'),
@@ -83,7 +85,12 @@ export const FileNode = Node.create({
   name: 'file',
   group: 'block',
   atom: true,
-  addAttributes: () => ({ href: attr('href', ''), name: attr('name', ''), size: { default: null } }),
+  addAttributes: () => ({
+    media: attr('media'),
+    href: attr('href', ''),
+    name: attr('name', ''),
+    size: { default: null },
+  }),
   parseHTML: () => [{ tag: 'div[data-file]' }],
   renderHTML: ({ HTMLAttributes }) => ['div', mergeAttributes(HTMLAttributes, { 'data-file': '' })],
 });

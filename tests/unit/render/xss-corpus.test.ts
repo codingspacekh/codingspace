@@ -36,6 +36,26 @@ const CORPUS: [string, unknown][] = [
     `file link to ${u}`,
     doc({ type: 'file', attrs: { href: u, name: 'x.pdf' } }),
   ]),
+  ...['javascript:alert(1)', '../../x', '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f/../../x', '" onerror="alert(1)'].flatMap(
+    (m): [string, unknown][] => [
+      [`uploaded image with media id ${m}`, doc({ type: 'image', attrs: { media: m, widths: [480], alt: 'x' } })],
+      [`uploaded file with media id ${m}`, doc({ type: 'file', attrs: { media: m, name: 'x.pdf' } })],
+    ],
+  ),
+  [
+    'uploaded image widths injection',
+    doc({
+      type: 'image',
+      attrs: { media: '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f', widths: [480, '960w, javascript:alert(1) 1x'], alt: 'x' },
+    }),
+  ],
+  [
+    'uploaded image alt break-out',
+    doc({
+      type: 'image',
+      attrs: { media: '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f', widths: [480], alt: '" onerror="alert(1)' },
+    }),
+  ],
   [
     'image alt break-out',
     doc({ type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: '" onerror="alert(1)' } }),

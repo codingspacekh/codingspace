@@ -1076,6 +1076,9 @@ figure.code pre {
   display: grid;
   gap: 8px;
 }
+.figure picture {
+  display: block;
+}
 .figure img {
   width: 100%;
   height: auto;

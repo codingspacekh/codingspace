@@ -1,3 +1,4 @@
+import { mediaBaseUrl, r2Endpoint } from '@/config/content-origins.mjs';
 import { buildCsp, securityHeaders } from '@/config/security-headers.mjs';
 import { renderContent } from '@/server/render';
 
@@ -44,6 +45,15 @@ describe('Content-Security-Policy (03 §8.3, ADR 0001)', () => {
     expect(directives(csp)).toContain(
       'frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org',
     );
+  });
+
+  it('allows the R2 upload endpoint only when configured', () => {
+    expect(csp).not.toContain('r2.cloudflarestorage.com');
+    const withR2 = buildCsp({ uploadOrigin: r2Endpoint('0123456789abcdef0123456789abcdef') });
+    expect(directives(withR2)).toContain(
+      "connect-src 'self' https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+    );
+    expect(() => r2Endpoint('evil.example/')).toThrow();
   });
 
   it('rejects a Supabase URL that is not a plain https origin', () => {
@@ -105,4 +115,26 @@ describe('search indexing (M7: indexed only after launch)', () => {
   it('allows indexing only when explicitly enabled for launch', () => {
     expect(robots({ indexable: true })).toBeUndefined();
   });
+});
+
+describe('media base URL (NEXT_PUBLIC_MEDIA_BASE_URL)', () => {
+  it('defaults to the files domain', () => {
+    expect(mediaBaseUrl(undefined)).toBe('https://files.codingspace.io');
+  });
+
+  it("takes R2's temporary public address until the domain is ready", () => {
+    expect(mediaBaseUrl('https://pub-0123456789abcdef.r2.dev/')).toBe('https://pub-0123456789abcdef.r2.dev');
+  });
+
+  it('allows plain http only on this machine (tests)', () => {
+    expect(mediaBaseUrl('http://localhost:3000/api/media-local')).toBe('http://localhost:3000/api/media-local');
+    expect(() => mediaBaseUrl('http://pub-x.r2.dev')).toThrow();
+  });
+
+  it.each(['javascript:alert(1)', 'https://user:pw@files.example', 'https://files.example/?a=1', 'files.example'])(
+    'rejects %s',
+    (value) => {
+      expect(() => mediaBaseUrl(value)).toThrow();
+    },
+  );
 });

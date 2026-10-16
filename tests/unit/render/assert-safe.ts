@@ -1,4 +1,6 @@
-import { EMBED_ORIGINS, MEDIA_ORIGIN } from '@/server/render/policy';
+import { EMBED_ORIGINS, MEDIA_BASE_URL } from '@/server/render/policy';
+
+const media = (value: string) => value.startsWith(`${MEDIA_BASE_URL.toLowerCase()}/`);
 
 const FORBIDDEN_TAGS = [
   'script',
@@ -43,12 +45,18 @@ export function findUnsafe(html: string): string[] {
       if (name === 'style' && /url\(|expression\(|@import|javascript:/.test(value)) {
         problems.push(`active style on <${tag}>: ${attr.value}`);
       }
+      if (name === 'srcset') {
+        // "url 480w, url 960w": every candidate must be on the media address.
+        const urls = value.split(',').map((c) => c.trim().split(/\s+/)[0] ?? '');
+        if (!['img', 'source'].includes(tag) || !urls.every(media)) problems.push(`srcset="${attr.value}" on <${tag}>`);
+        continue;
+      }
       if (URL_ATTRS.includes(name)) {
         const ok =
           (tag === 'a' && (/^https:\/\//.test(value) || value.startsWith('mailto:'))) ||
           (tag === 'a' && /^\/(?!\/)/.test(value)) ||
           (tag === 'a' && value.startsWith('#')) ||
-          (tag === 'img' && value.startsWith(`${MEDIA_ORIGIN}/`)) ||
+          (tag === 'img' && media(value)) ||
           (tag === 'iframe' && EMBED_ORIGINS.some((o) => value.startsWith(`${o}/`)));
         if (!ok) problems.push(`${name}="${attr.value}" on <${tag}>`);
       }

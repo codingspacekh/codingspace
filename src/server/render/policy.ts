@@ -3,9 +3,9 @@
  * these functions; anything they reject is dropped, never passed through.
  */
 
-import { EMBED_ORIGINS as ORIGINS, MEDIA_ORIGIN } from '@/config/content-origins.mjs';
+import { EMBED_ORIGINS as ORIGINS, MEDIA_BASE_URL, MEDIA_ORIGIN } from '@/config/content-origins.mjs';
 
-export { MEDIA_ORIGIN };
+export { MEDIA_BASE_URL, MEDIA_ORIGIN };
 
 const EMBEDS = {
   youtube: {
@@ -63,11 +63,12 @@ export function safeLinkHref(href: unknown): string | null {
   return null;
 }
 
-/** Images and file downloads: only from our own media origin. */
+/** Images and file downloads given as a URL (imported content): only under our media address. */
 export function safeMediaUrl(src: unknown): string | null {
   if (typeof src !== 'string' || hasUnsafeChars(src)) return null;
   const url = parse(src);
   if (!url || url.origin !== MEDIA_ORIGIN || url.username || url.password) return null;
+  if (!url.href.startsWith(`${MEDIA_BASE_URL}/`)) return null;
   return url.href;
 }
 
