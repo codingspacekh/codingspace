@@ -1,4 +1,5 @@
 import { buildCsp, securityHeaders } from '@/config/security-headers.mjs';
+import { renderContent } from '@/server/render';
 
 const directives = (csp: string) => csp.split(';').map((d) => d.trim());
 
@@ -28,19 +29,56 @@ describe('Content-Security-Policy (03 §8.3, ADR 0001)', () => {
     }
   });
 
-  it('allows the Supabase API and the files domain only when configured', () => {
+  it('allows the Supabase API only when configured', () => {
     expect(csp).not.toContain('supabase.co');
-    const withExtras = buildCsp({
-      supabaseUrl: 'https://abc.supabase.co',
-      filesOrigin: 'https://files.codingspace.io',
-    });
-    expect(directives(withExtras)).toContain("connect-src 'self' https://abc.supabase.co");
-    expect(directives(withExtras)).toContain("img-src 'self' data: https://files.codingspace.io");
+    const withSupabase = buildCsp({ supabaseUrl: 'https://abc.supabase.co' });
+    expect(directives(withSupabase)).toContain("connect-src 'self' https://abc.supabase.co");
   });
 
-  it('rejects origins that are not plain https origins', () => {
+  it('loads images and media only from the site and the media origin', () => {
+    expect(directives(csp)).toContain("img-src 'self' data: https://files.codingspace.io");
+    expect(directives(csp)).toContain("media-src 'self' https://files.codingspace.io");
+  });
+
+  it('allows frames only from the three embed providers', () => {
+    expect(directives(csp)).toContain(
+      'frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org',
+    );
+  });
+
+  it('rejects a Supabase URL that is not a plain https origin', () => {
     expect(() => buildCsp({ supabaseUrl: 'http://abc.supabase.co' })).toThrow();
-    expect(() => buildCsp({ filesOrigin: "https://x.io; script-src 'unsafe-inline'" })).toThrow();
+    expect(() => buildCsp({ supabaseUrl: "https://x.io; script-src 'unsafe-inline'" })).toThrow();
+  });
+});
+
+// The renderer and the CSP share src/config/content-origins.mjs. This checks the result,
+// not the wiring: everything rendered content can load must be allowed, or pages break.
+describe('CSP allows what the renderer outputs', () => {
+  const csp = buildCsp({});
+
+  it('covers every embed provider and the media origin', async () => {
+    const { html } = await renderContent({
+      type: 'doc',
+      content: [
+        { type: 'embed', attrs: { provider: 'youtube', id: 'dQw4w9WgXcQ' } },
+        { type: 'embed', attrs: { provider: 'desmos', id: 'abcde12345' } },
+        { type: 'embed', attrs: { provider: 'geogebra', id: 'Xyz123ab' } },
+        { type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: 'a' } },
+      ],
+    });
+    const page = new DOMParser().parseFromString(html, 'text/html');
+    const allowed = (directive: string) =>
+      directives(csp)
+        .find((d) => d.startsWith(`${directive} `))!
+        .split(' ')
+        .slice(1);
+
+    const frames = Array.from(page.querySelectorAll('iframe'), (f) => new URL(f.src).origin);
+    const images = Array.from(page.querySelectorAll('img'), (i) => new URL(i.src).origin);
+    expect(frames).toHaveLength(3);
+    for (const o of frames) expect(allowed('frame-src')).toContain(o);
+    for (const o of images) expect(allowed('img-src')).toContain(o);
   });
 });
 

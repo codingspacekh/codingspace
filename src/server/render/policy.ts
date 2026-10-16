@@ -3,25 +3,27 @@
  * these functions; anything they reject is dropped, never passed through.
  */
 
-export const MEDIA_ORIGIN = 'https://files.codingspace.io';
+import { EMBED_ORIGINS as ORIGINS, MEDIA_ORIGIN } from '@/config/content-origins.mjs';
+
+export { MEDIA_ORIGIN };
 
 const EMBEDS = {
   youtube: {
-    origin: 'https://www.youtube-nocookie.com',
+    origin: ORIGINS.youtube,
     id: /^[A-Za-z0-9_-]{11}$/,
-    src: (id: string) => `https://www.youtube-nocookie.com/embed/${id}`,
+    src: (id: string) => `${ORIGINS.youtube}/embed/${id}`,
     title: 'YouTube video',
   },
   desmos: {
-    origin: 'https://www.desmos.com',
+    origin: ORIGINS.desmos,
     id: /^[a-z0-9]{10,20}$/,
-    src: (id: string) => `https://www.desmos.com/calculator/${id}?embed`,
+    src: (id: string) => `${ORIGINS.desmos}/calculator/${id}?embed`,
     title: 'Desmos graph',
   },
   geogebra: {
-    origin: 'https://www.geogebra.org',
+    origin: ORIGINS.geogebra,
     id: /^[A-Za-z0-9]{6,12}$/,
-    src: (id: string) => `https://www.geogebra.org/material/iframe/id/${id}`,
+    src: (id: string) => `${ORIGINS.geogebra}/material/iframe/id/${id}`,
     title: 'GeoGebra applet',
   },
 } as const;
