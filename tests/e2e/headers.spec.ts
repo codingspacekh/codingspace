@@ -7,6 +7,8 @@ for (const path of ['/', '/this-page-does-not-exist']) {
     const h = res.headers();
     expect(h['content-security-policy']).toContain("script-src 'self'");
     expect(h['content-security-policy']).not.toContain("'unsafe-eval'");
+    expect(h['content-security-policy']).toContain('frame-src https://www.youtube-nocookie.com');
+    expect(h['content-security-policy']).toContain("img-src 'self' data: https://files.codingspace.io");
     expect(h['strict-transport-security']).toContain('max-age=63072000');
     expect(h['x-content-type-options']).toBe('nosniff');
     expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');

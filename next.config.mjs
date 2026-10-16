@@ -10,7 +10,6 @@ const nextConfig = {
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('https://')
         ? process.env.NEXT_PUBLIC_SUPABASE_URL
         : undefined,
-      filesOrigin: process.env.NEXT_PUBLIC_FILES_ORIGIN,
       indexable: process.env.SITE_INDEXABLE === 'true',
     });
     return [{ source: '/:path*', headers }];
