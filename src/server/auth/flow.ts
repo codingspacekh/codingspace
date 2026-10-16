@@ -55,9 +55,21 @@ export async function startEnrolment(supabase: SupabaseClient): Promise<Enrolmen
   if (error) throw new Error(`enroll: ${error.message}`);
   return {
     factorId: data.id,
-    qr: `data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`,
+    qr: qrDataUrl(data.totp.qr_code),
     secret: data.totp.secret,
   };
+}
+
+/**
+ * supabase-js already returns the QR as `data:image/svg+xml;utf-8,<svg…>` (raw, unencoded SVG).
+ * Re-encode the SVG so characters like `#` can't cut the URL short; accept raw SVG too.
+ */
+export function qrDataUrl(qr: string): string {
+  const svg = qr.startsWith('data:') ? qr.slice(qr.indexOf(',') + 1) : qr;
+  // GoTrue's SVG starts with an XML declaration and a comment.
+  if (!/^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>/]/.test(svg))
+    throw new Error('enroll: unexpected QR code format');
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 /**
