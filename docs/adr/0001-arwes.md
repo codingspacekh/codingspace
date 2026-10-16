@@ -20,6 +20,7 @@ A production build with:
 
 **Versions (exact):**
 - `next@16.4.1`, `react@18.3.1`, `@arwes/react@1.0.0-next.25020502`
+  - The app (M1) pins `next@16.3.8`, because 16.4.1 was released 2026-10-14 and we only use releases at least two weeks old. Move to 16.4.x after 2026-10-28.
 - `katex@0.19.0`, `shiki@3.2.1`, `@playwright/test@1.64.1`
 - `npm audit`: **0 vulnerabilities**
 
