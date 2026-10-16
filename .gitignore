@@ -38,3 +38,6 @@ public/katex/
 # Lighthouse CI reports
 .lighthouseci/
 tools/lighthouse/node_modules/
+
+# Local screenshots and notes (may show sign-in secrets)
+report/

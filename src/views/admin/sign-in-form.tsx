@@ -113,7 +113,10 @@ export function SignInForm({ onDone, reason }: { onDone: () => void; reason?: st
       {step === 'enroll' ? (
         enrolment ? (
           <>
-            <p>Scan this QR code with an authenticator app (for example Google Authenticator or 1Password).</p>
+            <p>
+              <strong>1.</strong> In an authenticator app (for example Google Authenticator or 1Password), add an
+              account by scanning this QR code.
+            </p>
             <img
               className="adm-qr"
               src={enrolment.qr}
@@ -122,7 +125,12 @@ export function SignInForm({ onDone, reason }: { onDone: () => void; reason?: st
               height={200}
             />
             <p>
-              Can’t scan it? Enter this key instead: <code className="adm-secret">{enrolment.secret}</code>
+              Can’t scan it? Type this setup key <em>into the app</em> instead:{' '}
+              <code className="adm-secret">{enrolment.secret}</code>
+            </p>
+            <p>
+              <strong>2.</strong> The app then shows a 6-digit code that changes every 30 seconds. Enter that code
+              below.
             </p>
           </>
         ) : (
@@ -134,14 +142,19 @@ export function SignInForm({ onDone, reason }: { onDone: () => void; reason?: st
       <label>
         6-digit code
         <input
+          aria-describedby="code-hint"
           name="code"
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9 ]{6,7}"
+          title="The 6-digit code from your authenticator app"
           maxLength={7}
           required
         />
       </label>
+      <span className="adm-hint" id="code-hint">
+        Numbers only, from your app — not the setup key.
+      </span>
       <button className="btn pri" type="submit" disabled={busy || (step === 'enroll' && !enrolment)}>
         Verify
       </button>
