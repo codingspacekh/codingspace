@@ -3,7 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E runs against a production build: CSP, bundles and SSR differ in dev mode.
 // In CI, BASE_URL can point at a Vercel preview deployment instead.
 const baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
+// Admin tests that publish or change what students see run after the public-page tests
+// (which count lessons, check the featured project…), one file at a time: both use the
+// same test account.
+const ADMIN_POSTS = /admin-posts\.spec\.ts$/;
 const SITE_ADMIN = /admin-site\.spec\.ts$/;
+const CHANGES_CONTENT = [ADMIN_POSTS, SITE_ADMIN];
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -13,17 +18,18 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: { baseURL, trace: 'retain-on-failure' },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: SITE_ADMIN },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: CHANGES_CONTENT },
     // @single-account tests share one admin account and authenticator: one project runs them.
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, grepInvert: /@single-account/, testIgnore: SITE_ADMIN },
-    // Editing projects, the profile and the problem of the week changes what the public-page
-    // tests check, so these run alone, after everything else, and put the content back.
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, grepInvert: /@single-account/, testIgnore: CHANGES_CONTENT },
+    // Writing, publishing and deleting posts.
     {
-      name: 'site-admin',
+      name: 'admin',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: SITE_ADMIN,
+      testMatch: ADMIN_POSTS,
       dependencies: ['desktop', 'mobile'],
     },
+    // Projects, the profile and the problem of the week (they put the content back afterwards).
+    { name: 'site-admin', use: { ...devices['Desktop Chrome'] }, testMatch: SITE_ADMIN, dependencies: ['admin'] },
   ],
   webServer: process.env.BASE_URL
     ? undefined

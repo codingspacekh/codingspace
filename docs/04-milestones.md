@@ -37,7 +37,7 @@ flowchart LR
 | **M4** 🔨 | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
 | **M5** 🔨 | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
-| **M6** | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
+| **M6** 🔨 | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
 | — | **R2: public launch** | `codingspace.io` live and indexed | | |
 
@@ -244,7 +244,15 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** no placeholder content left on the public site.
 
-### M6 — Arwes experience & search (6 days)
+### M6 — Arwes experience & search (6 days) — 🔨 BUILT 2026-10-16, waiting for owner sign-off on look and sound
+> **Status** (PRs #35–#37):
+> - **Remembered choices** (PUB-11): motion (follows the device until the visitor picks), sound (off until turned on), **reading mode**; localStorage only, hydration-safe. **Print** stylesheet: the lesson only, black on white, hints and solutions opened.
+> - **Orbit hero** on Home: the prototype's canvas, loaded only after the page is idle and the hero is on screen; stops off screen, in hidden tabs, with motion off or in reading mode. Decipher headline, CSS backdrop and the lazy bleeps were already in place from M2.
+> - **Search** (PUB-09): `/search` (works without JavaScript), weighted index (title > summary > body), prefix matching, Khmer inside words, highlighted snippets, drafts never; cached at the CDN for 5 minutes per query; 30 searches a minute per visitor (salted daily hash of the IP, nothing stored in clear), 429 after.
+> - **Bundle budget** in CI (`npm run check:bundle`): Home 158 KB of 260, lessons 132 KB of 200. Lighthouse locally: Home 0.95 with the orbit (TBT 45 ms, CLS 0), lessons 0.95–0.97.
+> - Not built: `Animator` page transitions — the pages already appear instantly, and transitions would only delay content; dropped unless the owner wants them.
+> - **Owner:** push migration `20261023000000_search.sql`; look at Home (orbit), turn sound on, try reading mode and Print on a lesson, and sign off (exit criterion).
+
 **Goal:** the futuristic feel, without hurting speed or readability.
 
 **Build:**

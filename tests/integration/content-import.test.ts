@@ -65,6 +65,15 @@ describe('content import into a real database', () => {
     expect(await search('គន្លឹះសិក្សាសម្រាប់សិស្ស')).toEqual(['study-tips-km']);
   });
 
+  it('search (PUB-09): title matches first, prefixes, Khmer inside words, drafts never', async () => {
+    const search = async (q: string) =>
+      ((await anon.rpc('search_posts', { p_q: q })).data as { slug: string; snippet: string }[]).map((r) => r.slug);
+    expect((await search('cauchy'))[0]).toBe('cauchy-schwarz-inequality');
+    expect(await search('ineq')).toEqual(expect.arrayContaining(['am-gm-inequality', 'cauchy-schwarz-inequality']));
+    expect(await search('សិក្សា')).toContain('study-tips-km');
+    expect(await search('zzzz-no-such-word')).toEqual([]);
+  });
+
   it('serves projects, profile, timeline and the current problem', async () => {
     expect((await anon.from('public_projects').select('slug')).data).toHaveLength(3);
     expect((await anon.from('public_profile').select('name').single()).data).toEqual({ name: 'CodingSpace' });
