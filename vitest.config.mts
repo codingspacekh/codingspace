@@ -18,6 +18,7 @@ export default defineConfig({
         lines: 70,
         'src/lib/**': { lines: 90 },
         'src/config/**': { lines: 90 },
+        'src/server/**': { lines: 90 },
       },
     },
   },

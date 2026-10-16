@@ -1,0 +1,74 @@
+{
+  "type": "doc",
+  "content": [
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "Projectile motion" }] },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Horizontal and vertical motion are independent. The range is " },
+        { "type": "mathInline", "attrs": { "latex": "R = \\dfrac{u^2 \\sin 2\\theta}{g}" } },
+        { "type": "text", "text": "." }
+      ]
+    },
+    {
+      "type": "image",
+      "attrs": {
+        "src": "https://files.codingspace.io/physics/projectile.png",
+        "alt": "Parabolic path of a projectile",
+        "caption": "Path at 45°",
+        "width": 800,
+        "height": 450
+      }
+    },
+    { "type": "embed", "attrs": { "provider": "desmos", "id": "k3hd7syx2q", "title": "Interactive projectile" } },
+    { "type": "heading", "attrs": { "level": 3 }, "content": [{ "type": "text", "text": "Simulate it" }] },
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "js" },
+      "content": [
+        { "type": "text", "text": "const range = (u, theta, g = 9.81) => (u ** 2 * Math.sin(2 * theta)) / g;" }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "content": [
+        { "type": "paragraph", "content": [{ "type": "text", "text": "Air resistance is ignored in this model." }] }
+      ]
+    },
+    {
+      "type": "callout",
+      "attrs": { "variant": "warning" },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "Use radians in " },
+            { "type": "text", "text": "Math.sin", "marks": [{ "type": "code" }] },
+            { "type": "text", "text": "." }
+          ]
+        }
+      ]
+    },
+    { "type": "horizontalRule" },
+    {
+      "type": "file",
+      "attrs": {
+        "href": "https://files.codingspace.io/physics/projectile-worksheet.pdf",
+        "name": "projectile-worksheet.pdf",
+        "size": 245760
+      }
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "See also " },
+        {
+          "type": "text",
+          "text": "the next lesson",
+          "marks": [{ "type": "link", "attrs": { "href": "/posts/circular-motion" } }]
+        },
+        { "type": "text", "text": "." }
+      ]
+    }
+  ]
+}
