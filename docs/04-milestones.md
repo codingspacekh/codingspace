@@ -34,7 +34,7 @@ flowchart LR
 | **M1** | Walking skeleton | Repo, CI gates, Supabase local + RLS baseline, security headers, preview deploys, first green E2E | NFR-SEC-2, NFR-MAINT-1 | 4 days |
 | **M2** | Public read path | Home, Study ×4, lesson, Projects, Author pages from the DB; renderer; SEO; content import script | PUB-01…08, 10, 12 | 8 days |
 | **M3** ✅ | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule, study structure | ADM-01…09, ADM-12 | 10 days |
-| **M4** | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
+| **M4** 🔨 | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
 | **M5** | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
 | **M6** | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
@@ -190,7 +190,16 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** the acceptance journey is green on preview, and the owner has published a test lesson end to end.
 
-### M4 — Media & files (5 days)
+### M4 — Media & files (5 days) — 🔨 BUILT 2026-10-16, waiting for R2 setup on staging
+> **Status** (PRs #27–#30):
+> - **Temporary address:** no domain yet, so media are served from the bucket's R2 public address (`https://pub-….r2.dev`), set in `NEXT_PUBLIC_MEDIA_BASE_URL`. Content stores media **ids**, not URLs, so moving to `files.codingspace.io` (M7) is: connect the domain, change the setting, redeploy, re-publish posts with images. r2.dev is rate-limited and uncached: fine for the beta, not for launch.
+> - **Catalogue:** `media` + `post_media` (draft / live use, kept in step by a trigger); a used file can't be deleted (database and UI); same file twice → the first copy.
+> - **Uploads:** presigned PUT straight to R2 (10 min, signed type and length) → the server checks magic bytes, re-encodes images with sharp to AVIF + WebP at 480/960/1600 (EXIF/GPS stripped, auto-rotated) and stores files as attachments. SVG, HEIC, programs, mismatched content, damaged or > 50 MP images are refused with a reason.
+> - **Editor:** Image and File in the Insert and "/" menus, paste and drop, alt text and caption, "From the media library". **Library** at `/admin/media`: search, filter, unused, rename, default alt, used-in, delete unused.
+> - **Public pages:** `<picture>` with AVIF/WebP `srcset` and `sizes`; files download with `Content-Disposition: attachment`.
+> - Tests: pgTAP 27, unit/component (rules, magic bytes, pipeline, stores, editor, library), integration 11 against the local DB, and the E2E journey (paste → caption → attach → publish → variants load from the media address → library delete rules). E2E and local runs use `MEDIA_STORE=local` instead of R2.
+> - **Owner, before R1:** push migration `20261021000000_media.sql` to staging; set up the bucket (README → Media (R2)); add the 5 Vercel variables; redeploy; upload an image and a PDF on staging.
+
 **Goal:** lessons can include images and downloadable worksheets.
 
 **Build:**
