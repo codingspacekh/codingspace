@@ -126,7 +126,18 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** all public pages render from the DB on preview; budgets pass; content import works for at least 5 real lessons.
 
-### M3 — Admin core (10 days)
+### M3 — Admin core (10 days) — 🚧 in progress (started 2026-10-16)
+> **Plan (one PR each):**
+> 1. ✅ **Sign-in & admin gate:** password + required TOTP, HttpOnly session cookies through our own API (the browser never calls Supabase), proxy + `withOwner()` + RLS, 12 h idle timeout and revocation in `public.admin_touch()`, sign out (everywhere), Origin check on every mutating route.
+> 2. Write-side schema: revisions, publish/unpublish/schedule as one transaction each, audit rows.
+> 3. Dashboard and posts list (ADM-02, ADM-03).
+> 4. Tiptap editor and settings panel (ADM-04, ADM-05).
+> 5. Autosave and revisions (ADM-06).
+> 6. Checklist, preview, publish / update / unpublish / schedule, revalidation, cron (ADM-07…09).
+> 7. Acceptance journey and docs.
+>
+> **Deviations so far:** Turnstile on the sign-in form (03 §8.2) is not in this milestone's build list; it moves to M7 hardening. Supabase's own auth rate limits apply meanwhile.
+
 **Goal:** the owner can write, preview and publish without touching code.
 
 **Build:**

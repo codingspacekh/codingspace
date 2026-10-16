@@ -1,0 +1,99 @@
+import { currentStep, passwordBody, signInWithPassword, signOut, startEnrolment, verifyCode } from '@/server/auth/flow';
+import { fakeSupabase, OWNER_CLAIMS } from './fake-supabase';
+
+const AAL1 = { ...OWNER_CLAIMS, aal: 'aal1' };
+const verified = { id: 'f1', factor_type: 'totp' as const, status: 'verified' as const };
+const pending = { id: 'f0', factor_type: 'totp' as const, status: 'unverified' as const };
+
+describe('currentStep', () => {
+  it('password → enroll → verify → done', async () => {
+    expect(await currentStep(fakeSupabase().client)).toBe('password');
+    expect(await currentStep(fakeSupabase({ claims: AAL1 }).client)).toBe('enroll');
+    expect(await currentStep(fakeSupabase({ claims: AAL1, factors: [pending] }).client)).toBe('enroll');
+    expect(await currentStep(fakeSupabase({ claims: AAL1, factors: [verified] }).client)).toBe('verify');
+    expect(await currentStep(fakeSupabase({ claims: OWNER_CLAIMS }).client)).toBe('done');
+  });
+});
+
+describe('signInWithPassword', () => {
+  const body = { email: 'owner@example.test', password: 'x' };
+  it('gives one answer for any credential error, and passes rate limits through', async () => {
+    expect(await signInWithPassword(fakeSupabase({ passwordError: { status: 400 } }).client, body)).toEqual({
+      ok: false,
+      status: 401,
+    });
+    expect(await signInWithPassword(fakeSupabase({ passwordError: { status: 429 } }).client, body)).toEqual({
+      ok: false,
+      status: 429,
+    });
+  });
+  it('validates input', () => {
+    expect(passwordBody.safeParse({ email: 'not-an-email', password: 'x' }).success).toBe(false);
+    expect(passwordBody.safeParse({ email: 'a@b.co', password: '' }).success).toBe(false);
+    expect(passwordBody.safeParse({ email: 'a@b.co', password: 'x'.repeat(201) }).success).toBe(false);
+  });
+});
+
+describe('startEnrolment', () => {
+  it('is refused once a verified authenticator exists, or without a session', async () => {
+    expect(await startEnrolment(fakeSupabase({ claims: AAL1, factors: [verified] }).client)).toBe('not_allowed');
+    expect(await startEnrolment(fakeSupabase().client)).toBe('not_allowed');
+  });
+  it('drops abandoned attempts and returns a data: QR code', async () => {
+    const { client, auth } = fakeSupabase({ claims: AAL1, factors: [pending] });
+    expect(await startEnrolment(client)).toEqual({
+      factorId: 'factor-new',
+      qr: 'data:image/svg+xml;utf-8,%3Csvg%2F%3E',
+      secret: 'SECRET',
+    });
+    expect(auth.mfa.unenroll).toHaveBeenCalledWith({ factorId: 'f0' });
+  });
+});
+
+describe('verifyCode', () => {
+  it('needs a password session first', async () => {
+    expect(await verifyCode(fakeSupabase().client, '123456')).toBe('unauthenticated');
+  });
+  it('reports a wrong code', async () => {
+    const { client } = fakeSupabase({ claims: AAL1, factors: [verified], verifyError: { message: 'bad' } });
+    expect(await verifyCode(client, '123456')).toBe('invalid_code');
+  });
+  it('verifies the pending enrolment when nothing is verified yet', async () => {
+    const { client, auth } = fakeSupabase({ claims: AAL1, factors: [pending] });
+    expect(await verifyCode(client, '123456')).toBe('ok');
+    expect(auth.mfa.challengeAndVerify).toHaveBeenCalledWith({ factorId: 'f0', code: '123456' });
+  });
+  it('has nothing to verify against without any factor', async () => {
+    expect(await verifyCode(fakeSupabase({ claims: AAL1 }).client, '123456')).toBe('invalid_code');
+  });
+  it('signs the owner in and writes an audit row', async () => {
+    const { client, insert } = fakeSupabase({ claims: AAL1, factors: [verified] });
+    expect(await verifyCode(client, '123456')).toBe('ok');
+    expect(insert).toHaveBeenCalledWith({
+      action: 'auth.sign_in',
+      entity: 'session',
+      entity_id: 'self',
+      meta: { factor: 'f1' },
+    });
+  });
+  it('ends the session of anyone who is not the owner', async () => {
+    const { client, auth, insert } = fakeSupabase({ claims: AAL1, factors: [verified], touch: 'forbidden' });
+    expect(await verifyCode(client, '123456')).toBe('forbidden');
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('signOut', () => {
+  it('audits "sign out everywhere"', async () => {
+    const { client, auth, insert } = fakeSupabase({ claims: OWNER_CLAIMS });
+    await signOut(client, 'global');
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ action: 'auth.sign_out_everywhere' }));
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'global' });
+  });
+  it('a normal sign-out is not audited', async () => {
+    const { client, insert } = fakeSupabase({ claims: OWNER_CLAIMS });
+    await signOut(client, 'local');
+    expect(insert).not.toHaveBeenCalled();
+  });
+});

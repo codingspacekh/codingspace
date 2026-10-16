@@ -13,7 +13,8 @@ export default defineConfig({
   use: { baseURL, trace: 'retain-on-failure' },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    // @single-account tests share one admin account and authenticator: one project runs them.
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, grepInvert: /@single-account/ },
   ],
   webServer: process.env.BASE_URL
     ? undefined

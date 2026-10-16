@@ -1270,3 +1270,88 @@ html[data-motion='off'] *::after {
     transition: none !important;
   }
 }
+
+/* ── Admin (03 ADM-*): plain, fast and readable; no Arwes. ─────────────── */
+.adm {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.adm-center {
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter-r) 24px var(--gutter);
+}
+.adm-card {
+  width: min(420px, 100%);
+  padding: 28px 24px;
+}
+.adm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--gutter-r) 12px var(--gutter);
+  border-bottom: 1px solid var(--line);
+}
+.adm-brand {
+  color: var(--fg);
+  font-family: var(--font-display), sans-serif;
+  text-decoration: none;
+}
+.adm-brand span {
+  color: var(--cyan);
+}
+.adm-user {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.adm-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px var(--gutter-r) 48px var(--gutter);
+}
+.adm-form {
+  display: grid;
+  gap: 16px;
+}
+.adm-form h1 {
+  font-size: 26px;
+  outline: none;
+}
+.adm-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--fg2);
+  font-size: 14px;
+}
+.adm-form input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px;
+}
+.adm-form input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+.adm-error {
+  padding: 10px 12px;
+  border-left: 3px solid var(--pink);
+  background: rgba(255, 111, 207, 0.08);
+  color: var(--fg);
+}
+.adm-qr {
+  justify-self: center;
+  padding: 8px;
+  background: #fff;
+}
+.adm-secret {
+  font-family: var(--font-mono), monospace;
+  word-break: break-all;
+  color: var(--cyan);
+}

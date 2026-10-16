@@ -59,7 +59,7 @@ export function buildRss(items: FeedItem[], base = siteUrl()): string {
 /** Mirrors the X-Robots-Tag header: everything blocked until launch (M7 sets SITE_INDEXABLE=true). */
 export function buildRobots(indexable: boolean, base = siteUrl()): string {
   if (!indexable) return 'User-agent: *\nDisallow: /\n';
-  return `User-agent: *\nAllow: /\n\nSitemap: ${absoluteUrl('/sitemap.xml', base)}\n`;
+  return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${absoluteUrl('/sitemap.xml', base)}\n`;
 }
 
 /**
