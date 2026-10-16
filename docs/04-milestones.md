@@ -36,7 +36,7 @@ flowchart LR
 | **M3** ✅ | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule, study structure | ADM-01…09, ADM-12 | 10 days |
 | **M4** 🔨 | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
-| **M5** | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
+| **M5** 🔨 | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
 | **M6** | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
 | — | **R2: public launch** | `codingspace.io` live and indexed | | |
@@ -219,7 +219,15 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria → R1 private beta:** production deploy on the `vercel.app` URL with `noindex`. The owner writes 10+ real lessons. 3–5 students give feedback.
 
-### M5 — Site-content admin (5 days)
+### M5 — Site-content admin (5 days) — 🔨 BUILT 2026-10-16, waiting for real content
+> **Status** (PRs #31–#34):
+> - **One migration** (`20261022000000_site_content.sql`): audited `admin_*` functions for projects (save, feature exactly one, reorder 1..n, delete), the profile and whole timeline, and problems (save, show as the subject's current one, delete). Landing pages: https, a real host, no `user:pass@`.
+> - **Admin screens:** `/admin/projects`, `/admin/author`, `/admin/problems` (Markdown + LaTeX with a live preview from the lesson renderer; "Show on the site" swaps the subject's current problem). Every save rebuilds the pages that show it.
+> - **Public pages:** each subject page now shows its own problem of the week (PUB-05: Math and Home).
+> - **content:import** keeps projects, profile, timeline and problems once they exist, so a re-import can't wipe admin edits (`--replace-site-content` to overwrite).
+> - Tests: pgTAP 41, integration 8, component tests for the three screens, and E2E in a `site-admin` Playwright project that runs after the public-page tests and restores what it changes (change the problem of the week → Home and Math show it).
+> - **Owner:** push the migration to staging; then replace the placeholder projects, profile, timeline and problem in the admin (exit criterion). The dummy lessons go when real ones are written.
+
 **Goal:** everything students see can be managed from the admin.
 
 **Build:**

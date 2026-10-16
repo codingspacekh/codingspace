@@ -78,7 +78,14 @@ export async function getLatestLessons(limit = 6): Promise<PostCard[]> {
 
 /** Problem statements are short Markdown with $maths$; rendered like lesson content. */
 
-export async function getFeaturedProblem(): Promise<FeaturedProblem | null> {
+/** The newest current problem (Home), or one subject's current problem (its subject page). */
+export async function getFeaturedProblem(subject?: SubjectId): Promise<FeaturedProblem | null> {
+  let query = db()
+    .from('public_featured_problems')
+    .select('subject_id, section_id, week_of, statement, hint, solution')
+    .order('week_of', { ascending: false })
+    .limit(1);
+  if (subject) query = query.eq('subject_id', subject);
   const rows = must<
     {
       subject_id: string;
@@ -88,14 +95,7 @@ export async function getFeaturedProblem(): Promise<FeaturedProblem | null> {
       hint: string;
       solution: string;
     }[]
-  >(
-    await db()
-      .from('public_featured_problems')
-      .select('subject_id, section_id, week_of, statement, hint, solution')
-      .order('week_of', { ascending: false })
-      .limit(1),
-    'featured problem',
-  );
+  >(await query, 'featured problem');
   const p = rows[0];
   if (!p || !isSubjectId(p.subject_id)) return null;
   const section = p.section_id

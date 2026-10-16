@@ -95,4 +95,54 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await student.context().close();
     expect(problems).toEqual([]);
   });
+
+  // The M5 acceptance check (04-milestones): change the problem of the week → Home and Math show it.
+  test('problem of the week: write one with a live preview, show it → Home and Math show it; then put it back', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const origin = { Origin: baseURL! };
+    const marker = `E2E${Date.now()}`;
+    const before = (await (await page.request.get('/api/admin/problems')).json()).problems as {
+      id: string;
+      subject_id: string;
+      is_current: boolean;
+    }[];
+
+    await page.goto('/admin/problems');
+    await page.getByRole('button', { name: 'New problem' }).click();
+    const form = page.getByRole('form', { name: 'New problem' });
+    await form.getByRole('textbox', { name: 'Problem' }).fill(`${marker}: show that $x^2 + 1 > 0$ for every real $x$.`);
+    await form.getByRole('textbox', { name: 'Hint (optional)' }).fill('Squares are never negative.');
+    const preview = page.getByRole('region', { name: 'Preview' });
+    await expect(preview.locator('.katex').first()).toBeVisible();
+    await expectAccessible(page);
+    await form.getByRole('button', { name: 'Add problem' }).click();
+    await expect(page.getByRole('status')).toHaveText('Added, and showing it as the Math problem of the week.');
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    for (const path of ['/', '/study/math']) {
+      await student.goto(path);
+      const potw = student.getByRole('region', { name: 'Problem of the week' });
+      await expect(potw).toContainText(marker);
+      await expect(potw.locator('.katex').first()).toBeVisible();
+      await expect(potw.getByText('Squares are never negative.')).toBeHidden();
+      await potw.getByText('Show a hint').click();
+      await expect(potw.getByText('Squares are never negative.')).toBeVisible();
+    }
+
+    // Put back the problem that was showing, and remove ours.
+    const mine = (
+      (await (await page.request.get('/api/admin/problems')).json()).problems as { id: string; statement: string }[]
+    ).find((p) => p.statement.startsWith(marker))!;
+    const was = before.find((p) => p.subject_id === 'math' && p.is_current);
+    if (was) await page.request.patch(`/api/admin/problems/${was.id}`, { headers: origin, data: { current: true } });
+    expect((await page.request.delete(`/api/admin/problems/${mine.id}`, { headers: origin })).status()).toBe(200);
+    await student.goto('/');
+    await expect(student.getByText(marker)).toHaveCount(0);
+    await student.context().close();
+    expect(problems).toEqual([]);
+  });
 });

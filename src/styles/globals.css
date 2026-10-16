@@ -1376,8 +1376,12 @@ html[data-motion='off'] *::after {
 }
 .adm-nav {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 6px 18px;
   margin-right: auto;
+}
+.adm-nav a {
+  white-space: nowrap;
 }
 @media (min-width: 700px) {
   .adm-nav {
@@ -2177,4 +2181,36 @@ img.ProseMirror-separator {
 }
 .adm-timeline .adm-grow {
   flex: 1 1 260px;
+}
+.adm-timeline li + li {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.adm-section h2 .adm-status {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* problem of the week admin (03 ADM-11) */
+.adm-problem-edit {
+  margin-bottom: 20px;
+}
+.adm-problem-line {
+  overflow: hidden;
+  color: var(--fg2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-form .adm-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* a short explanation under an admin page title */
+.adm-lead {
+  margin: 4px 0 16px;
+  max-width: 70ch;
+  color: var(--muted);
+  font-size: 14px;
 }

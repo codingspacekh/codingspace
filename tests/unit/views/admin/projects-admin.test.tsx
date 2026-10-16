@@ -44,7 +44,7 @@ describe('projects admin (03 ADM-13)', () => {
     render(<ProjectsAdmin />);
     const list = await screen.findByRole('list', { name: 'Projects, in order' });
     const items = within(list).getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Quiz Featured');
+    expect(items[0]).toHaveTextContent(/Quiz\s*Featured/);
     expect(items[0]).toHaveTextContent('Coding · Web app · Web');
     expect(within(items[0]!).getByRole('button', { name: 'Feature Quiz' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(items[0]!).getByRole('button', { name: 'Move Quiz up' })).toBeDisabled();

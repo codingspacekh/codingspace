@@ -1,14 +1,13 @@
 import type { GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
-import { formatDate } from '@/lib/format';
-import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
 import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects } from '@/server/data/public';
 import type { FeaturedProblem, PostCard, Project } from '@/server/data/types';
 import { Decipher, Stagger } from '@/ui';
 import { PostTile, ProjectCard, SubjectTrack } from '@/views/cards';
+import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 
 type Props = {
   counts: Record<SubjectId, number>;
@@ -26,47 +25,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   ]);
   return { props: { counts, latest, problem, projects: projects.slice(0, 2) }, revalidate: REVALIDATE };
 };
-
-function ProblemOfTheWeek({ problem }: { problem: FeaturedProblem }) {
-  const s = SUBJECTS[problem.subject];
-  return (
-    <section className={`section c-${s.color}`} aria-labelledby="potw">
-      {problem.hasMath && (
-        <Head>
-          <link rel="stylesheet" href="/katex/katex.min.css" />
-        </Head>
-      )}
-      <div className="shead">
-        <div>
-          <span className="eyebrow">Week of {formatDate(problem.weekOf)}</span>
-          <h2 id="potw">Problem of the week</h2>
-        </div>
-        <span className="tag">
-          {s.name}
-          {problem.sectionTitle ? ` · ${problem.sectionTitle}` : ''}
-        </span>
-      </div>
-      <div className="frame potw">
-        <div className="q prose" dangerouslySetInnerHTML={{ __html: problem.statementHtml }} />
-        <div className="side">
-          {/* <details> works without JavaScript and keeps the answer hidden until asked for. */}
-          {problem.hintHtml && (
-            <details className="reveal">
-              <summary>Show a hint</summary>
-              <div className="prose" dangerouslySetInnerHTML={{ __html: problem.hintHtml }} />
-            </details>
-          )}
-          {problem.solutionHtml && (
-            <details className="reveal">
-              <summary>Show the solution</summary>
-              <div className="prose" dangerouslySetInnerHTML={{ __html: problem.solutionHtml }} />
-            </details>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export default function Home({ counts, latest, problem, projects }: Props) {
   return (
