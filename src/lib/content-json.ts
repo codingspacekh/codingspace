@@ -23,8 +23,9 @@ const NODE_ATTRS: Record<string, Record<string, unknown>> = {
   mathBlock: { latex: undefined },
   mathInline: { latex: undefined },
   callout: { variant: undefined },
-  image: { src: undefined, alt: undefined, caption: null, width: null, height: null },
-  file: { href: undefined, name: undefined, size: null },
+  // Uploads (M4) have `media` (+ `widths`); imported content may link by `src` / `href` instead.
+  image: { media: undefined, widths: null, src: undefined, alt: undefined, caption: null, width: null, height: null },
+  file: { media: undefined, href: undefined, name: undefined, size: null },
   embed: { provider: undefined, id: undefined, title: null },
   table: {},
   tableRow: {},

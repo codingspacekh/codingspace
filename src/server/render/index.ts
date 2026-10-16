@@ -1,6 +1,7 @@
 import katex from 'katex';
 import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
 import { highlight, resolveLanguage } from './highlight';
+import { fallbackWidth, fileKey, imageKey, isMediaId, mediaUrl, mediaWidths, srcset } from '@/lib/media-urls';
 import { safeEmbed, safeLinkHref, safeMediaUrl } from './policy';
 import { CALLOUT_VARIANTS, type RenderResult, type TocEntry } from './schema';
 
@@ -137,7 +138,34 @@ function formatSize(bytes: unknown): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const dimension = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 10_000 ? v : null);
+const dimension = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 20_000 ? v : null);
+
+/** The article column is at most 720 px wide; below 1100 px the page is one column. */
+const IMAGE_SIZES = '(min-width: 1100px) 720px, 100vw';
+
+const imgTail = (alt: string, width: number | null, height: number | null) =>
+  ` alt="${escapeHtml(alt)}"` +
+  (width && height ? ` width="${width}" height="${height}"` : '') +
+  ` loading="lazy" decoding="async">`;
+
+/** An uploaded image (03 §7): AVIF where the browser has it, WebP otherwise, at 480/960/1600 px. */
+function uploadedImage(id: string, widthsAttr: unknown, alt: string, width: number | null, height: number | null) {
+  const widths = mediaWidths(widthsAttr);
+  if (!widths) return null;
+  const fallback = mediaUrl(imageKey(id, fallbackWidth(widths), 'webp'));
+  return (
+    `<picture><source type="image/avif" srcset="${escapeHtml(srcset(id, widths, 'avif'))}" sizes="${IMAGE_SIZES}">` +
+    `<img src="${escapeHtml(fallback)}" srcset="${escapeHtml(srcset(id, widths, 'webp'))}" sizes="${IMAGE_SIZES}"` +
+    imgTail(alt, width, height) +
+    `</picture>`
+  );
+}
+
+/** An image given by URL (imported content): it must be on the media address. */
+function linkedImage(value: unknown, alt: string, width: number | null, height: number | null) {
+  const src = safeMediaUrl(value);
+  return src ? `<img src="${escapeHtml(src)}"` + imgTail(alt, width, height) : null;
+}
 
 async function renderBlocks(nodes: Node[], ctx: Context, depth: number): Promise<string> {
   if (depth > MAX_DEPTH) return '';
@@ -281,24 +309,24 @@ async function renderBlock(node: Node, ctx: Context, depth: number): Promise<str
     }
 
     case 'image': {
-      const src = safeMediaUrl(a.src);
-      if (!src) return '';
       const alt = str(a.alt);
       const caption = str(a.caption);
       const width = dimension(a.width);
       const height = dimension(a.height);
+      const img = isMediaId(a.media)
+        ? uploadedImage(a.media, a.widths, alt, width, height)
+        : linkedImage(a.src, alt, width, height);
+      if (!img) return '';
       ctx.blocks.push(`${alt} ${caption}`);
       return (
-        `<figure class="figure"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"` +
-        (width && height ? ` width="${width}" height="${height}"` : '') +
-        ` loading="lazy" decoding="async">` +
+        `<figure class="figure">${img}` +
         (caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : '') +
         `</figure>`
       );
     }
 
     case 'file': {
-      const href = safeMediaUrl(a.href);
+      const href = isMediaId(a.media) ? mediaUrl(fileKey(a.media)) : safeMediaUrl(a.href);
       const name = str(a.name);
       if (!href || !name) return '';
       const size = formatSize(a.size);

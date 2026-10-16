@@ -1,0 +1,21 @@
+{
+  "type": "doc",
+  "content": [
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "Uploaded media" }] },
+    {
+      "type": "image",
+      "attrs": {
+        "media": "3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f",
+        "widths": [480, 960, 1600],
+        "alt": "Forces on a block on a slope",
+        "caption": "Resolve along and across the slope",
+        "width": 2000,
+        "height": 1250
+      }
+    },
+    {
+      "type": "file",
+      "attrs": { "media": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "name": "slope-worksheet.pdf", "size": 245760 }
+    }
+  ]
+}

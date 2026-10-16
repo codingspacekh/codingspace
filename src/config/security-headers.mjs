@@ -14,11 +14,13 @@ function origin(value, name) {
 }
 
 /**
- * @param {{ supabaseUrl?: string }} options
+ * @param {{ supabaseUrl?: string, uploadOrigin?: string | null }} options
+ *   uploadOrigin: R2's S3 endpoint, which the admin's browser uploads to (r2Endpoint()).
  * @returns {string}
  */
-export function buildCsp({ supabaseUrl } = {}) {
+export function buildCsp({ supabaseUrl, uploadOrigin } = {}) {
   const supabase = origin(supabaseUrl, 'supabaseUrl');
+  const upload = origin(uploadOrigin ?? undefined, 'uploadOrigin');
   return [
     "default-src 'self'",
     "script-src 'self'",
@@ -27,7 +29,7 @@ export function buildCsp({ supabaseUrl } = {}) {
     "style-src-attr 'unsafe-inline'",
     `img-src 'self' data: ${MEDIA_ORIGIN}`,
     "font-src 'self'",
-    ['connect-src', "'self'", supabase].filter(Boolean).join(' '),
+    ['connect-src', "'self'", supabase, upload].filter(Boolean).join(' '),
     `media-src 'self' ${MEDIA_ORIGIN}`,
     // Lesson embeds only; the renderer rebuilds every iframe URL on these origins.
     `frame-src ${Object.values(EMBED_ORIGINS).join(' ')}`,
@@ -39,7 +41,7 @@ export function buildCsp({ supabaseUrl } = {}) {
 }
 
 /**
- * @param {{ supabaseUrl?: string, indexable?: boolean }} options
+ * @param {{ supabaseUrl?: string, uploadOrigin?: string | null, indexable?: boolean }} options
  * @returns {{ key: string, value: string }[]}
  */
 export function securityHeaders(options = {}) {
