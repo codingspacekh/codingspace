@@ -82,3 +82,47 @@ describe('SettingsPanel (ADM-05)', () => {
     expect(screen.getByRole('combobox', { name: 'Language' })).toBeInTheDocument();
   });
 });
+
+describe('SettingsPanel: new section', () => {
+  function WithCreate({ create }: { create: (t: string) => Promise<string | null> }) {
+    const [value, setValue] = useState(start);
+    return (
+      <SettingsPanel
+        kind="lesson"
+        value={value}
+        sections={sections}
+        slug="am-gm"
+        urlLocked={false}
+        onChange={(p) => setValue((v) => ({ ...v, ...p }))}
+        onCreateSection={create}
+      />
+    );
+  }
+
+  it('adds a section by title (Enter or the button), and can be cancelled', async () => {
+    const create = vi.fn(async () => null);
+    const user = userEvent.setup();
+    render(<WithCreate create={create} />);
+    await user.click(screen.getByRole('button', { name: 'New section…' }));
+    const group = screen.getByRole('group', { name: 'New section' });
+    expect(group).toHaveTextContent('Added at the end of Math');
+    expect(screen.getByRole('button', { name: 'Add section' })).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: 'New section title' }), 'Functional equations{Enter}');
+    expect(create).toHaveBeenCalledWith('Functional equations');
+    expect(screen.queryByRole('group', { name: 'New section' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'New section…' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('group', { name: 'New section' })).toBeNull();
+  });
+
+  it('shows why a section could not be added, and keeps the title', async () => {
+    const user = userEvent.setup();
+    render(<WithCreate create={async () => 'could not find a free address for this section'} />);
+    await user.click(screen.getByRole('button', { name: 'New section…' }));
+    await user.type(screen.getByRole('textbox', { name: 'New section title' }), 'X');
+    await user.click(screen.getByRole('button', { name: 'Add section' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('free address');
+    expect(screen.getByRole('textbox', { name: 'New section title' })).toHaveValue('X');
+  });
+});

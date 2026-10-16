@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { levelLabel } from '@/lib/format';
 import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
 
@@ -24,6 +24,7 @@ export function SettingsPanel({
   slug,
   urlLocked,
   onChange,
+  onCreateSection,
 }: {
   kind: 'lesson' | 'life';
   value: Settings;
@@ -31,8 +32,26 @@ export function SettingsPanel({
   slug: string;
   urlLocked: boolean;
   onChange: (patch: Partial<Settings>) => void;
+  /** Adds a section to the current subject; resolves to an error message, or null. */
+  onCreateSection?: (title: string) => Promise<string | null>;
 }) {
   const id = useId();
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [addError, setAddError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function addSection(e: FormEvent) {
+    e.preventDefault();
+    if (!onCreateSection || !newTitle.trim()) return;
+    setBusy(true);
+    const error = await onCreateSection(newTitle.trim());
+    setBusy(false);
+    if (error) return setAddError(error);
+    setAdding(false);
+    setNewTitle('');
+    setAddError('');
+  }
   const inSubject = sections.filter((s) => s.subject_id === value.subject_id).sort((a, b) => a.sort - b.sort);
   const num = (v: string, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(v) || min)));
 
@@ -79,6 +98,49 @@ export function SettingsPanel({
               This subject has no sections yet.
             </p>
           )}
+          {onCreateSection &&
+            (adding ? (
+              // Not a <form>: this panel sits inside the editor page, and Enter must not submit anything else.
+              <div className="ed-new-section" role="group" aria-label="New section">
+                <label>
+                  New section title
+                  <input
+                    value={newTitle}
+                    maxLength={120}
+                    aria-invalid={addError ? true : undefined}
+                    aria-describedby={addError ? `${id}-adderr` : `${id}-addhint`}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void addSection(e);
+                      if (e.key === 'Escape') setAdding(false);
+                    }}
+                  />
+                </label>
+                {addError ? (
+                  <p id={`${id}-adderr`} className="adm-error" role="alert">
+                    {addError}
+                  </p>
+                ) : (
+                  <p id={`${id}-addhint`} className="adm-hint">
+                    Added at the end of{' '}
+                    {value.subject_id ? SUBJECTS[value.subject_id as keyof typeof SUBJECTS]?.name : 'the subject'}. It
+                    shows on the subject page as “coming soon” until it has a lesson.
+                  </p>
+                )}
+                <div className="adm-quick">
+                  <button type="button" className="btn pri" disabled={busy || !newTitle.trim()} onClick={addSection}>
+                    Add section
+                  </button>
+                  <button type="button" className="btn" onClick={() => setAdding(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn" onClick={() => setAdding(true)} disabled={!value.subject_id}>
+                New section…
+              </button>
+            ))}
           <label>
             Level
             <select value={value.level} onChange={(e) => onChange({ level: Number(e.target.value) })}>

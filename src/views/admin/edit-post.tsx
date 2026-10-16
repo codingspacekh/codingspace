@@ -402,6 +402,18 @@ export function EditPost({ id }: { id: string }) {
                 setSettings((s) => (s ? { ...s, ...patch } : s));
                 changed();
               }}
+              onCreateSection={async (sectionTitle) => {
+                const { status, data } = await api<Section & { error?: string }>('/api/admin/sections', {
+                  method: 'POST',
+                  body: { subject_id: settings.subject_id, title: sectionTitle },
+                });
+                if (status !== 201) return data.error ?? 'The section could not be added. Try again.';
+                setSections((list) => [...list, data]);
+                // Put this post in it straight away.
+                setSettings((s) => (s ? { ...s, section_id: data.id } : s));
+                changed();
+                return null;
+              }}
             />
           )}
         </div>

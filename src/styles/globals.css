@@ -1972,3 +1972,9 @@ img.ProseMirror-separator {
 .adm-preview-bar a {
   color: var(--amber);
 }
+.ed-new-section {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--line);
+}

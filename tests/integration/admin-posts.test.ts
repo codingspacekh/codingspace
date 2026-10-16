@@ -15,6 +15,7 @@ import {
   unpublishPost,
 } from '@/server/admin/posts';
 import { dashboard, listPosts } from '@/server/admin/list';
+import { createSection } from '@/server/admin/sections';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // The write side against a real database (03 ADM-03, ADM-05…09): every change commits
@@ -334,5 +335,32 @@ describe('a new lesson in an existing section', () => {
 
     const off = await unpublishPost(owner, second.id);
     expect(off.paths).toContain('/posts/it-test-order-first');
+
+describe('adding a section', () => {
+  afterAll(async () => {
+    await service.from('sections').delete().like('slug', 'it-test-new%');
+    await service.from('sections').delete().like('title', 'វិ%');
+  });
+
+  it('goes last in its subject, with a free address from its title', async () => {
+    const a = await createSection(owner, { subject_id: 'coding', title: 'IT test new: Recursion' });
+    const b = await createSection(owner, { subject_id: 'coding', title: 'IT test new: Recursion' });
+    expect(a.slug).toBe('it-test-new-recursion');
+    expect(b.slug).toBe('it-test-new-recursion-2');
+    expect(b.sort).toBeGreaterThan(a.sort);
+    const khmer = await createSection(owner, { subject_id: 'coding', title: 'វិសមភាព' });
+    expect(khmer.slug).toMatch(/^section-\d+$/);
+    await expect(createSection(owner, { subject_id: 'coding', title: '  ' })).rejects.toMatchObject({ status: 422 });
+    await expect(createSection(owner, { subject_id: 'art', title: 'X' })).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('visitors cannot add sections', async () => {
+    const { error } = await anon.rpc('admin_create_section', {
+      p_subject_id: 'math',
+      p_title: 'x',
+      p_slug: 'x',
+      p_description: '',
+    });
+    expect(error?.code).toBe('42501');
   });
 });
