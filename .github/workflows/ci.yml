@@ -52,11 +52,10 @@ jobs:
       # The API (PostgREST behind Kong) is needed for the content import test; the rest is skipped.
       - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,realtime,storage-api,postgres-meta
       - run: supabase test db
-      # Imports content/ into the local database and reads it back as a visitor (job name kept: it is a required check).
-      - name: Content import integration test
+      # Content import and the page data layer against the local database (job name kept: it is a required check).
+      - name: Integration tests (content import, page data)
         run: |
-          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
-          export API_URL ANON_KEY SERVICE_ROLE_KEY
+          set -a; eval "$(scripts/local-db-env.sh)"; set +a
           npm run test:int
 
   e2e:
@@ -70,6 +69,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      # Pages are built from the database: start a local Supabase and load content/ into it.
+      - run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,realtime,storage-api,postgres-meta
+      - run: scripts/local-db-env.sh >> "$GITHUB_ENV"
+      - run: npm run content:import
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -93,6 +96,10 @@ jobs:
       - run: npm ci
       - run: npm install --no-save --legacy-peer-deps react@19.1.0 react-dom@19.1.0 @types/react@19.1.2 @types/react-dom@19.1.2
       - run: node patches/apply-arwes-patch.mjs
+      # Pages are built from the database: start a local Supabase and load content/ into it.
+      - run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,realtime,storage-api,postgres-meta
+      - run: scripts/local-db-env.sh >> "$GITHUB_ENV"
+      - run: npm run content:import
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run test:e2e

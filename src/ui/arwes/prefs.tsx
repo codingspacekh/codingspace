@@ -18,28 +18,35 @@ const bleepsSettings = {
   },
 };
 
-type Prefs = { motion: boolean; sound: boolean; toggleSound: () => void };
-const PrefsContext = createContext<Prefs>({ motion: false, sound: false, toggleSound: () => {} });
+type Prefs = { motion: boolean; sound: boolean; toggleSound: () => void; toggleMotion: () => void };
+const PrefsContext = createContext<Prefs>({
+  motion: false,
+  sound: false,
+  toggleSound: () => {},
+  toggleMotion: () => {},
+});
 
 function osAllowsMotion() {
   return typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /**
- * Root of all UI state: motion (from the OS, overridable in tests) and sound (off by default).
+ * Root of all UI state: motion (starts from the OS setting, overridable in tests, and
+ * switchable from the top bar) and sound (off by default).
  * Read the OS setting on the very first client render so animators start disabled.
  */
 export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode; motion?: boolean }) {
-  const [motion] = useState(() => forcedMotion ?? osAllowsMotion());
+  const [motion, setMotion] = useState(() => forcedMotion ?? osAllowsMotion());
   const [sound, setSound] = useState(false);
   const toggleSound = useCallback(() => setSound((s) => !s), []);
+  const toggleMotion = useCallback(() => setMotion((m) => !m), []);
 
   useEffect(() => {
     document.documentElement.dataset.motion = motion ? 'on' : 'off';
   }, [motion]);
 
   return (
-    <PrefsContext.Provider value={{ motion, sound, toggleSound }}>
+    <PrefsContext.Provider value={{ motion, sound, toggleSound, toggleMotion }}>
       <BleepsProvider {...bleepsSettings}>
         <AnimatorGeneralProvider disabled={!motion} duration={{ enter: 0.4, exit: 0.3, stagger: 0.08 }}>
           {children}

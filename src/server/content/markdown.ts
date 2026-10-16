@@ -20,7 +20,16 @@ const CALLOUT = /^\[!(NOTE|CONTEST-TIP|EXAM-TIP|WARNING)\][ \t]*\n?/;
 
 class Converter {
   warnings = new Set<string>();
-  constructor(private lineOffset: number) {}
+  constructor(
+    private source: string,
+    private lineOffset: number,
+  ) {}
+
+  /** The Markdown a node was written as (to tell `$$x$$` from `$x$`; both parse as inlineMath). */
+  raw(node: Md.Node): string {
+    const { start, end } = node.position ?? {};
+    return start?.offset !== undefined && end?.offset !== undefined ? this.source.slice(start.offset, end.offset) : '';
+  }
 
   warn(message: string, node: Md.Node) {
     const line = (node.position?.start.line ?? 0) + this.lineOffset;
@@ -88,6 +97,10 @@ class Converter {
       case 'paragraph': {
         const meaningful = node.children.filter((c) => !(c.type === 'text' && !c.value.trim()));
         const only = meaningful.length === 1 ? meaningful[0] : undefined;
+        // remark-math reads a one-line $$…$$ as inline maths; on its own line it is meant as display maths.
+        if (only?.type === 'inlineMath' && this.raw(only).startsWith('$$')) {
+          return [{ type: 'mathBlock', attrs: { latex: only.value.trim() } }];
+        }
         if (only?.type === 'image') {
           return [
             {
@@ -179,7 +192,7 @@ export type MarkdownResult = { doc: { type: 'doc'; content: Json[] }; warnings: 
 
 /** @param lineOffset lines before the Markdown body (front matter), so warnings point at the file line. */
 export function markdownToDoc(markdown: string, { lineOffset = 0 } = {}): MarkdownResult {
-  const converter = new Converter(lineOffset);
+  const converter = new Converter(markdown, lineOffset);
   const tree = parser.parse(markdown);
   const content = converter.blocks(tree.children);
   return { doc: { type: 'doc', content }, warnings: [...converter.warnings] };

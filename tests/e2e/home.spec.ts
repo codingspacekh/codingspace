@@ -1,30 +1,29 @@
-import { test, expect, type Page } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from '@playwright/test';
+import { collectProblems, expectAccessible } from './helpers';
 
-async function collectProblems(page: Page) {
-  const problems: string[] = [];
-  await page.addInitScript(() => {
-    document.addEventListener('securitypolicyviolation', (e) =>
-      console.error(`CSP-VIOLATION ${e.violatedDirective} ${e.blockedURI}`),
-    );
-  });
-  page.on('console', (m) => {
-    if (m.type() === 'error' || /hydrat/i.test(m.text())) problems.push(`[${m.type()}] ${m.text()}`);
-  });
-  page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}`));
-  return problems;
-}
-
-test('home renders the brand and is accessible', async ({ page }) => {
+test('home renders the brand, tracks and latest lessons, and is accessible', async ({ page }) => {
   const problems = await collectProblems(page);
   await page.goto('/');
   await expect(page).toHaveTitle(/CodingSpace/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Prove it.');
-  await expect(page.getByRole('main')).toBeVisible();
-  await page.waitForLoadState('networkidle');
-  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  const study = page.getByRole('region', { name: 'Study' });
+  for (const subject of ['Math', 'Physics', 'Coding', 'IT']) {
+    await expect(study.getByRole('link', { name: new RegExp(`^${subject}`) })).toBeVisible();
+  }
+  await expect(page.getByRole('heading', { name: 'Latest lessons' })).toBeVisible();
+  await page.waitForLoadState('load');
+  await expectAccessible(page);
   expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('problem of the week hides the solution until asked', async ({ page }) => {
+  await page.goto('/');
+  const potw = page.getByRole('region', { name: 'Problem of the week' });
+  await expect(potw.locator('.katex').first()).toBeVisible();
+  const solution = potw.getByText('Show the solution');
+  await expect(potw.getByText(/a\+b\+c/i).last()).toBeHidden();
+  await solution.click();
+  await expect(potw.locator('details[open]')).toHaveCount(1);
 });
 
 test('skip link moves keyboard focus to main content', async ({ page }) => {

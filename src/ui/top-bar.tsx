@@ -1,26 +1,143 @@
 import Link from 'next/link';
+import { useEffect, useId, useRef, useState } from 'react';
+import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
 import { usePrefs, useSound } from './arwes/prefs';
 
-export function TopBar() {
-  const { sound, toggleSound } = usePrefs();
-  const play = useSound();
+function Logo() {
   return (
-    <header className="ui-bar">
-      <Link href="/" className="ui-logo" onMouseEnter={() => play('hover')}>
-        Coding<b>Space</b>
-      </Link>
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <path d="M14 2 25 8.5v11L14 26 3 19.5v-11L14 2Z" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M10 11l-3 3 3 3M18 11l3 3-3 3M15.5 9.5l-3 9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Study ▾ disclosure: a button that shows a list of links (not an ARIA menu; plain Tab order works). */
+function StudyMenu({ active }: { active: boolean }) {
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const play = useSound();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    const onPointer = (e: PointerEvent | MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+    };
+  }, [open]);
+
+  return (
+    <div className={`dd${open ? ' open' : ''}`} ref={root}>
       <button
+        ref={button}
         type="button"
-        className="ui-toggle"
-        aria-pressed={sound}
+        className={`nl${active ? ' on' : ''}`}
+        aria-expanded={open}
+        aria-controls={menuId}
         onClick={() => {
-          toggleSound();
-          // Turning sound on is the user gesture that unlocks audio; confirm with a click.
-          if (!sound) play('click', true);
+          setOpen((o) => !o);
+          play('click');
         }}
       >
-        Sound {sound ? 'on' : 'off'}
+        Study
+        <svg className="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M1 3l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
       </button>
+      <ul className="menu" id={menuId} hidden={!open}>
+        {SUBJECT_IDS.map((id) => (
+          <li key={id}>
+            <Link href={`/study/${id}`} className={`mi c-${SUBJECTS[id].color}`} onClick={() => setOpen(false)}>
+              <span className="g" aria-hidden="true">
+                {SUBJECTS[id].glyph}
+              </span>
+              <span>
+                <strong>{SUBJECTS[id].name}</strong>
+                <span>{SUBJECTS[id].blurb}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export type NavItem = 'home' | 'study' | 'projects' | 'author';
+
+export function TopBar({ active }: { active?: NavItem }) {
+  const { sound, motion, toggleSound, toggleMotion } = usePrefs();
+  const play = useSound();
+  const [navOpen, setNavOpen] = useState(false);
+  const navId = useId();
+  const current = (item: NavItem) => (active === item ? 'page' : undefined);
+
+  return (
+    <header className="ui-bar">
+      <div className="bar-inner">
+        <Link href="/" className="ui-logo" aria-label="CodingSpace home" onMouseEnter={() => play('hover')}>
+          <Logo />
+          <span>
+            Coding<b>Space</b>
+          </span>
+        </Link>
+        <button
+          type="button"
+          className="burger"
+          aria-expanded={navOpen}
+          aria-controls={navId}
+          onClick={() => setNavOpen((o) => !o)}
+        >
+          Menu
+        </button>
+        <nav id={navId} className={`main-nav${navOpen ? ' show' : ''}`} aria-label="Main">
+          <Link className="nl" href="/" aria-current={current('home')}>
+            Home
+          </Link>
+          <StudyMenu active={active === 'study'} />
+          <Link className="nl" href="/projects" aria-current={current('projects')}>
+            Projects
+          </Link>
+          <Link className="nl" href="/author" aria-current={current('author')}>
+            Author
+          </Link>
+          <div className="tools">
+            <button
+              type="button"
+              className="ui-toggle"
+              aria-pressed={sound}
+              onClick={() => {
+                toggleSound();
+                // Turning sound on is the user gesture that unlocks audio; confirm with a click.
+                if (!sound) play('click', true);
+              }}
+            >
+              Sound {sound ? 'on' : 'off'}
+            </button>
+            <button type="button" className="ui-toggle" aria-pressed={motion} onClick={toggleMotion}>
+              Motion {motion ? 'on' : 'off'}
+            </button>
+          </div>
+        </nav>
+      </div>
     </header>
   );
 }
