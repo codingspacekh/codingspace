@@ -113,6 +113,7 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
+          include-hidden-files: true # the folder name starts with a dot
           retention-days: 14
 
   react19:
