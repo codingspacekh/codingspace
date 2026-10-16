@@ -1,7 +1,16 @@
 # Content
 
-Source content for the site. `npm run content:import` (M2) loads it into the database;
-from M3 on, new content is written in the admin editor instead.
+Source content for the site. From M3 on, new content is written in the admin editor instead.
+
+```sh
+npm run content:import -- --dry-run   # check every file and render it; writes nothing
+npm run content:import                # publish to NEXT_PUBLIC_SUPABASE_URL
+```
+
+The import needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. It is safe to run again:
+posts are matched by slug and keep their first publish date. Posts that are in the
+database but no longer here are listed, never deleted. Projects, the timeline and
+featured problems are replaced by what these files say.
 
 **Everything here marked `dummy: true` is placeholder content** — replace it with real
 lessons, then delete the dummy files.

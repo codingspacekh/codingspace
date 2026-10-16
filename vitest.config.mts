@@ -12,7 +12,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}', 'patches/**/*.mjs'],
-      exclude: ['src/pages/**', '**/*.d.ts'],
+      // supabase-store.ts is exercised by tests/integration (npm run test:int), not unit tests.
+      exclude: ['src/pages/**', '**/*.d.ts', 'src/server/content/supabase-store.ts'],
       // NFR-MAINT-1: ≥ 90 % for src/lib and src/config, ≥ 70 % overall
       thresholds: {
         lines: 70,
