@@ -31,3 +31,6 @@ spikes/m0-arwes-r19/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# copied from node_modules at build (scripts/copy-katex.mjs)
+public/katex/

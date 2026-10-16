@@ -25,11 +25,12 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
-    "prebuild": "node patches/apply-arwes-patch.mjs",
+    "prebuild": "node patches/apply-arwes-patch.mjs && node scripts/copy-katex.mjs",
     "pretest": "node patches/apply-arwes-patch.mjs",
     "audit:ci": "npm audit --audit-level=high",
     "content:import": "tsx --env-file-if-exists=.env.local scripts/import-content.ts",
-    "test:int": "vitest run --config vitest.integration.config.mts"
+    "test:int": "vitest run --config vitest.integration.config.mts",
+    "predev": "node scripts/copy-katex.mjs"
   },
   "dependencies": {
     "@arwes/react": "1.0.0-next.25020502",

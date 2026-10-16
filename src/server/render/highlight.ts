@@ -46,5 +46,11 @@ export function resolveLanguage(language: unknown): { id: string; label: string 
 
 /** Returns Shiki's `<pre>`; Shiki escapes the code and only adds inline colour styles. */
 export async function highlight(code: string, lang: string): Promise<string> {
-  return (await getHighlighter()).codeToHtml(code, { lang, theme: THEME });
+  return (await getHighlighter()).codeToHtml(code, {
+    lang,
+    theme: THEME,
+    // Shiki stops colouring a line after 500 ms by default, which a busy machine can hit while the
+    // grammar compiles. Publishing must give the same HTML every time, so allow far longer.
+    tokenizeTimeLimit: 30_000,
+  });
 }

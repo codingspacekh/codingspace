@@ -58,6 +58,16 @@ describe('markdownToDoc: maths and code', () => {
     ]);
   });
 
+  it('treats one-line $$…$$ on its own line as display maths', () => {
+    expect(blocks('$$\\frac{a+b}{2} \\ge \\sqrt{ab},$$')).toEqual([
+      { type: 'mathBlock', attrs: { latex: '\\frac{a+b}{2} \\ge \\sqrt{ab},' } },
+    ]);
+  });
+
+  it('keeps $$…$$ inside a sentence inline', () => {
+    expect(blocks('so $$x$$ holds')).toEqual([p(t('so '), { type: 'mathInline', attrs: { latex: 'x' } }, t(' holds'))]);
+  });
+
   it('converts fenced code with its language', () => {
     expect(blocks('```python\nprint(1)\n```')).toEqual([
       { type: 'codeBlock', attrs: { language: 'python' }, content: [t('print(1)')] },
