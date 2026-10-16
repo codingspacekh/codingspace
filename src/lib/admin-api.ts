@@ -4,13 +4,19 @@ export type ApiResult<T> = { status: number; data: T };
 
 export async function api<T = Record<string, unknown>>(
   path: string,
-  { method = 'GET', body }: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown } = {},
+  {
+    method = 'GET',
+    body,
+    keepalive,
+  }: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; keepalive?: boolean } = {},
 ): Promise<ApiResult<T>> {
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+    // Lets a save finish while the tab closes (bodies up to 64 KB).
+    keepalive,
   });
   const data = (await res.json().catch(() => ({}))) as T;
   return { status: res.status, data };

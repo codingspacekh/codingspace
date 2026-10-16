@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { EditPost } from '@/views/admin/edit-post';
+import { AUTOSAVE_MS, EditPost } from '@/views/admin/edit-post';
 
 beforeAll(() => {
   const rect = () => ({ x: 0, y: 0, top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0, toJSON: () => ({}) });
@@ -13,7 +13,7 @@ beforeAll(() => {
   document.elementFromPoint = () => null;
 });
 
-const post = {
+const basePost = {
   id: 'p1',
   kind: 'lesson',
   slug: 'lesson-2026-10-16',
@@ -33,70 +33,139 @@ const post = {
   has_unpublished_changes: false,
 };
 
-function mockApi(put: (body: { revision: number; fields: Record<string, unknown> }) => [number, unknown]) {
-  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-    if (init?.method === 'PUT') {
-      const [status, body] = put(JSON.parse(String(init.body)));
-      return new Response(JSON.stringify(body), { status });
-    }
-    return new Response(
-      JSON.stringify({ post, sections: [{ id: 's1', subject_id: 'math', title: 'Inequalities', sort: 0 }] }),
-      { status: 200 },
-    );
-  });
-  vi.stubGlobal('fetch', fetch);
-  return fetch;
+type Put = { revision: number; fields: Record<string, unknown> };
+type Reply = [number, unknown] | 'network';
+
+/** Routes fetch(): GET post, PUT saves (replies from `puts`), revisions and restore. */
+function mockApi({
+  put = (b: Put): Reply => [200, { revision: b.revision + 1, slug: 'am-gm' }],
+  post = basePost as Record<string, unknown>,
+  revisions = [] as unknown[],
+} = {}) {
+  const calls = { puts: [] as Put[], restores: [] as unknown[], gets: 0 };
+  let current = post;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      const json = (status: number, data: unknown) => new Response(JSON.stringify(data), { status });
+      if (url.endsWith('/revisions')) return json(200, { revisions });
+      if (/\/revisions\/\d+$/.test(url) && init?.method === 'POST') {
+        calls.restores.push(body);
+        current = { ...current, title: 'Old title', revision: body.revision + 2 };
+        return json(200, { revision: body.revision + 2 });
+      }
+      if (/\/revisions\/\d+$/.test(url)) return json(200, { html: '<p>old body</p>' });
+      if (init?.method === 'PUT') {
+        calls.puts.push(body);
+        const reply = put(body);
+        if (reply === 'network') throw new TypeError('Failed to fetch');
+        return json(reply[0], reply[1]);
+      }
+      calls.gets++;
+      return json(200, { post: current, sections: [{ id: 's1', subject_id: 'math', title: 'Inequalities', sort: 0 }] });
+    }),
+  );
+  return calls;
 }
+
+let user: ReturnType<typeof userEvent.setup>;
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+});
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-describe('EditPost', () => {
-  it('saves title, settings and body with the current revision, then shows the new address', async () => {
-    const puts: { revision: number; fields: Record<string, unknown> }[] = [];
-    mockApi((body) => {
-      puts.push(body);
-      return [200, { revision: body.revision + 1, slug: 'am-gm' }];
-    });
-    const user = userEvent.setup();
+const status = () => screen.getByRole('status');
+const titleBox = () => screen.findByRole('textbox', { name: 'Title' });
+const wait = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+
+describe('EditPost autosave (ADM-06)', () => {
+  it('saves once, a second after the last keystroke, with every change in it', async () => {
+    const calls = mockApi();
     render(<EditPost id="p1" />);
-    await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'AM–GM');
-    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
+    await user.type(await titleBox(), 'AM–GM');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Section' }), 's1');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('All changes saved'));
-    expect(puts[0]).toMatchObject({ revision: 3, fields: { title: 'AM–GM', section_id: 's1', subject_id: 'math' } });
+    expect(status()).toHaveTextContent('Unsaved changes');
+    await wait(AUTOSAVE_MS - 100);
+    expect(calls.puts).toHaveLength(0);
+    await wait(200);
+    await waitFor(() => expect(status()).toHaveTextContent('All changes saved'));
+    expect(calls.puts).toHaveLength(1);
+    expect(calls.puts[0]).toMatchObject({ revision: 3, fields: { title: 'AM–GM', section_id: 's1' } });
     expect(screen.getByText('codingspace.io/posts/am-gm')).toBeInTheDocument();
-
-    // The next save sends the revision the server returned.
-    await user.type(screen.getByRole('textbox', { name: 'Title' }), '!');
-    act(() => void fireEvent.keyDown(window, { key: 's', ctrlKey: true }));
-    await waitFor(() => expect(puts).toHaveLength(2));
-    expect(puts[1]!.revision).toBe(4);
   });
 
-  it('stops saving after a conflict (another tab saved first)', async () => {
-    const fetch = mockApi(() => [409, { error: 'the post changed since revision 3' }]);
-    const user = userEvent.setup();
+  it('an edit while a save is in flight is saved next, with the new revision', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const calls = mockApi();
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    const original = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => Promise<Response>;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT' && calls.puts.length === 0) await gate;
+      return original(url, init);
+    });
     render(<EditPost id="p1" />);
-    await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'x');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('changed in another tab'));
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.type(await titleBox(), 'A');
+    await wait(AUTOSAVE_MS + 10);
+    expect(status()).toHaveTextContent('Saving…');
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), 'B');
+    release();
+    await wait(AUTOSAVE_MS + 10);
+    await waitFor(() => expect(calls.puts).toHaveLength(2));
+    expect(calls.puts[1]).toMatchObject({ revision: 4, fields: { title: 'AB' } });
+    await waitFor(() => expect(status()).toHaveTextContent('All changes saved'));
+  });
+
+  it('retries after a lost connection, and says so meanwhile', async () => {
+    let fail = true;
+    const calls = mockApi({ put: (b) => (fail ? 'network' : [200, { revision: b.revision + 1, slug: 'x' }]) });
+    render(<EditPost id="p1" />);
+    await user.type(await titleBox(), 'x');
+    await wait(AUTOSAVE_MS + 10);
+    await waitFor(() => expect(status()).toHaveTextContent('no connection'));
+    fail = false;
+    await wait(2_000);
+    await waitFor(() => expect(status()).toHaveTextContent('All changes saved'));
+    expect(calls.puts).toHaveLength(2);
+  });
+
+  it('signed out (12 h idle): keeps the edits, says what to do, and does not retry by itself', async () => {
+    const calls = mockApi({ put: () => [401, { error: 'expired' }] });
+    render(<EditPost id="p1" />);
+    await user.type(await titleBox(), 'x');
+    await wait(AUTOSAVE_MS + 10);
+    await waitFor(() => expect(status()).toHaveTextContent('you were signed out'));
+    await wait(60_000);
+    expect(calls.puts).toHaveLength(1);
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('x');
+  });
+
+  it('a conflict stops saving: no autosave, no Save button', async () => {
+    const calls = mockApi({ put: () => [409, { error: 'the post changed since revision 3' }] });
+    render(<EditPost id="p1" />);
+    await user.type(await titleBox(), 'x');
+    await wait(AUTOSAVE_MS + 10);
+    await waitFor(() => expect(status()).toHaveTextContent('changed in another tab'));
     await user.type(screen.getByRole('textbox', { name: 'Title' }), 'y');
-    expect(screen.getByRole('status')).toHaveTextContent('changed in another tab');
-    expect(fetch.mock.calls.filter(([, i]) => i?.method === 'PUT')).toHaveLength(1);
+    await wait(AUTOSAVE_MS * 5);
+    expect(calls.puts).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
-  it('warns before leaving with unsaved changes', async () => {
-    mockApi(() => [200, { revision: 4, slug: 'x' }]);
-    const user = userEvent.setup();
+  it('Ctrl/⌘+S saves at once; leaving with unsaved changes asks first', async () => {
+    const calls = mockApi();
     render(<EditPost id="p1" />);
-    await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'x');
-    const event = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(event);
-    expect(event.defaultPrevented).toBe(true);
+    await user.type(await titleBox(), 'x');
+    const leave = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(leave);
+    expect(leave.defaultPrevented).toBe(true);
+    act(() => void fireEvent.keyDown(window, { key: 's', metaKey: true }));
+    await waitFor(() => expect(calls.puts).toHaveLength(1));
   });
 
   it('says so when the post does not exist', async () => {
@@ -106,5 +175,43 @@ describe('EditPost', () => {
     );
     render(<EditPost id="missing" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('does not exist');
+  });
+});
+
+describe('EditPost history', () => {
+  const revisions = [
+    { id: 11, revision: 2, reason: 'publish', title: 'Old title', created_at: '2026-10-16T03:00:00Z' },
+    { id: 10, revision: 1, reason: 'autosave', title: 'Older', created_at: '2026-10-16T02:00:00Z' },
+  ];
+
+  it('previews a version, restores it after confirming, and reloads the draft', async () => {
+    const calls = mockApi({ revisions });
+    render(<EditPost id="p1" />);
+    await titleBox();
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    const history = screen.getByRole('region', { name: 'History' });
+    await user.click(await within(history).findByRole('button', { name: /Published\s*Old title/ }));
+    expect(await within(history).findByText('old body')).toBeInTheDocument();
+
+    await user.click(within(history).getByRole('button', { name: 'Restore…' }));
+    await user.click(within(history).getByRole('button', { name: 'Restore this version' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Old title'));
+    expect(calls.restores).toEqual([{ revision: 3 }]);
+    expect(calls.gets).toBe(2);
+    expect(screen.getByRole('alert')).toHaveTextContent('Restored.');
+  });
+
+  it('saves pending edits before restoring, so they are in the history too', async () => {
+    const calls = mockApi({ revisions });
+    render(<EditPost id="p1" />);
+    await user.type(await titleBox(), 'unsaved');
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    const history = screen.getByRole('region', { name: 'History' });
+    await user.click(await within(history).findByRole('button', { name: /Autosaved\s*Older/ }));
+    await user.click(within(history).getByRole('button', { name: 'Restore…' }));
+    await user.click(within(history).getByRole('button', { name: 'Restore this version' }));
+    await waitFor(() => expect(calls.restores).toHaveLength(1));
+    expect(calls.puts[0]).toMatchObject({ fields: { title: 'unsaved' } });
+    expect(calls.restores[0]).toEqual({ revision: 4 });
   });
 });

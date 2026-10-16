@@ -65,7 +65,7 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     expect(problems).toEqual([]);
   });
 
-  test('the editor: title, text, a maths block from the "/" menu, a section; saved and still there after reload', async ({
+  test('the editor: title, text, a maths block from the "/" menu, a section; autosaved and still there after reload', async ({
     page,
   }) => {
     const problems = await collectProblems(page);
@@ -91,7 +91,7 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await expect(page.getByRole('status').filter({ hasText: 'Unsaved changes' })).toBeVisible();
     await expectAccessible(page);
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    // No Save click: autosave (03 ADM-06) stores it a second after the last edit.
     await expect(page.getByText('All changes saved')).toBeVisible();
     const slug = title.toLowerCase().replace(/\s+/g, '-');
     await expect(page.getByText(`codingspace.io/posts/${slug}`)).toBeVisible();
@@ -101,6 +101,20 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await expect(page.getByRole('textbox', { name: 'Body' })).toContainText('For positive reals:');
     await expect(page.getByLabel('Maths block (LaTeX)')).toHaveValue('\\frac{a+b}{2} \\ge \\sqrt{ab}');
     await expect(page.getByRole('combobox', { name: 'Section' })).toHaveValue(sectionId);
+    expect(problems).toEqual([]);
+
+    // History: rename, let it autosave, then restore the first version.
+    await page.getByRole('textbox', { name: 'Title' }).fill(`${title} (renamed)`);
+    await expect(page.getByText('All changes saved')).toBeVisible();
+    await page.getByRole('button', { name: 'History' }).click();
+    const history = page.getByRole('region', { name: 'History' });
+    await history.getByRole('button', { name: new RegExp(`Autosaved\\s*${title}$`) }).click();
+    await expect(history.getByText('For positive reals:')).toBeVisible();
+    await history.getByRole('button', { name: 'Restore…' }).click();
+    await history.getByRole('button', { name: 'Restore this version' }).click();
+    await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(title);
+    await expect(page.getByRole('alert').filter({ hasText: 'Restored.' })).toBeVisible();
+    await expectAccessible(page);
     expect(problems).toEqual([]);
 
     const id = page.url().split('/').pop()!;
