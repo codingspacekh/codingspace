@@ -64,4 +64,50 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await expect(page.getByText(slug, { exact: true })).toHaveCount(0);
     expect(problems).toEqual([]);
   });
+
+  test('the editor: title, text, a maths block from the "/" menu, a section; saved and still there after reload', async ({
+    page,
+  }) => {
+    const problems = await collectProblems(page);
+    const title = `E2E editor ${Date.now()}`;
+    await page.goto('/admin');
+    await page.getByRole('button', { name: 'New lesson' }).click();
+    await expect(page.getByRole('textbox', { name: 'Body' })).toBeVisible();
+
+    await page.getByRole('textbox', { name: 'Title' }).fill(title);
+    await page.getByRole('textbox', { name: 'Body' }).click();
+    await page.keyboard.type('For positive reals:');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/math');
+    await expect(page.getByRole('listbox', { name: 'Insert a block' })).toBeVisible();
+    await page.keyboard.press('Enter');
+    const latex = page.getByLabel('Maths block (LaTeX)');
+    await latex.fill('\\frac{a+b}{2} \\ge \\sqrt{ab}');
+    await expect(page.getByRole('img', { name: 'Preview' }).locator('.katex')).toBeVisible();
+
+    const section = page.getByRole('combobox', { name: 'Section' });
+    await section.selectOption({ index: 1 });
+    const sectionId = await section.inputValue();
+    await expect(page.getByRole('status').filter({ hasText: 'Unsaved changes' })).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('All changes saved')).toBeVisible();
+    const slug = title.toLowerCase().replace(/\s+/g, '-');
+    await expect(page.getByText(`codingspace.io/posts/${slug}`)).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(title);
+    await expect(page.getByRole('textbox', { name: 'Body' })).toContainText('For positive reals:');
+    await expect(page.getByLabel('Maths block (LaTeX)')).toHaveValue('\\frac{a+b}{2} \\ge \\sqrt{ab}');
+    await expect(page.getByRole('combobox', { name: 'Section' })).toHaveValue(sectionId);
+    expect(problems).toEqual([]);
+
+    const id = page.url().split('/').pop()!;
+    expect(
+      (
+        await page.request.delete(`/api/admin/posts/${id}`, { headers: { Origin: new URL(page.url()).origin } })
+      ).status(),
+    ).toBe(200);
+  });
 });

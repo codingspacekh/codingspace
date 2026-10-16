@@ -1,4 +1,5 @@
 import katex from 'katex';
+import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
 import { highlight, resolveLanguage } from './highlight';
 import { safeEmbed, safeLinkHref, safeMediaUrl } from './policy';
 import { CALLOUT_VARIANTS, type RenderResult, type TocEntry } from './schema';
@@ -14,7 +15,6 @@ export type { RenderResult, TocEntry } from './schema';
  */
 
 const MAX_DEPTH = 32;
-const MAX_LATEX = 5_000;
 const WORDS_PER_MINUTE = 200;
 
 type Node = { type?: unknown; attrs?: unknown; content?: unknown; text?: unknown; marks?: unknown };
@@ -85,15 +85,7 @@ function renderMath(latex: unknown, displayMode: boolean, ctx: Context): string 
   const source = str(latex).slice(0, MAX_LATEX);
   if (!source.trim()) return '';
   ctx.hasMath = true;
-  return katex.renderToString(source, {
-    displayMode,
-    throwOnError: false,
-    trust: false,
-    strict: 'ignore',
-    output: 'htmlAndMathml',
-    maxSize: 20,
-    maxExpand: 500,
-  });
+  return katex.renderToString(source, { ...KATEX_OPTIONS, displayMode });
 }
 
 /** Returns [html, plain text] for a run of inline nodes. */

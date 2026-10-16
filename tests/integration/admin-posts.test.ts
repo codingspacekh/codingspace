@@ -2,10 +2,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   createPost,
   deletePost,
+  getPostForEdit,
   PostError,
   publishDuePosts,
   publishPost,
   restoreRevision,
+  saveDraft,
   savePost,
   schedulePost,
   unpublishPost,
@@ -56,6 +58,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await service.from('posts').delete().like('slug', 'it-test-%');
+  await service.from('posts').delete().like('title', 'IT test%');
   await service.from('sections').delete().eq('slug', 'it-test-section');
 });
 
@@ -198,5 +201,68 @@ describe('the posts list and dashboard', () => {
   it('shows nothing to a visitor', async () => {
     const { data } = await anon.from('admin_posts').select('id');
     expect(data ?? []).toEqual([]);
+  });
+});
+
+describe('editing a draft (the editor’s save)', () => {
+  it('the URL follows the title until first publish, avoiding taken ones; then it is fixed', async () => {
+    const { id, slug } = await createPost(owner, { kind: 'lesson', subject_id: 'math', section_id: sectionId });
+    expect(slug).toMatch(/^lesson-\d{4}-\d{2}-\d{2}(-\d+)?$/);
+
+    let saved = await saveDraft(owner, id, 1, { title: 'IT test edit: Vieta' });
+    expect(saved).toEqual({ revision: 2, slug: 'it-test-edit-vieta' });
+
+    // Same title again: keeps its slug, doesn't become -2.
+    saved = await saveDraft(owner, id, 2, { title: 'IT test edit: Vieta' });
+    expect(saved.slug).toBe('it-test-edit-vieta');
+
+    // Another post takes the next title first: this one gets -2.
+    await createPost(owner, { kind: 'lesson', title: 'IT test edit: Vieta jumping', subject_id: 'math' });
+    saved = await saveDraft(owner, id, 3, { title: 'IT test edit: Vieta jumping' });
+    expect(saved.slug).toBe('it-test-edit-vieta-jumping-2');
+
+    // A Khmer title has no Latin letters: the URL stays as it was.
+    saved = await saveDraft(owner, id, 4, { title: 'វិសមភាព' });
+    expect(saved.slug).toBe('it-test-edit-vieta-jumping-2');
+
+    await saveDraft(owner, id, 5, { title: 'IT test edit: Vieta', content_json: doc('x') });
+    await publishPost(owner, id, 6);
+    saved = await saveDraft(owner, id, 6, { title: 'IT test edit: renamed after publishing' });
+    expect(saved.slug).toBe('it-test-edit-vieta');
+  });
+
+  it('the client cannot set the slug, and the body is stored in canonical form', async () => {
+    const { id } = await createPost(owner, { kind: 'life', title: 'IT test edit: canonical' });
+    const saved = await saveDraft(owner, id, 1, {
+      slug: 'hijacked',
+      content_json: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'text', text: 'a', marks: [{ type: 'link', attrs: { href: 'https://x.io', target: '_blank' } }] },
+            ],
+          },
+        ],
+      },
+    });
+    expect(saved.slug).toBe('it-test-edit-canonical');
+    const { post, sections } = await getPostForEdit(owner, id);
+    expect(post.content_json).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'a', marks: [{ type: 'link', attrs: { href: 'https://x.io' } }] }],
+        },
+      ],
+    });
+    expect(post).toMatchObject({ kind: 'life', revision: 2, has_unpublished_changes: false });
+    expect(sections.length).toBeGreaterThan(0);
+  });
+
+  it('a missing post is 404', async () => {
+    await expect(getPostForEdit(owner, '00000000-0000-4000-8000-00000000dead')).rejects.toMatchObject({ status: 404 });
   });
 });

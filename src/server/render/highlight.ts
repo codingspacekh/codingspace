@@ -1,31 +1,7 @@
 import { createHighlighter, createJavaScriptRegexEngine, type Highlighter } from 'shiki';
+import { CODE_LANGUAGES as LANGUAGES } from '@/lib/code-languages';
 
 const THEME = 'github-dark-default';
-
-/** Allow-listed languages: alias → [Shiki id, label]. Everything else is plain text. */
-const LANGUAGES = new Map<string, [string, string]>([
-  ['python', ['python', 'Python']],
-  ['py', ['python', 'Python']],
-  ['javascript', ['javascript', 'JavaScript']],
-  ['js', ['javascript', 'JavaScript']],
-  ['typescript', ['typescript', 'TypeScript']],
-  ['ts', ['typescript', 'TypeScript']],
-  ['java', ['java', 'Java']],
-  ['c', ['c', 'C']],
-  ['cpp', ['cpp', 'C++']],
-  ['c++', ['cpp', 'C++']],
-  ['csharp', ['csharp', 'C#']],
-  ['cs', ['csharp', 'C#']],
-  ['vb', ['vb', 'Visual Basic']],
-  ['sql', ['sql', 'SQL']],
-  ['html', ['html', 'HTML']],
-  ['css', ['css', 'CSS']],
-  ['bash', ['bash', 'Bash']],
-  ['sh', ['bash', 'Bash']],
-  ['shell', ['bash', 'Bash']],
-  ['json', ['json', 'JSON']],
-  ['pseudocode', ['text', 'Pseudocode']],
-]);
 
 let highlighter: Promise<Highlighter> | undefined;
 
