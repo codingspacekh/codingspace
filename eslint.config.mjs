@@ -5,7 +5,18 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['node_modules', '.next', 'coverage', 'test-results', 'playwright-report', 'spikes', 'next-env.d.ts'] },
+  {
+    ignores: [
+      'node_modules',
+      '.next',
+      'coverage',
+      'test-results',
+      'playwright-report',
+      'spikes',
+      'next-env.d.ts',
+      '.media-local',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

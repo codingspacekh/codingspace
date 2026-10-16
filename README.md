@@ -43,6 +43,31 @@ A GitHub Actions schedule (`.github/workflows/publish-due.yml`) calls `/api/cron
 
 Until then the workflow skips itself, and scheduled posts wait.
 
+### Media (R2)
+
+Images and files are uploaded to a Cloudflare R2 bucket. Until `codingspace.io` exists, the bucket's temporary public address (`https://pub-….r2.dev`) serves them. Set up once, in the Cloudflare dashboard → **R2**:
+
+1. **Create bucket** `codingspace-media` (location hint: Asia-Pacific).
+2. Bucket → **Settings → Public access → R2.dev subdomain → Allow**. Copy the `https://pub-….r2.dev` address.
+3. Bucket → **Settings → CORS policy → Add**, so the admin's browser may upload straight to R2:
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://codingspace-tawny.vercel.app", "http://localhost:3000"],
+       "AllowedMethods": ["PUT"],
+       "AllowedHeaders": ["content-type"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+4. Bucket → **Settings → Object lifecycle rules → Add rule**: prefix `u/`, delete objects 1 day after upload (uploads that were never finished).
+5. R2 overview → **Manage API tokens → Create API token**: permission **Object Read & Write**, applied to `codingspace-media` only. Copy the Access Key ID and Secret Access Key (shown once), and the Account ID.
+6. In Vercel (Production and Preview): `NEXT_PUBLIC_MEDIA_BASE_URL` (the r2.dev address), `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET=codingspace-media`. Redeploy (the media address is built into the pages and the CSP).
+
+Until then uploads answer "Uploads aren't set up yet". Content stores media ids, not URLs, so moving to `files.codingspace.io` later (M7) is: connect the domain to the bucket, change `NEXT_PUBLIC_MEDIA_BASE_URL`, redeploy, and **Update** the published posts that have images. Keep the r2.dev address on until that is done.
+
+Locally, without R2: `MEDIA_STORE=local` and `NEXT_PUBLIC_MEDIA_BASE_URL=http://localhost:3000/api/media-local` keep uploads in `./.media-local` (refused on Vercel). The E2E tests run that way.
+
 Under Authentication → Providers, **Email** must be enabled (it is the sign-in method) while **Allow new users to sign up** stays off. Keep the authenticator's recovery key offline.
 
 ## Tests

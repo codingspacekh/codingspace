@@ -13,3 +13,4 @@ tests/unit/render/__snapshots__/
 
 # Lesson sources are authored text; the importer parses them as written
 content/posts/
+.media-local
