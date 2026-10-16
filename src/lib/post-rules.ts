@@ -111,3 +111,12 @@ export function revalidationPaths(p: PublishedRef, sectionLessons: string[] = []
   for (const slug of sectionLessons) paths.push(`/posts/${slug}`);
   return [...new Set(paths)];
 }
+
+/** The list with the item at `index` moved one place up (-1) or down (+1); unchanged at the ends. */
+export function moveItem<T>(list: readonly T[], index: number, delta: -1 | 1): T[] {
+  const to = index + delta;
+  if (index < 0 || index >= list.length || to < 0 || to >= list.length) return [...list];
+  const next = [...list];
+  [next[index], next[to]] = [next[to]!, next[index]!];
+  return next;
+}

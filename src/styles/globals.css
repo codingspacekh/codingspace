@@ -1978,3 +1978,48 @@ img.ProseMirror-separator {
   padding: 10px;
   border: 1px dashed var(--line);
 }
+.adm-subjects {
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.adm-sections {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.adm-section {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.adm-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.adm-section .adm-quick .btn {
+  padding: 6px 10px;
+}
+.adm-lessons {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.adm-lessons li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+.adm-lessons .adm-quick {
+  margin-left: auto;
+}
+.adm-order {
+  min-width: 2ch;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+}

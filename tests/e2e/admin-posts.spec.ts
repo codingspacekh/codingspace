@@ -237,4 +237,51 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     const res = await request.get('/api/cron/publish-due');
     expect([401, 503]).toContain(res.status());
   });
+
+  test('study structure: add, rename, move and delete a section; the subject page follows', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const name = `E2E struct ${Date.now()}`;
+    await page.goto('/admin/sections?subject=it');
+    await expect(page.getByRole('heading', { level: 1, name: 'Study structure' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'IT', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+    const add = page.getByRole('form', { name: 'Add a section to IT' });
+    await add.getByRole('textbox', { name: 'Title' }).fill(name);
+    await add.getByRole('button', { name: 'Add section' }).click();
+    await expect(page.getByRole('status')).toHaveText(`Added “${name}” at the end.`);
+    await expectAccessible(page);
+
+    await page.getByRole('button', { name: `Edit ${name}` }).click();
+    const form = page.getByRole('form', { name: `Edit ${name}` });
+    await form.getByRole('textbox', { name: 'Title' }).fill(`${name} renamed`);
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: `${name} renamed` })).toBeVisible();
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    await student.goto('/study/it');
+    await expect(student.getByText(`${name} renamed`).first()).toBeVisible();
+
+    const titles = () => page.getByRole('list').first().getByRole('heading', { level: 2 }).allTextContents();
+    const before = await titles();
+    if (before.length > 1) {
+      await page.getByRole('button', { name: `Move ${name} renamed up` }).click();
+      await expect(page.getByRole('status')).toContainText('up');
+      expect((await titles()).indexOf(`${name} renamed`)).toBe(before.length - 2);
+    }
+
+    await page.getByRole('button', { name: `Delete ${name} renamed` }).click();
+    await page
+      .getByRole('group', { name: 'Confirm delete' })
+      .getByRole('button', { name: 'Delete permanently' })
+      .click();
+    await expect(page.getByRole('heading', { level: 2, name: `${name} renamed` })).toHaveCount(0);
+    await student.goto('/study/it');
+    await expect(student.getByText(`${name} renamed`)).toHaveCount(0);
+    await student.context().close();
+    expect(problems).toEqual([]);
+  });
 });

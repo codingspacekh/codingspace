@@ -134,7 +134,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 > 4. ✅ **Editor and settings panel** (ADM-04, ADM-05): Tiptap 3 with exactly the content format's nodes (a round-trip test loads every fixture and imported lesson and expects identical JSON and HTML); toolbar and "/" menu with keyboard navigation; maths blocks and inline maths with a live KaTeX preview using the renderer's own options; code language, callout type, embeds from a pasted link; existing images and files kept (uploads in M4); settings with the dependent Section list; the URL follows the title until first publish. Save by button or Ctrl/⌘+S; a stale tab gets a conflict instead of overwriting.
 > 5. ✅ **Autosave and history** (ADM-06): saves a second after the last edit, one request at a time; retries a lost connection (2 s → 30 s); stops and says so when signed out (12 h idle) or when another tab saved first; saves when the tab is hidden. History panel: preview any kept version as students would see it, restore it after confirming; a restore first keeps the current draft (`before_restore`), so it can be undone.
 > 6. ✅ **Publishing** (ADM-07…09): "Ready to publish?" checklist (required items block, recommended ones warn); Preview in a new tab with the real lesson view; Publish / Update / Unpublish (confirmed) / Schedule / Cancel; each rebuilds the affected pages at once (measured < 10 s in the acceptance test); scheduled posts go live through `/api/cron/publish-due`, called every 5 minutes by GitHub Actions.
-> - ✅ **Brought forward from M5 (owner's request after the first staging test):** "New section…" in the editor's Section menu adds a section at the end of the subject. Renaming, reordering and deleting sections stay in M5 (ADM-12).
+> - ✅ **Brought forward from M5 at the owner's request: Study structure (ADM-12).** A Study structure page per subject: add, rename and describe sections (the address stays), move them up and down, delete empty ones, and order the lessons inside each; plus "New section…" in the editor's Section menu. Every change rebuilds the subject page and the affected lesson pages.
 > 7. Acceptance journey and docs.
 >
 > **Decisions:** autosave keeps one revision (and one audit row) per 10 minutes of editing, not one per keystroke; a post's URL can't change once published (no redirects yet); `npm run content:import` overwrites drafts, so stop using it for a post once you edit that post in the admin.
@@ -193,7 +193,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Build:**
 - Problem of the week editor with live preview (ADM-11).
-- Study structure: add, rename, describe, reorder and delete sections; reorder lessons (ADM-12).
+- ~~Study structure: add, rename, describe, reorder and delete sections; reorder lessons (ADM-12).~~ Done in M3.
 - Projects CRUD with one featured project and an https-only URL (ADM-13).
 - Author profile and timeline (ADM-14).
 - The public pages for these (PUB-05/06/07) read from the DB and revalidate on save.
