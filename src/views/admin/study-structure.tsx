@@ -4,6 +4,7 @@ import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
 import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
 import type { StructureSection } from '@/server/admin/sections';
+import { Modal } from './modal';
 import { StatusBadge } from './posts-browser';
 
 type Reply = { error?: string; failed?: string[] };
@@ -17,6 +18,7 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     const { status, data } = await api<{ sections?: StructureSection[] }>(`/api/admin/sections?subject=${subject}`);
@@ -67,6 +69,12 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
 
   return (
     <>
+      <div className="adm-head">
+        <h1>Study structure</h1>
+        <button type="button" className="btn pri" onClick={() => setAdding(true)}>
+          New section
+        </button>
+      </div>
       <div role="group" aria-label="Subject" className="ed-panels adm-subjects">
         {SUBJECT_IDS.map((s) => (
           <button key={s} type="button" className="btn" aria-pressed={s === subject} onClick={() => onSubject(s)}>
@@ -86,7 +94,7 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
       ) : (
         <>
           {sections.length === 0 ? (
-            <p className="empty">{SUBJECTS[subject].name} has no sections yet. Add the first one below.</p>
+            <p className="empty">{SUBJECTS[subject].name} has no sections yet. Add the first one with New section.</p>
           ) : (
             <ol className="adm-sections">
               {sections.map((s, i) => (
@@ -120,19 +128,24 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
               ))}
             </ol>
           )}
-          <AddSection
-            subject={subject}
-            busy={busy}
-            onAdd={async (title, description) => {
-              const ok = await change(
-                () => api('/api/admin/sections', { method: 'POST', body: { subject_id: subject, title, description } }),
-                `Added “${title}” at the end.`,
-              );
-              if (ok) await load();
-              return ok;
-            }}
-          />
         </>
+      )}
+      {adding && (
+        <AddSection
+          subject={subject}
+          busy={busy}
+          onCancel={() => setAdding(false)}
+          onAdd={async (title, description) => {
+            const ok = await change(
+              () => api('/api/admin/sections', { method: 'POST', body: { subject_id: subject, title, description } }),
+              `Added “${title}” at the end.`,
+            );
+            if (ok) {
+              setAdding(false);
+              await load();
+            }
+          }}
+        />
       )}
     </>
   );
@@ -309,47 +322,50 @@ function SectionCard({
   );
 }
 
+/** New section, in a modal (like New problem: the form shows only when asked for). */
 function AddSection({
   subject,
   busy,
   onAdd,
+  onCancel,
 }: {
   subject: SubjectId;
   busy: boolean;
-  onAdd: (title: string, description: string) => Promise<boolean>;
+  onAdd: (title: string, description: string) => Promise<void>;
+  onCancel: () => void;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const name = `Add a section to ${SUBJECTS[subject].name}`;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (await onAdd(title.trim(), description.trim())) {
-      setTitle('');
-      setDescription('');
-    }
+    await onAdd(title.trim(), description.trim());
   }
 
   return (
-    <form
-      className="adm-form frame adm-section"
-      onSubmit={submit}
-      aria-label={`Add a section to ${SUBJECTS[subject].name}`}
-    >
-      <h2>Add a section to {SUBJECTS[subject].name}</h2>
-      <label>
-        Title
-        <input value={title} maxLength={120} required onChange={(e) => setTitle(e.target.value)} />
-      </label>
-      <label>
-        Description (optional)
-        <textarea rows={2} maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-      <p className="adm-hint">
-        It goes at the end, and shows on the subject page as “coming soon” until it has a lesson.
-      </p>
-      <button type="submit" className="btn pri" disabled={busy || !title.trim()}>
-        Add section
-      </button>
-    </form>
+    <Modal title={name} onClose={onCancel}>
+      <form className="adm-form" onSubmit={submit} aria-label={name}>
+        <label>
+          Title
+          <input value={title} maxLength={120} required onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label>
+          Description (optional)
+          <textarea rows={2} maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </label>
+        <p className="adm-hint">
+          It goes at the end, and shows on the subject page as “coming soon” until it has a lesson.
+        </p>
+        <div className="adm-quick">
+          <button type="submit" className="btn pri" disabled={busy || !title.trim()}>
+            Add section
+          </button>
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

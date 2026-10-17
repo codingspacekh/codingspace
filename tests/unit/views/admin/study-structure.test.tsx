@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StudyStructure } from '@/views/admin/study-structure';
 
@@ -121,11 +121,33 @@ describe('StudyStructure (ADM-12)', () => {
     ).toEqual(['Cauchy', 'AM–GM']);
   });
 
-  it('adds a section, and reloads to undo a refused change', async () => {
+  it('"New section" opens the form in a modal; Cancel and Escape close it without adding', async () => {
+    const calls = mockApi();
+    const user = userEvent.setup();
+    render(<StudyStructure subject="math" onSubject={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'Inequalities' });
+    expect(screen.queryByRole('form', { name: 'Add a section to Math' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'New section' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add a section to Math' });
+    expect(within(dialog).getByRole('textbox', { name: 'Title' })).toHaveFocus();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'New section' }));
+    fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true })); // what Escape fires
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'New section' })).toHaveFocus();
+    expect(calls).toEqual([]);
+  });
+
+  it('adds a section from the modal, and reloads to undo a refused change', async () => {
     const calls = mockApi((c) => (c.method === 'PUT' ? [409, { error: 'the order changed' }] : [201, { id: 's3' }]));
     const user = userEvent.setup();
     render(<StudyStructure subject="math" onSubject={vi.fn()} />);
-    const add = await screen.findByRole('form', { name: 'Add a section to Math' });
+    await screen.findByRole('heading', { name: 'Inequalities' });
+    await user.click(screen.getByRole('button', { name: 'New section' }));
+    const add = screen.getByRole('form', { name: 'Add a section to Math' });
     await user.type(within(add).getByRole('textbox', { name: 'Title' }), 'Combinatorics');
     await user.click(within(add).getByRole('button', { name: 'Add section' }));
     expect(calls[0]).toMatchObject({
@@ -134,6 +156,7 @@ describe('StudyStructure (ADM-12)', () => {
       body: { subject_id: 'math', title: 'Combinatorics' },
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Added “Combinatorics” at the end.');
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Move Sequences up' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Not done: the order changed.');

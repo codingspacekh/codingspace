@@ -9,20 +9,17 @@ export default function AdminSections() {
   const subject: SubjectId = isSubjectId(router.query.subject) ? router.query.subject : 'math';
   return (
     <AdminShell title="Study structure">
-      {() => (
-        <>
-          <h1>Study structure</h1>
-          {router.isReady && (
-            <StudyStructure
-              key={subject}
-              subject={subject}
-              onSubject={(s) =>
-                router.replace({ pathname: '/admin/sections', query: { subject: s } }, undefined, { shallow: true })
-              }
-            />
-          )}
-        </>
-      )}
+      {() =>
+        router.isReady && (
+          <StudyStructure
+            key={subject}
+            subject={subject}
+            onSubject={(s) =>
+              router.replace({ pathname: '/admin/sections', query: { subject: s } }, undefined, { shallow: true })
+            }
+          />
+        )
+      }
     </AdminShell>
   );
 }

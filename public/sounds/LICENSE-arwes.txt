@@ -1,7 +1,7 @@
-click.mp3, type.mp3, deploy.mp3 and intro.mp3 are sound effects from the ARWES project
-(https://github.com/arwes/arwes: static/sound/click.mp3 and deploy.mp3 from the version1 branch,
+type.mp3, deploy.mp3 and intro.mp3 are sound effects from the ARWES project
+(https://github.com/arwes/arwes: static/sound/deploy.mp3 from the version1 branch,
 static/assets/sounds/type.mp3 and intro.mp3 from main), used under the MIT License below.
-hover.wav and transition.wav are CodingSpace's own (scripts/sound-synth.mjs).
+click.wav, hover.wav and transition.wav are CodingSpace's own (scripts/sound-synth.mjs).
 
 The MIT License (MIT)
 
