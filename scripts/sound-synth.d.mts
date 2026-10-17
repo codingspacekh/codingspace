@@ -23,6 +23,7 @@ export declare const ALTERNATIVES: Record<
   | 'glass'
   | 'key'
   | 'breeze'
+  | 'hush'
   | 'swish'
   | 'hum',
   () => Float32Array

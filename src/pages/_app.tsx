@@ -41,13 +41,15 @@ const display = localFont({
   display: 'swap',
   preload: false,
 });
-// Khmer posts (lang="km", PUB-08).
+// Khmer (PUB-08): a fallback in every font stack, so Khmer text looks the same everywhere (post
+// body, section names, headings). unicode-range keeps it to Khmer letters: Latin pages never fetch it.
 const khmer = localFont({
   src: [
     { path: '../../node_modules/@fontsource/kantumruy-pro/files/kantumruy-pro-khmer-400-normal.woff2', weight: '400' },
     { path: '../../node_modules/@fontsource/kantumruy-pro/files/kantumruy-pro-khmer-600-normal.woff2', weight: '600' },
   ],
   variable: '--font-khmer',
+  declarations: [{ prop: 'unicode-range', value: 'U+1780-17FF, U+19E0-19FF, U+200C-200D, U+25CC' }],
   display: 'swap',
   preload: false,
   adjustFontFallback: false,
