@@ -21,6 +21,26 @@ const data = {
       updated_at: '2026-10-16T08:00:00Z',
     },
   ],
+  activity: [
+    {
+      id: 7,
+      action: 'post.publish',
+      entity: 'post',
+      entity_id: 'p1',
+      meta: { slug: 'am-gm' },
+      at: '2026-10-16T08:00:00Z',
+      name: 'AM–GM',
+    },
+    {
+      id: 6,
+      action: 'auth.sign_in',
+      entity: 'session',
+      entity_id: 'self',
+      meta: {},
+      at: '2026-10-16T07:55:00Z',
+      name: null,
+    },
+  ],
 };
 
 function mockFetch(handler: (url: string, init?: RequestInit) => [number, unknown]) {
@@ -46,6 +66,16 @@ describe('Dashboard (ADM-02)', () => {
     const recent = screen.getByRole('heading', { name: 'Recently edited' }).nextElementSibling as HTMLElement;
     expect(within(recent).getByRole('link', { name: 'AM–GM' })).toHaveAttribute('href', '/admin/posts/p1');
     expect(recent).toHaveTextContent('Unpublished changes');
+  });
+
+  it('shows the latest admin activity, linking to what still exists (ADM-15)', async () => {
+    mockFetch(() => [200, data]);
+    render(<Dashboard />);
+    const heading = await screen.findByRole('heading', { name: 'Recent activity' });
+    const list = heading.nextElementSibling as HTMLElement;
+    expect(within(list).getByRole('link', { name: 'Published “AM–GM”' })).toHaveAttribute('href', '/admin/posts/p1');
+    expect(list).toHaveTextContent('Signed in');
+    expect(screen.getByRole('link', { name: 'All activity →' })).toHaveAttribute('href', '/admin/activity');
   });
 
   it('“New lesson” creates a draft and opens it', async () => {

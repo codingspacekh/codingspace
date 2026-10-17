@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/admin-api';
 import type { Dashboard as Data, PostKind } from '@/lib/admin-posts';
+import { ActivityList } from './activity-log';
 import { shortDate, StatusBadge, subjectName } from './posts-browser';
 
 const STATS = [
@@ -12,7 +13,7 @@ const STATS = [
   { key: 'life', label: 'Life posts', href: '/admin/posts?kind=life' },
 ] as const;
 
-/** 03 ADM-02: counts, recent posts, quick actions. */
+/** 03 ADM-02: counts, recent posts, quick actions; ADM-15: the latest admin activity. */
 export function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState<Data | null>(null);
@@ -88,6 +89,15 @@ export function Dashboard() {
           )}
           <p>
             <Link href="/admin/posts">All posts →</Link>
+          </p>
+          <h2>Recent activity</h2>
+          {data.activity.length === 0 ? (
+            <p className="empty">No changes yet.</p>
+          ) : (
+            <ActivityList events={data.activity} />
+          )}
+          <p>
+            <Link href="/admin/activity">All activity →</Link>
           </p>
         </>
       )}

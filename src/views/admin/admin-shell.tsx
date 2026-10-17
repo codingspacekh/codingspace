@@ -14,6 +14,7 @@ const NAV = [
   { href: '/admin/media', label: 'Media' },
   { href: '/admin/projects', label: 'Projects' },
   { href: '/admin/author', label: 'Author' },
+  { href: '/admin/activity', label: 'Activity' },
 ];
 
 /** Sends the browser to the sign-in page, remembering where it was. */
