@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zip } from '@/server/export/zip';
-import { unzip } from '../../support/unzip';
+import { unzip } from '@/server/export/unzip';
 
 const hasUnzip = (() => {
   try {

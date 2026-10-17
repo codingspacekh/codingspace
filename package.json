@@ -32,6 +32,7 @@
     "pretest": "node patches/apply-arwes-patch.mjs",
     "audit:ci": "npm audit --audit-level=high",
     "content:import": "tsx --env-file-if-exists=.env.local scripts/import-content.ts",
+    "restore": "tsx scripts/restore.ts",
     "test:int": "vitest run --config vitest.integration.config.mts",
     "predev": "node scripts/copy-katex.mjs",
     "check:bundle": "node scripts/bundle-budget.mjs"

@@ -4,7 +4,7 @@ import { EXPORT_TABLES, exportZip, type ExportData } from '@/server/export/bundl
 import { markdownToDoc } from '@/server/content/markdown';
 import { createPost, saveDraft } from '@/server/admin/posts';
 import { ownerSession, serviceClient } from '../support/admin-users';
-import { unzip } from '../support/unzip';
+import { unzip } from '@/server/export/unzip';
 
 // 03 ADM-16 against a real database: the owner's export holds every row of every content
 // table, and each post as Markdown that converts back to the same document.

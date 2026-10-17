@@ -1,7 +1,7 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test';
 import sharp from 'sharp';
 import { EDITOR, resetUser, serviceClient, totp } from '../support/admin-users';
-import { unzip } from '../support/unzip';
+import { unzip } from '../../src/server/export/unzip';
 import { collectProblems, expectAccessible } from './helpers';
 
 // M3 dashboard and posts list (03 ADM-02, ADM-03), signed in as a second allow-listed test

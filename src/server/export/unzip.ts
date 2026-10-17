@@ -1,6 +1,6 @@
 import { crc32, inflateRawSync } from 'node:zlib';
 
-/** Reads a ZIP back through its central directory, checking every CRC (tests only). */
+/** Reads a ZIP made by ./zip.ts back through its central directory, checking every CRC. */
 export function unzip(file: Buffer): Map<string, string> {
   const end = file.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (end < 0) throw new Error('no end of central directory');
