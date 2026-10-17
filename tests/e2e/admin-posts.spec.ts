@@ -250,10 +250,14 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Study structure' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'IT', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
-    const add = page.getByRole('form', { name: 'Add a section to IT' });
+    await page.getByRole('button', { name: 'New section' }).click();
+    const add = page.getByRole('dialog', { name: 'Add a section to IT' });
+    await expect(add.getByRole('textbox', { name: 'Title' })).toBeFocused();
+    await expectAccessible(page);
     await add.getByRole('textbox', { name: 'Title' }).fill(name);
     await add.getByRole('button', { name: 'Add section' }).click();
     await expect(page.getByRole('status')).toHaveText(`Added “${name}” at the end.`);
+    await expect(add).toHaveCount(0);
     await expectAccessible(page);
 
     await page.getByRole('button', { name: `Edit ${name}` }).click();

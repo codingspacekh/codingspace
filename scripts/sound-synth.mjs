@@ -162,10 +162,36 @@ export function start() {
   return finish(echo(out, 120, 0.3, 3), 0.7);
 }
 
-/** The ones the site uses: ARWES has no hover or page-leave sound (the rest are ARWES's, see
- * public/sounds/LICENSE-arwes.txt); click, typing, deploy and start stay here for reference. */
-export const SOUNDS = { hover, transition };
-export const ALTERNATIVES = { click, typing, deploy, start };
+// ── Gentle clicks (the owner found ARWES's click harsh): sines only, no echo, quiet ──
+
+/** A soft tap: a short, warm, slightly falling pop. */
+export const tap = () => finish(osc(45, 1100, 820, { attackMs: 1, decay: 9 }), 0.42);
+
+/** A water droplet: a quick rising "bloop". */
+export const droplet = () =>
+  finish(mix(osc(60, 520, 1150, { attackMs: 2, decay: 7 }), osc(30, 2300, 2300, { vol: 0.06, decay: 10 })), 0.4);
+
+/** A glass tick: a high, pure ping with a soft overtone that dies away fast. */
+export const glass = () =>
+  finish(
+    mix(osc(90, 2093, 2093, { attackMs: 1, decay: 11 }), osc(60, 4186, 4186, { vol: 0.12, attackMs: 1, decay: 12 })),
+    0.32,
+  );
+
+/** A keyboard key: a muffled snap with a low body. */
+export const key = () =>
+  finish(
+    mix(
+      noise(22, 5, { from: 2600, to: 900, vol: 0.5, attackMs: 0.5, decay: 9 }),
+      osc(35, 340, 260, { vol: 0.35, attackMs: 1, decay: 8 }),
+    ),
+    0.45,
+  );
+
+/** The ones the site uses: ARWES has no hover or page-leave sound, and its click felt harsh
+ * (the rest are ARWES's, see public/sounds/LICENSE-arwes.txt). The others stay here to compare. */
+export const SOUNDS = { hover, transition, click: tap };
+export const ALTERNATIVES = { click, typing, deploy, start, tap, droplet, glass, key };
 
 /** 16-bit mono PCM WAV. */
 export function wav(samples) {

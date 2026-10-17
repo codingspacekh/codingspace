@@ -101,6 +101,24 @@ test('reading mode calms a lesson and stays on for the next one', async ({ page 
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
+test('the footer stays on the bottom edge while the page scrolls (in the page on phones)', async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto('/posts/am-gm-inequality');
+  const footer = page.getByRole('contentinfo');
+  const gap = () => footer.evaluate((f) => Math.round(window.innerHeight - f.getBoundingClientRect().bottom));
+  if (isMobile) {
+    // A phone keeps its screen for the lesson: the footer is at the end of the page.
+    expect(await gap()).toBeLessThan(0);
+    return;
+  }
+  expect(await gap()).toBe(0);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await gap()).toBe(0);
+});
+
 test('print shows only the lesson, black on white', async ({ page }) => {
   await page.goto('/posts/am-gm-inequality');
   await page.emulateMedia({ media: 'print' });
@@ -133,6 +151,30 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
     await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
     expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(
       expect.arrayContaining(['out', 'in', '-']),
+    );
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  test('opening a subject shows a short loading screen, then the page', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'same code; the desktop bar has the link in view');
+    const problems = await collectProblems(page);
+    await page.goto('/projects');
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { seen: string[] }).seen = seen;
+      new MutationObserver(() => seen.push(document.documentElement.dataset.transition ?? '-')).observe(
+        document.documentElement,
+        { attributes: true, attributeFilter: ['data-transition'] },
+      );
+    });
+    await page.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: 'Physics' }).click();
+    await expect(page.getByTestId('page-loader')).toBeVisible();
+    await expect(page.getByTestId('page-loader')).toContainText(/loading physics/i);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByTestId('page-loader')).toHaveCount(0);
+    await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
+    expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(
+      expect.arrayContaining(['loading', 'in', '-']),
     );
     expect(problems, problems.join('\n')).toEqual([]);
   });

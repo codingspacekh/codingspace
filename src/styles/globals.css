@@ -543,13 +543,35 @@ a.more:hover {
 main:focus {
   outline: none;
 }
+/* The footer stays on the bottom edge while the page scrolls between it and the top bar.
+   Sticky, not fixed: its height still counts in the layout, so content never hides under it
+   however its links wrap, and the window keeps scrolling (anchors, scroll-to-top, the TOC). */
 .site-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
   border-top: 1px solid var(--line);
-  padding: 24px var(--gutter-r) 24px var(--gutter);
+  background: rgba(3, 8, 12, 0.88);
+  padding: 14px var(--gutter-r) calc(14px + env(safe-area-inset-bottom, 0px)) var(--gutter);
   font-family: var(--font-mono), monospace;
   font-size: 12px;
   letter-spacing: 0.1em;
   color: var(--muted);
+}
+html {
+  scroll-padding-bottom: 64px;
+}
+/* Phones (and short landscape screens): it would take a fifth of the screen from the lesson,
+   so there it waits at the end of the page as before. */
+@media (max-width: 640px), (max-height: 500px) {
+  .site-footer {
+    position: static;
+    padding-top: 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  html {
+    scroll-padding-bottom: 0;
+  }
 }
 .footer-inner {
   max-width: 1200px;
@@ -2250,6 +2272,47 @@ img.ProseMirror-separator {
   flex-wrap: wrap;
   margin: 12px 0;
 }
+/* Admin modal (src/views/admin/modal.tsx): the browser's <dialog>, framed like a panel. */
+.adm-modal {
+  position: fixed;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  margin: auto;
+  padding: 20px;
+  overflow: auto;
+  background: var(--raised);
+  border-color: rgba(24, 228, 236, 0.45);
+  box-shadow:
+    var(--glow),
+    0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.adm-modal[open] {
+  display: grid;
+  gap: 16px;
+  animation: modal-in 0.18s ease-out;
+}
+.adm-modal::backdrop {
+  background: rgba(1, 4, 6, 0.72);
+}
+.adm-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.adm-modal-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.adm-modal-head .btn {
+  padding: 4px 10px;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
 .adm-sections {
   display: grid;
   gap: 14px;
@@ -2509,7 +2572,7 @@ html[data-motion='on'][data-transition='out'] #main {
     filter 0.18s;
 }
 /* A scan line sweeps down the window as the old page goes. */
-html[data-motion='on'][data-transition='out'] body::after {
+html[data-motion='on']:is([data-transition='out'], [data-transition='loading']) body::after {
   content: '';
   position: fixed;
   left: 0;
@@ -2620,11 +2683,104 @@ html[data-reading='on'] body::after {
   display: none;
 }
 
+/* Opening a subject or a lesson: the page goes, a loading panel shows for a moment, then the
+   new page arrives as above. The panel sits between the top bar and the footer. */
+html[data-motion='on'][data-transition='loading'] #main {
+  opacity: 0;
+  transition: opacity 0.15s ease-in;
+}
+.page-loader {
+  position: fixed;
+  inset: var(--bar-h) 0 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 0 var(--gutter-r) 0 var(--gutter);
+  pointer-events: none;
+}
+html:not([data-transition='loading']) .page-loader,
+html[data-motion='off'] .page-loader {
+  display: none;
+}
+.page-loader-box {
+  display: grid;
+  gap: 14px;
+  width: min(320px, 100%);
+  padding: 22px 24px;
+  background: rgba(7, 24, 32, 0.9);
+  animation: page-in 0.2s ease-out both;
+}
+.page-loader-box::before,
+.page-loader-box::after {
+  animation: corners-in 0.35s ease-out both;
+}
+.page-loader-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+.page-loader-label b {
+  font-weight: 500;
+  color: var(--c, var(--cyan));
+}
+/* A blinking cursor after the label. */
+.page-loader-label::after {
+  content: '_';
+  margin-left: 2px;
+  color: var(--c, var(--cyan));
+  animation: blink 0.5s steps(1, end) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+/* Ten cells; they light one by one, then the full bar breathes until the page is ready. */
+.page-loader-bar {
+  position: relative;
+  height: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--c, var(--cyan)) 18%, transparent) 0 calc(10% - 4px),
+    transparent calc(10% - 4px) 10%
+  );
+}
+.page-loader-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--c, var(--cyan)) 0 calc(10% - 4px),
+    transparent calc(10% - 4px) 10%
+  );
+  filter: drop-shadow(0 0 6px var(--c, var(--cyan)));
+  animation:
+    bar-fill 0.55s steps(10, end) both,
+    bar-wait 0.7s ease-in-out 0.55s infinite alternate;
+}
+@keyframes bar-fill {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes bar-wait {
+  to {
+    opacity: 0.45;
+  }
+}
+
 /* The one-time sound offer (no gate: the page is never held back). */
 .sound-invite {
   position: fixed;
   right: var(--gutter-r);
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* Above the sticky footer. */
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   z-index: 70;
   display: grid;
   gap: 12px;
@@ -2637,12 +2793,18 @@ html[data-reading='on'] body::after {
   font-size: 15px;
   animation: page-in 0.3s ease-out both;
 }
+@media (max-width: 640px), (max-height: 500px) {
+  .sound-invite {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
 .sound-invite-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 @media print {
+  .page-loader,
   .sound-invite,
   .ui-streak,
   .ui-circuit {

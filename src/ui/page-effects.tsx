@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { isSubjectId, SUBJECTS } from '@/lib/subjects';
 import { usePrefs, useSound } from './arwes/prefs';
 import { setPref } from './prefs-store';
 
@@ -11,6 +12,7 @@ import { setPref } from './prefs-store';
  *    "deploys" and its heading types in.
  *  - Page changes inside the site (motion on): the old page fades with a scan line; the new
  *    one draws its frame corners, types its heading and brings in its cards in sequence.
+ *    Opening a subject or a lesson shows a short loading screen first (at least LOADER_MS).
  *    CSS does the drawing (html[data-transition] in globals.css); this only sets the state.
  *    The first page a visitor opens is never animated, so it appears at once (LCP).
  *
@@ -20,14 +22,27 @@ import { setPref } from './prefs-store';
 
 /** How long the arrival animation runs before the page is left alone. */
 export const ARRIVE_MS = 900;
+/** The shortest a loading screen shows, so it reads as a step and not as a flicker. */
+export const LOADER_MS = 650;
 const INTERACTIVE = 'a[href], button:not(:disabled), summary, [role="button"], input[type="checkbox"], select';
 
 const inAdmin = (path: string) => path.startsWith('/admin');
+
+type Loader = { label: string; color: string };
+
+/** Subject and lesson pages open with a loading screen, like soulextract.com's; others don't. */
+export function loaderFor(url: string): Loader | null {
+  const path = url.split(/[?#]/)[0]!;
+  const subject = /^\/study\/([^/]+)\/?$/.exec(path)?.[1];
+  if (subject) return isSubjectId(subject) ? { label: SUBJECTS[subject].name, color: SUBJECTS[subject].color } : null;
+  return /^\/posts\/[^/]+\/?$/.test(path) ? { label: 'Lesson', color: 'cyan' } : null;
+}
 
 export function PageEffects() {
   const router = useRouter();
   const { sound, animate } = usePrefs();
   const play = useSound();
+  const [loader, setLoader] = useState<Loader | null>(null);
   // Router callbacks are registered once; they read the latest values through refs.
   const state = useRef({ sound, animate, play });
   useEffect(() => {
@@ -63,25 +78,42 @@ export function PageEffects() {
   useEffect(() => {
     const root = document.documentElement;
     let timer = 0;
+    // When the loading screen went up (0: none is showing).
+    let loadingSince = 0;
     const clear = () => {
       window.clearTimeout(timer);
+      loadingSince = 0;
+      setLoader(null);
       delete root.dataset.transition;
     };
     const onStart = (url: string, { shallow }: { shallow: boolean }) => {
       if (shallow || inAdmin(url)) return;
       const { animate: a, play: p } = state.current;
+      window.clearTimeout(timer);
       p('transition');
-      if (a) root.dataset.transition = 'out';
+      if (!a) return;
+      const next = loaderFor(url);
+      loadingSince = next ? Date.now() : 0;
+      setLoader(next);
+      root.dataset.transition = next ? 'loading' : 'out';
     };
-    const onDone = (url: string, { shallow }: { shallow: boolean }) => {
-      if (shallow || inAdmin(url)) return clear();
+    const arrive = () => {
       const { animate: a, play: p } = state.current;
+      loadingSince = 0;
+      setLoader(null);
       p('deploy');
       if (document.querySelector('main h1')) window.setTimeout(() => state.current.play('typing'), 120);
       if (!a) return clear();
       root.dataset.transition = 'in';
-      window.clearTimeout(timer);
       timer = window.setTimeout(clear, ARRIVE_MS);
+    };
+    const onDone = (url: string, { shallow }: { shallow: boolean }) => {
+      if (shallow || inAdmin(url)) return clear();
+      window.clearTimeout(timer);
+      // A fast page still keeps the loading screen up for LOADER_MS, then arrives.
+      const wait = loadingSince ? LOADER_MS - (Date.now() - loadingSince) : 0;
+      if (wait > 0) timer = window.setTimeout(arrive, wait);
+      else arrive();
     };
     router.events.on('routeChangeStart', onStart);
     router.events.on('routeChangeComplete', onDone);
@@ -94,7 +126,27 @@ export function PageEffects() {
     };
   }, [router.events]);
 
-  return <SoundInvite />;
+  return (
+    <>
+      {loader && <PageLoader {...loader} />}
+      <SoundInvite />
+    </>
+  );
+}
+
+/** The loading screen: a framed panel with the destination and a bar filling in steps.
+ * Decorative (screen readers hear the new page's title from Next's route announcer). */
+function PageLoader({ label, color }: Loader) {
+  return (
+    <div className={`page-loader c-${color}`} aria-hidden="true" data-testid="page-loader">
+      <div className="page-loader-box frame">
+        <span className="page-loader-label">
+          Loading <b>{label}</b>
+        </span>
+        <span className="page-loader-bar" />
+      </div>
+    </div>
+  );
 }
 
 /**

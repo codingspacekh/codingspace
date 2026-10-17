@@ -1,5 +1,5 @@
 // Writes CodingSpace's own interface sounds to public/sounds/ (scripts/sound-synth.mjs):
-// the hover tick and the page-leave whoosh. The others are ARWES's (public/sounds/LICENSE-arwes.txt).
+// the hover tick, the page-leave whoosh and the click. The others are ARWES's (public/sounds/LICENSE-arwes.txt).
 // Run after changing a sound: node scripts/make-sounds.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
