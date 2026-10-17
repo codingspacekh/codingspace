@@ -7,7 +7,7 @@ export const SITE_DESCRIPTION =
 type Env = Partial<Record<'NEXT_PUBLIC_SITE_URL' | 'VERCEL_PROJECT_PRODUCTION_URL', string>>;
 
 /**
- * The public origin for absolute links. Set NEXT_PUBLIC_SITE_URL once codingspace.io is live;
+ * The public origin for absolute links. Set NEXT_PUBLIC_SITE_URL once codingspacekh.dev is live;
  * until then Vercel's production domain is used (Vercel sets VERCEL_PROJECT_PRODUCTION_URL).
  */
 export function siteUrl(env: Env = process.env as Env): string {

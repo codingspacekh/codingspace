@@ -42,7 +42,7 @@ select throws_ok($$insert into public.projects (slug, name, description, landing
                  '23505', null, 'only one project can be featured');
 
 insert into public.profile (name, bio, years, students, email)
-  values ('CodingSpace', 'Teacher', 8, 500, 'hello@codingspace.io');
+  values ('CodingSpace', 'Teacher', 8, 500, 'hello@codingspacekh.dev');
 select throws_ok($$insert into public.profile (name, bio) values ('Second', 'x')$$,
                  '23505', null, 'the profile has a single row');
 

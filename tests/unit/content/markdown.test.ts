@@ -130,8 +130,11 @@ describe('markdownToDoc: blocks', () => {
   });
 
   it('turns a paragraph holding only an image into an image block', () => {
-    expect(blocks('![A triangle](https://files.codingspace.io/a.png "Figure 1")')).toEqual([
-      { type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: 'A triangle', caption: 'Figure 1' } },
+    expect(blocks('![A triangle](https://files.codingspacekh.dev/a.png "Figure 1")')).toEqual([
+      {
+        type: 'image',
+        attrs: { src: 'https://files.codingspacekh.dev/a.png', alt: 'A triangle', caption: 'Figure 1' },
+      },
     ]);
   });
 });
@@ -148,7 +151,7 @@ describe('markdownToDoc: what it will not convert', () => {
   });
 
   it('reports images inside a line of text', () => {
-    const { warnings } = markdownToDoc('see ![x](https://files.codingspace.io/a.png) here');
+    const { warnings } = markdownToDoc('see ![x](https://files.codingspacekh.dev/a.png) here');
     expect(warnings).toEqual(['images must be on their own line (line 1)']);
   });
 });

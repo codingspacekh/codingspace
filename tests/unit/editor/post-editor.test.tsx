@@ -204,7 +204,7 @@ describe('PostEditor', () => {
       // The editor shows the smallest variant from the media address.
       expect(document.querySelector('img.ed-image')).toHaveAttribute(
         'src',
-        `https://files.codingspace.io/i/${ID}/480.webp`,
+        `https://files.codingspacekh.dev/i/${ID}/480.webp`,
       );
       fireEvent.change(alt, { target: { value: 'A sine curve' } });
       fireEvent.change(screen.getByLabelText(/^Caption/), { target: { value: 'One period' } });

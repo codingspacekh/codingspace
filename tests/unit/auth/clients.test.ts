@@ -74,7 +74,7 @@ describe('apiClient', () => {
 
 describe('proxyClient', () => {
   it('writes refreshed tokens to the request (for the route) and to a fresh response', () => {
-    const request = new NextRequest('https://codingspace.io/admin', { headers: { cookie: 'sb-x-auth-token=old' } });
+    const request = new NextRequest('https://codingspacekh.dev/admin', { headers: { cookie: 'sb-x-auth-token=old' } });
     let response = NextResponse.next();
     proxyClient(request, () => (response = NextResponse.next()));
 

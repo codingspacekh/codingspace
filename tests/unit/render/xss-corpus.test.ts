@@ -20,8 +20,8 @@ const BAD_URLS = [
   'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+',
   '//evil.example/x',
   'http://evil.example/x',
-  'https://files.codingspace.io.evil.example/x.png',
-  'https://files.codingspace.io@evil.example/x.png',
+  'https://files.codingspacekh.dev.evil.example/x.png',
+  'https://files.codingspacekh.dev@evil.example/x.png',
   'https://evil.example/x.png',
 ];
 
@@ -58,13 +58,13 @@ const CORPUS: [string, unknown][] = [
   ],
   [
     'image alt break-out',
-    doc({ type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: '" onerror="alert(1)' } }),
+    doc({ type: 'image', attrs: { src: 'https://files.codingspacekh.dev/a.png', alt: '" onerror="alert(1)' } }),
   ],
   [
     'image caption html',
     doc({
       type: 'image',
-      attrs: { src: 'https://files.codingspace.io/a.png', alt: 'a', caption: '<script>alert(1)</script>' },
+      attrs: { src: 'https://files.codingspacekh.dev/a.png', alt: 'a', caption: '<script>alert(1)</script>' },
     }),
   ],
   [
@@ -72,7 +72,7 @@ const CORPUS: [string, unknown][] = [
     doc({
       type: 'image',
       attrs: {
-        src: 'https://files.codingspace.io/a.png',
+        src: 'https://files.codingspacekh.dev/a.png',
         alt: 'a',
         width: '1" style="background:url(javascript:alert(1))',
       },
@@ -126,7 +126,7 @@ const CORPUS: [string, unknown][] = [
   ],
   [
     'file name html',
-    doc({ type: 'file', attrs: { href: 'https://files.codingspace.io/a.pdf', name: '<script>alert(1)</script>' } }),
+    doc({ type: 'file', attrs: { href: 'https://files.codingspacekh.dev/a.pdf', name: '<script>alert(1)</script>' } }),
   ],
   [
     'table cell attribute break-out',

@@ -1,11 +1,11 @@
 // Origins that published content may load from (03 §8.4). Shared by the renderer's URL
 // policy and the CSP so the two cannot drift apart. Plain ESM so next.config.mjs can import it.
 
-const DEFAULT_MEDIA_BASE_URL = 'https://files.codingspace.io';
+const DEFAULT_MEDIA_BASE_URL = 'https://files.codingspacekh.dev';
 
 /**
  * Where uploaded images and files are served from: R2's public bucket address until the
- * domain is ready (https://pub-….r2.dev), then https://files.codingspace.io. Set at build
+ * domain is ready (https://pub-….r2.dev), then https://files.codingspacekh.dev. Set at build
  * time (NEXT_PUBLIC_, so the editor sees the same value). Plain http only for this machine (tests).
  * @param {string | undefined} value
  * @returns {string}

@@ -26,8 +26,8 @@ describe('renderer: text and marks', () => {
     expect(await html(p(text('x', { type: 'link', attrs: { href: 'https://example.com/a?b=1&c=2' } })))).toBe(
       '<p><a href="https://example.com/a?b=1&amp;c=2" rel="noopener noreferrer">x</a></p>',
     );
-    expect(await html(p(text('x', { type: 'link', attrs: { href: 'mailto:hi@codingspace.io' } })))).toBe(
-      '<p><a href="mailto:hi@codingspace.io">x</a></p>',
+    expect(await html(p(text('x', { type: 'link', attrs: { href: 'mailto:hi@codingspacekh.dev' } })))).toBe(
+      '<p><a href="mailto:hi@codingspacekh.dev">x</a></p>',
     );
   });
 
@@ -199,7 +199,7 @@ describe('renderer: media', () => {
       await html({
         type: 'image',
         attrs: {
-          src: 'https://files.codingspace.io/img/tri.png',
+          src: 'https://files.codingspacekh.dev/img/tri.png',
           alt: 'A triangle',
           caption: 'Figure 1',
           width: 640,
@@ -207,7 +207,7 @@ describe('renderer: media', () => {
         },
       }),
     ).toBe(
-      '<figure class="figure"><img src="https://files.codingspace.io/img/tri.png" alt="A triangle" width="640" height="480" loading="lazy" decoding="async"><figcaption>Figure 1</figcaption></figure>',
+      '<figure class="figure"><img src="https://files.codingspacekh.dev/img/tri.png" alt="A triangle" width="640" height="480" loading="lazy" decoding="async"><figcaption>Figure 1</figcaption></figure>',
     );
   });
 
@@ -219,15 +219,15 @@ describe('renderer: media', () => {
     expect(
       await html({
         type: 'file',
-        attrs: { href: 'https://files.codingspace.io/f/notes.pdf', name: 'notes.pdf', size: 1_258_291 },
+        attrs: { href: 'https://files.codingspacekh.dev/f/notes.pdf', name: 'notes.pdf', size: 1_258_291 },
       }),
     ).toBe(
-      '<p class="file-row"><a href="https://files.codingspace.io/f/notes.pdf" rel="noopener"><span class="file-name">notes.pdf</span> <span class="file-size">1.2 MB</span></a></p>',
+      '<p class="file-row"><a href="https://files.codingspacekh.dev/f/notes.pdf" rel="noopener"><span class="file-name">notes.pdf</span> <span class="file-size">1.2 MB</span></a></p>',
     );
   });
 
   const ID = '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f';
-  const variant = (w: number, f: string) => `https://files.codingspace.io/i/${ID}/${w}.${f}`;
+  const variant = (w: number, f: string) => `https://files.codingspacekh.dev/i/${ID}/${w}.${f}`;
 
   it('renders an uploaded image as AVIF and WebP variants with srcset (03 §7)', async () => {
     const out = await html({
@@ -265,7 +265,7 @@ describe('renderer: media', () => {
 
   it('renders an uploaded file as a download from the media address', async () => {
     expect(await html({ type: 'file', attrs: { media: ID, name: 'Worksheet 1.pdf', size: 245_760 } })).toBe(
-      `<p class="file-row"><a href="https://files.codingspace.io/f/${ID}" rel="noopener">` +
+      `<p class="file-row"><a href="https://files.codingspacekh.dev/f/${ID}" rel="noopener">` +
         '<span class="file-name">Worksheet 1.pdf</span> <span class="file-size">240 KB</span></a></p>',
     );
   });
@@ -301,7 +301,7 @@ describe('renderer: toc, search text and reading time', () => {
     const out = await renderContent(
       doc(
         p(text('Hello '), text('world', { type: 'bold' })),
-        { type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: 'graph', caption: 'A parabola' } },
+        { type: 'image', attrs: { src: 'https://files.codingspacekh.dev/a.png', alt: 'graph', caption: 'A parabola' } },
         { type: 'codeBlock', attrs: { language: 'python' }, content: [text('def f(): pass')] },
       ),
     );

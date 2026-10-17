@@ -58,20 +58,22 @@ describe('checkOwner', () => {
 });
 
 describe('isSameOrigin (CSRF)', () => {
-  const host = { host: 'codingspace.io' };
+  const host = { host: 'codingspacekh.dev' };
   it('lets safe methods through', () => {
     expect(isSameOrigin('GET', {})).toBe(true);
     expect(isSameOrigin(undefined, {})).toBe(true);
   });
   it('accepts a POST from this site', () => {
-    expect(isSameOrigin('POST', { ...host, origin: 'https://codingspace.io' })).toBe(true);
-    expect(isSameOrigin('post', { 'x-forwarded-host': 'codingspace.io', origin: 'https://codingspace.io' })).toBe(true);
+    expect(isSameOrigin('POST', { ...host, origin: 'https://codingspacekh.dev' })).toBe(true);
+    expect(isSameOrigin('post', { 'x-forwarded-host': 'codingspacekh.dev', origin: 'https://codingspacekh.dev' })).toBe(
+      true,
+    );
   });
   it('refuses another site, a missing Origin and garbage', () => {
     expect(isSameOrigin('POST', { ...host, origin: 'https://evil.example' })).toBe(false);
-    expect(isSameOrigin('DELETE', { ...host, origin: 'https://codingspace.io.evil.example' })).toBe(false);
+    expect(isSameOrigin('DELETE', { ...host, origin: 'https://codingspacekh.dev.evil.example' })).toBe(false);
     expect(isSameOrigin('POST', host)).toBe(false);
-    expect(isSameOrigin('POST', { origin: 'https://codingspace.io' })).toBe(false);
+    expect(isSameOrigin('POST', { origin: 'https://codingspacekh.dev' })).toBe(false);
     expect(isSameOrigin('PATCH', { ...host, origin: 'null' })).toBe(false);
   });
 });
@@ -98,7 +100,7 @@ function call(
       return this;
     },
   };
-  const req = { method, headers: { host: 'codingspace.io', ...headers }, cookies: {} };
+  const req = { method, headers: { host: 'codingspacekh.dev', ...headers }, cookies: {} };
   return Promise.resolve(handler(req as unknown as NextApiRequest, res as unknown as NextApiResponse)).then(() => res);
 }
 
@@ -117,7 +119,7 @@ describe('withAuthRoute', () => {
 
   it('runs the handler with the request-bound client, never cached', async () => {
     fake.current = fakeSupabase().client;
-    const res = await call(route, 'POST', { origin: 'https://codingspace.io' });
+    const res = await call(route, 'POST', { origin: 'https://codingspacekh.dev' });
     expect(res.body).toEqual({ done: true });
     expect(res.headers['cache-control']).toBe('private, no-store');
     expect(inner.mock.calls[0]![2]).toBe(fake.current);
@@ -160,7 +162,7 @@ describe('withOwner', () => {
   it('runs the handler for the owner, with the client and owner', async () => {
     const { client } = fakeSupabase({ claims: OWNER_CLAIMS });
     fake.current = client;
-    const res = await call(route, 'POST', { origin: 'https://codingspace.io' });
+    const res = await call(route, 'POST', { origin: 'https://codingspacekh.dev' });
     expect(res.body).toEqual({ done: true });
     expect(inner.mock.calls[0]![2]).toEqual({
       supabase: client,

@@ -1,4 +1,4 @@
-# CodingSpace (codingspace.io) — System Architecture
+# CodingSpace (codingspacekh.dev) — System Architecture
 
 > **Superseded.** The current baseline is [03-system-analysis.md](./03-system-analysis.md), with the build plan in [04-milestones.md](./04-milestones.md). This file is kept as history.
 
@@ -9,7 +9,7 @@ Companion to [01-system-requirements.md](./01-system-requirements.md). Version 0
 > 2. **Projects link out.** Replace `software / releases / release_files` with one `projects` table: `id, slug, name, summary, icon_media_id, course_id?, platforms[], version_label, landing_url, tutorial_post_id?, is_featured, sort`. No installer uploads or multipart. `/api/download` only tracks lesson attachments, plus an outbound-click redirect `/go/[project]`.
 > 3. **Storage can be simpler.** Without large binaries, **Supabase Storage** is enough for images and lesson documents (one vendor). Move to R2 later only if bandwidth grows.
 > 4. **Khmer per post.** `posts.lang` (`en` | `km`) sets `<html lang>` and switches the body font to *Kantumruy Pro* for that article.
-> 5. **Domain: `codingspace.io`** (to be bought). Until then deploy to `*.vercel.app`, and keep all URLs relative so the domain can be added later.
+> 5. **Domain: `codingspacekh.dev`** (bought 2026-10-17; first planned as codingspace.io). Before it was live the site ran on `*.vercel.app`; keep all URLs relative so the domain can be added later.
 > 7. **Site structure (redesign, 2026-10-15).** The top menu is **Home · Study ▾ · Projects · Author**. *Lessons*, *Courses* and *Life* are removed as menu items.
 >    - **Study** opens a menu of four subjects: **Math, Physics, Coding, IT**. Each subject page groups its lessons by **section**. In Math, sections are competition topics: Inequalities, Sequences & Series, Functional Equations, Number Theory, Combinatorics. Math also has a weekly featured problem with a hint and solution you can reveal.
 >    - **Author** shows the owner's profile and a timeline, with **life posts** listed below.
@@ -46,7 +46,7 @@ flowchart LR
   end
 
   R2[("Cloudflare R2<br/>images · documents · software")]
-  CDN["files.codingspace.io<br/>(R2 public bucket + CDN)"]
+  CDN["files.codingspacekh.dev<br/>(R2 public bucket + CDN)"]
   TS["Cloudflare Turnstile"]
   MAIL["Resend (email)"]
   ANA["Umami / Plausible<br/>(cookie-less analytics)"]

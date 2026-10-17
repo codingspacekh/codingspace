@@ -49,7 +49,7 @@ export function Layout({
       <PageSkeleton />
       <footer className="site-footer">
         <div className="footer-inner">
-          <span>© 2026 codingspace.io · Teach · Build · Live</span>
+          <span>© 2026 codingspacekh.dev · Teach · Build · Live</span>
           {/* Plain links: the Study menu needs JavaScript, these don't. */}
           <nav aria-label="Subjects" className="footer-links">
             {SUBJECT_IDS.map((id) => (

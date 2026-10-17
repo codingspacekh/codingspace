@@ -3,7 +3,7 @@ import { MEDIA_BASE_URL } from '@/config/content-origins.mjs';
 /**
  * Where uploaded media live in R2 (03 ADM-10). Content stores only the media id (and an
  * image's variant widths), never a full URL, so moving from the temporary r2.dev address
- * to files.codingspace.io needs no content changes: only a rebuild and a re-publish.
+ * to files.codingspacekh.dev needs no content changes: only a rebuild and a re-publish.
  *
  *   i/<id>/<width>.webp, i/<id>/<width>.avif   image variants (EXIF stripped)
  *   f/<id>                                     files, served as downloads

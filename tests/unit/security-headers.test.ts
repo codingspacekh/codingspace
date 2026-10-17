@@ -38,8 +38,8 @@ describe('Content-Security-Policy (03 §8.3, ADR 0001)', () => {
   });
 
   it('loads images and media only from the site and the media origin', () => {
-    expect(directives(csp)).toContain("img-src 'self' data: https://files.codingspace.io");
-    expect(directives(csp)).toContain("media-src 'self' https://files.codingspace.io");
+    expect(directives(csp)).toContain("img-src 'self' data: https://files.codingspacekh.dev");
+    expect(directives(csp)).toContain("media-src 'self' https://files.codingspacekh.dev");
   });
 
   it('allows frames only from the three embed providers', () => {
@@ -75,7 +75,7 @@ describe('CSP allows what the renderer outputs', () => {
         { type: 'embed', attrs: { provider: 'youtube', id: 'dQw4w9WgXcQ' } },
         { type: 'embed', attrs: { provider: 'desmos', id: 'abcde12345' } },
         { type: 'embed', attrs: { provider: 'geogebra', id: 'Xyz123ab' } },
-        { type: 'image', attrs: { src: 'https://files.codingspace.io/a.png', alt: 'a' } },
+        { type: 'image', attrs: { src: 'https://files.codingspacekh.dev/a.png', alt: 'a' } },
       ],
     });
     const page = new DOMParser().parseFromString(html, 'text/html');
@@ -120,7 +120,7 @@ describe('search indexing (M7: indexed only after launch)', () => {
 
 describe('media base URL (NEXT_PUBLIC_MEDIA_BASE_URL)', () => {
   it('defaults to the files domain', () => {
-    expect(mediaBaseUrl(undefined)).toBe('https://files.codingspace.io');
+    expect(mediaBaseUrl(undefined)).toBe('https://files.codingspacekh.dev');
   });
 
   it("takes R2's temporary public address until the domain is ready", () => {

@@ -195,7 +195,7 @@ export function SettingsPanel({
       </p>
       <div className="ed-url">
         <span className="ed-label">Address</span>
-        <code>codingspace.io/posts/{slug}</code>
+        <code>codingspacekh.dev/posts/{slug}</code>
         <p className="adm-hint">
           {urlLocked
             ? 'Fixed: the post has been published, and links to it must keep working.'

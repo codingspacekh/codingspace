@@ -54,7 +54,7 @@ describe('publishChecklist (ADM-07)', () => {
     expect(publishChecklist({ ...base, content_json: {} }).ready).toBe(false);
   });
   it('recommends a summary and alt text, without blocking', () => {
-    const img = { type: 'image', attrs: { src: 'https://files.codingspace.io/a.webp', alt: '' } };
+    const img = { type: 'image', attrs: { src: 'https://files.codingspacekh.dev/a.webp', alt: '' } };
     const c = publishChecklist({
       ...base,
       summary: '',
