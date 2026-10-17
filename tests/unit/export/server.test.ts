@@ -60,15 +60,15 @@ function content() {
 }
 
 describe('listActivity (ADM-15)', () => {
+  // admin_activity_events adds each item's current name (a pgTAP test checks the view).
   const events = [
-    { id: 1, action: 'post.create', entity: 'post', entity_id: 'p1', meta: {}, at: 'a' },
-    { id: 2, action: 'post.save', entity: 'post', entity_id: 'p1', meta: {}, at: 'b' },
-    { id: 3, action: 'media.add', entity: 'media', entity_id: 'm1', meta: {}, at: 'c' },
-    { id: 4, action: 'post.delete', entity: 'post', entity_id: 'gone', meta: { title: 'Old' }, at: 'd' },
-    { id: 5, action: 'profile.update', entity: 'profile', entity_id: 'profile', meta: {}, at: 'e' },
+    { id: 1, action: 'post.create', entity: 'post', entity_id: 'p1', meta: {}, at: 'a', name: 'AM–GM' },
+    { id: 2, action: 'post.save', entity: 'post', entity_id: 'p1', meta: {}, at: 'b', name: 'AM–GM' },
+    { id: 3, action: 'media.add', entity: 'media', entity_id: 'm1', meta: {}, at: 'c', name: 'tri.png' },
+    { id: 4, action: 'post.delete', entity: 'post', entity_id: 'gone', meta: { title: 'Old' }, at: 'd', name: null },
+    { id: 5, action: 'profile.update', entity: 'profile', entity_id: 'profile', meta: {}, at: 'e', name: null },
   ];
-  const db = () =>
-    fakeDb({ audit_events: events, admin_posts: [{ id: 'p1', title: 'AM–GM' }], media: content().media }).client;
+  const db = () => fakeDb({ admin_activity_events: events }).client;
 
   it('lists newest first without autosaves, with current names, and pages', async () => {
     const first = await listActivity(db(), { limit: 2 });
@@ -85,10 +85,15 @@ describe('listActivity (ADM-15)', () => {
     expect(rest.more).toBe(false);
   });
 
+  it('is one read', async () => {
+    const { client, reads } = fakeDb({ admin_activity_events: events });
+    await listActivity(client, { limit: 8 });
+    expect(reads).toEqual(['admin_activity_events']);
+  });
+
   it('passes database errors on', async () => {
-    await expect(listActivity(fakeDb({}, { fail: { audit_events: 'denied' } }).client)).rejects.toThrow('denied');
-    const names = fakeDb({ audit_events: events }, { fail: { admin_posts: 'down' } }).client;
-    await expect(listActivity(names)).rejects.toThrow('admin_posts: down');
+    const down = fakeDb({}, { fail: { admin_activity_events: 'denied' } }).client;
+    await expect(listActivity(down)).rejects.toThrow('admin_activity_events: denied');
   });
 });
 

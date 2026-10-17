@@ -1,6 +1,7 @@
 import { AdminShell } from '@/views/admin/admin-shell';
-import { Dashboard } from '@/views/admin/dashboard';
+import { Dashboard, useDashboardRequest } from '@/views/admin/dashboard';
 
 export default function AdminHome() {
-  return <AdminShell title="Dashboard">{() => <Dashboard />}</AdminShell>;
+  const request = useDashboardRequest();
+  return <AdminShell title="Dashboard">{() => <Dashboard request={request} />}</AdminShell>;
 }

@@ -5,12 +5,15 @@ type Row = Record<string, unknown>;
 /**
  * An in-memory stand-in for the Supabase query builder, with just the calls src/server/export
  * and src/server/admin/activity.ts make: select (with a head count), order, range, limit, lt,
- * in, not…in, insert and upsert. `fail` makes a table answer with an error.
+ * in, not…in, insert and upsert. `fail` makes a table answer with an error; `reads` lists the
+ * tables queried, in order.
  */
 export function fakeDb(tables: Record<string, Row[]>, { fail = {} as Record<string, string> } = {}) {
   const writes: { table: string; op: 'insert' | 'upsert'; rows: Row[]; onConflict?: string }[] = [];
+  const reads: string[] = [];
 
   function query(table: string) {
+    reads.push(table);
     let rows = () => [...(tables[table] ?? [])];
     let head = false;
     const sorts: [string, boolean][] = [];
@@ -80,5 +83,5 @@ export function fakeDb(tables: Record<string, Row[]>, { fail = {} as Record<stri
     return builder;
   }
 
-  return { client: { from: query } as unknown as SupabaseClient, writes };
+  return { client: { from: query } as unknown as SupabaseClient, writes, reads };
 }

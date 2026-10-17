@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Dashboard } from '@/views/admin/dashboard';
+import { Dashboard, useDashboardRequest } from '@/views/admin/dashboard';
 
 const push = vi.fn(async () => true);
 vi.mock('next/router', () => ({ useRouter: () => ({ push }) }));
@@ -77,6 +77,22 @@ describe('Dashboard (ADM-02)', () => {
     expect(list).toHaveTextContent('Signed in');
     expect(screen.getByRole('link', { name: 'All activity →' })).toHaveAttribute('href', '/admin/activity');
     expect(screen.getByRole('link', { name: 'Download all content' })).toHaveAttribute('href', '/api/admin/export');
+  });
+
+  it('uses a request the page already started, instead of asking again', async () => {
+    const fetch = mockFetch(() => [500, {}]);
+    render(<Dashboard request={Promise.resolve({ status: 200, data } as never)} />);
+    expect(await screen.findByRole('link', { name: '9 Published' })).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('useDashboardRequest starts the request on mount, before the dashboard shows', async () => {
+    const fetch = mockFetch(() => [200, data]);
+    const { result } = renderHook(() => useDashboardRequest());
+    await waitFor(() => expect(result.current).toBeInstanceOf(Promise));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]![0]).toBe('/api/admin/dashboard');
+    await expect(result.current).resolves.toEqual({ status: 200, data });
   });
 
   it('“New lesson” creates a draft and opens it', async () => {
