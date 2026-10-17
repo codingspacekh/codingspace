@@ -21,7 +21,7 @@ export function createSiteBleeps() {
       transition: {
         sources: [{ src: '/sounds/transition.wav', type: 'audio/wav' }],
         category: 'transition',
-        volume: 0.5,
+        volume: 0.25,
       },
       start: { sources: [{ src: '/sounds/intro.mp3', type: 'audio/mpeg' }], category: 'notification', volume: 0.8 },
     },

@@ -157,6 +157,9 @@ export const transition = () =>
 /** A breeze: soft air that swells and settles, no high hiss and no tone. */
 export const breeze = () => finish(noise(340, 11, { from: 1400, to: 300, vol: 0.5, attackMs: 110, decay: 3 }), 0.3);
 
+/** A hush: softer still, a dark, slow breath of air that rises gently and fades out long. */
+export const hush = () => finish(noise(420, 11, { from: 600, to: 160, vol: 0.5, attackMs: 190, decay: 2.8 }), 0.21);
+
 /** A swish: a short, light brush of air. */
 export const swish = () =>
   finish(
@@ -209,8 +212,8 @@ export const key = () =>
 /** The ones the site uses: ARWES has no hover or page-leave sound, and its click and our first
  * whoosh felt harsh (the rest are ARWES's, see public/sounds/LICENSE-arwes.txt). The others stay
  * here to compare. */
-export const SOUNDS = { hover, transition: breeze, click: tap };
-export const ALTERNATIVES = { click, transition, typing, deploy, start, tap, droplet, glass, key, breeze, swish, hum };
+export const SOUNDS = { hover, transition: hush, click: tap };
+export const ALTERNATIVES = { click, transition, typing, deploy, start, tap, droplet, glass, key, breeze, hush, swish, hum };
 
 /** 16-bit mono PCM WAV. */
 export function wav(samples) {
