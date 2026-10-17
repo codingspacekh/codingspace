@@ -41,14 +41,16 @@ export function supabaseStore(db: SupabaseClient): ContentStore {
       check(await db.from('profile').upsert(row, { onConflict: 'id' }), 'profile');
     },
 
+    // The timeline is one of the Author page's sections (its id is 'timeline').
     async replaceTimeline(rows) {
-      check(await db.from('timeline_items').delete().not(all, 'is', null), 'timeline (clear)');
-      if (rows.length) check(await db.from('timeline_items').insert(rows), 'timeline');
+      check(await db.from('author_items').delete().eq('section_id', 'timeline'), 'timeline (clear)');
+      const items = rows.map((r) => ({ section_id: 'timeline', title: r.text, period: String(r.year), sort: r.sort }));
+      if (items.length) check(await db.from('author_items').insert(items), 'timeline');
     },
 
     async hasSiteContent() {
       const counts = await Promise.all(
-        ['projects', 'profile', 'timeline_items', 'featured_problems'].map(async (t) => {
+        ['projects', 'profile', 'author_items', 'featured_problems'].map(async (t) => {
           const { count, error } = await db.from(t).select('*', { count: 'exact', head: true });
           if (error) throw new Error(`${t}: ${error.message}`);
           return count ?? 0;

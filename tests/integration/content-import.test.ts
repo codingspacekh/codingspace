@@ -76,8 +76,10 @@ describe('content import into a real database', () => {
 
   it('serves projects, profile, timeline and the current problem', async () => {
     expect((await anon.from('public_projects').select('slug')).data).toHaveLength(3);
-    expect((await anon.from('public_profile').select('name').single()).data).toEqual({ name: 'CodingSpace' });
-    expect((await anon.from('public_timeline').select('year')).data).toHaveLength(4);
+    const { data: author } = await anon.rpc('author_page');
+    expect(author.profile.name).toBe('CodingSpace');
+    const timeline = author.sections.find((s: { id: string }) => s.id === 'timeline');
+    expect(timeline.items).toHaveLength(4);
     expect((await anon.from('public_featured_problems').select('subject_id')).data).toEqual([{ subject_id: 'math' }]);
   });
 

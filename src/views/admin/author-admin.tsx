@@ -1,25 +1,35 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '@/lib/admin-api';
+import type { AuthorSection, HeaderPart } from '@/lib/author';
 import { IMAGE_ACCEPT, type MediaKind } from '@/lib/media-rules';
 import { uploadMedia, type UploadedMedia } from '@/lib/media-upload';
 import { thumbnailUrl } from '@/lib/media-urls';
-import { moveItem } from '@/lib/post-rules';
 import { EMAIL } from '@/lib/site-rules';
+import {
+  sectionsBody,
+  SectionsEditor,
+  sectionsProblem,
+  sectionState,
+  type SectionState,
+} from './author-sections-admin';
 import { MediaPicker } from './media-library';
 
-type Profile = { name: string; bio: string; years: number | null; students: number | null; email: string };
-type Item = { key: number; year: string; text: string };
+type Profile = {
+  name: string;
+  bio: string;
+  years: number | null;
+  students: number | null;
+  email: string;
+  hidden: HeaderPart[];
+};
 type Photo = { id: string; widths: number[] };
-type Loaded = { profile: Profile; photo: Photo | null; timeline: { year: number; text: string }[] };
+type Loaded = { profile: Profile; photo: Photo | null; sections: AuthorSection[] };
 type Upload = (file: File, kind: MediaKind) => Promise<UploadedMedia>;
-
-let nextKey = 0;
-const item = (year: string | number, text: string): Item => ({ key: ++nextKey, year: String(year), text });
 
 const count = (v: string): number | null => (v.trim() === '' ? null : Number(v));
 
 /** What stops saving, if anything: the server checks the same (03 ADM-14). */
-function problemOf(p: Profile, years: string, students: string, items: Item[]): string | null {
+function problemOf(p: Profile, years: string, students: string, sections: SectionState[]): string | null {
   if (!p.name.trim()) return 'Add your name.';
   if (p.email.trim() && !EMAIL.test(p.email.trim())) return 'The email address doesn’t look right.';
   for (const [label, v, max] of [
@@ -30,26 +40,30 @@ function problemOf(p: Profile, years: string, students: string, items: Item[]): 
     if (n !== null && (!Number.isInteger(n) || n < 0 || n > max))
       return `${label} must be a whole number from 0 to ${max}.`;
   }
-  for (const [i, t] of items.entries()) {
-    const y = Number(t.year);
-    if (!Number.isInteger(y) || y < 1900 || y > 2200) return `Timeline entry ${i + 1}: the year must be like 2024.`;
-    if (!t.text.trim()) return `Timeline entry ${i + 1}: write what happened, or remove the entry.`;
-  }
-  return null;
+  return sectionsProblem(sections);
 }
 
 /**
- * 03 ADM-14: the Author page — name, bio, stats, public email, and the timeline (in the
- * order shown). One Save writes it all and rebuilds the page.
+ * 03 ADM-14: the Author page. The header (photo, name, bio, facts) and the sections below it, in
+ * the order shown; every part but the name can be hidden. One Save writes it all and rebuilds
+ * the page.
  */
-export function AuthorAdmin({ upload = uploadMedia }: { upload?: Upload }) {
+export function AuthorAdmin({ upload = uploadMedia, previewDelay = 400 }: { upload?: Upload; previewDelay?: number }) {
   const id = useId();
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [loaded, setLoaded] = useState<'loading' | 'failed' | 'ok'>('loading');
-  const [profile, setProfile] = useState<Profile>({ name: '', bio: '', years: null, students: null, email: '' });
+  const [profile, setProfile] = useState<Profile>({
+    name: '',
+    bio: '',
+    years: null,
+    students: null,
+    email: '',
+    hidden: [],
+  });
   const [years, setYears] = useState('');
   const [students, setStudents] = useState('');
-  const [items, setItems] = useState<Item[]>([]);
+  const [sections, setSections] = useState<SectionState[]>([]);
+  const [preview, setPreview] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -57,19 +71,35 @@ export function AuthorAdmin({ upload = uploadMedia }: { upload?: Upload }) {
   useEffect(() => {
     void api<Loaded>('/api/admin/author').then(({ status, data }) => {
       if (status !== 200) return setLoaded('failed');
-      setProfile(data.profile);
+      setProfile({ ...data.profile, hidden: data.profile.hidden ?? [] });
       setPhoto(data.photo ?? null);
       setYears(data.profile.years == null ? '' : String(data.profile.years));
       setStudents(data.profile.students == null ? '' : String(data.profile.students));
-      setItems(data.timeline.map((t) => item(t.year, t.text)));
+      setSections(data.sections.map(sectionState));
       setLoaded('ok');
     });
   }, []);
 
-  const problem = problemOf(profile, years, students, items);
+  // Live preview of the bio: rendered by the server exactly as visitors will see it.
+  const latest = useRef(0);
+  useEffect(() => {
+    if (loaded !== 'ok') return;
+    const ticket = ++latest.current;
+    const timer = setTimeout(async () => {
+      const { status, data } = await api<{ html?: string }>('/api/admin/author/preview', {
+        method: 'POST',
+        body: { bio: profile.bio },
+      });
+      if (status === 200 && ticket === latest.current) setPreview(data.html ?? '');
+    }, previewDelay);
+    return () => clearTimeout(timer);
+  }, [profile.bio, loaded, previewDelay]);
+
+  const problem = problemOf(profile, years, students, sections);
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setProfile((p) => ({ ...p, [k]: v }));
-  const setItem = (key: number, patch: Partial<Item>) =>
-    setItems((list) => list.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+  const shown = (part: HeaderPart) => !profile.hidden.includes(part);
+  const show = (part: HeaderPart, on: boolean) =>
+    set('hidden', on ? profile.hidden.filter((h) => h !== part) : [...profile.hidden, part]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -80,7 +110,7 @@ export function AuthorAdmin({ upload = uploadMedia }: { upload?: Upload }) {
       method: 'PUT',
       body: {
         profile: { ...profile, years: count(years), students: count(students), photo_media_id: photo?.id ?? null },
-        timeline: items.map((t) => ({ year: Number(t.year), text: t.text })),
+        sections: sectionsBody(sections),
       },
     }).catch(() => ({ status: 0, data: {} as { error?: string; failed?: string[] } }));
     setBusy(false);
@@ -104,96 +134,60 @@ export function AuthorAdmin({ upload = uploadMedia }: { upload?: Upload }) {
   return (
     <form className="adm-form adm-author" onSubmit={save} aria-label="Author page" noValidate>
       <h1>Author page</h1>
-      <PhotoField photo={photo} name={profile.name} upload={upload} onChange={setPhoto} />
+      <PhotoField photo={photo} name={profile.name} upload={upload} onChange={setPhoto}>
+        <ShowBox part="photo" label="Show the photo (otherwise your initials)" shown={shown} onShow={show} />
+      </PhotoField>
       <label>
         Name
         <input value={profile.name} maxLength={80} required onChange={(e) => set('name', e.target.value)} />
       </label>
-      <label>
-        About you
-        <textarea rows={5} maxLength={2000} value={profile.bio} onChange={(e) => set('bio', e.target.value)} />
-      </label>
-      <div className="adm-row">
-        <label>
-          Years teaching
-          <input inputMode="numeric" value={years} onChange={(e) => setYears(e.target.value)} />
-        </label>
-        <label>
-          Students taught
-          <input inputMode="numeric" value={students} onChange={(e) => setStudents(e.target.value)} />
-        </label>
+      <div className="adm-bio">
+        <div className="adm-bio-edit">
+          <label>
+            About you
+            <textarea rows={8} maxLength={5000} value={profile.bio} onChange={(e) => set('bio', e.target.value)} />
+          </label>
+          <p className="adm-hint">
+            Markdown: **bold**, *italic*, [a link](https://…), and a blank line between paragraphs.
+          </p>
+          <ShowBox part="bio" label="Show the bio" shown={shown} onShow={show} />
+        </div>
+        <div className="frame adm-section adm-bio-preview">
+          <h2 className="meta">Preview</h2>
+          <div
+            role="region"
+            aria-label="Bio preview"
+            aria-live="polite"
+            className="prose"
+            dangerouslySetInnerHTML={{ __html: preview }}
+          />
+        </div>
       </div>
-      <label>
-        Public email (shown on the page; leave empty to hide)
-        <input type="email" value={profile.email} maxLength={200} onChange={(e) => set('email', e.target.value)} />
-      </label>
+      <div className="adm-row">
+        <div className="adm-fact">
+          <label>
+            Years teaching
+            <input inputMode="numeric" value={years} onChange={(e) => setYears(e.target.value)} />
+          </label>
+          <ShowBox part="years" label="Show years teaching" shown={shown} onShow={show} />
+        </div>
+        <div className="adm-fact">
+          <label>
+            Students taught
+            <input inputMode="numeric" value={students} onChange={(e) => setStudents(e.target.value)} />
+          </label>
+          <ShowBox part="students" label="Show students taught" shown={shown} onShow={show} />
+        </div>
+      </div>
+      <div className="adm-fact">
+        <label>
+          Public email
+          <input type="email" value={profile.email} maxLength={200} onChange={(e) => set('email', e.target.value)} />
+        </label>
+        <ShowBox part="email" label="Show the email" shown={shown} onShow={show} />
+      </div>
 
-      <fieldset className="adm-timeline">
-        <legend>Timeline (shown in this order)</legend>
-        {items.length === 0 && <p className="meta">No entries yet.</p>}
-        <ol>
-          {items.map((t, i) => (
-            <li key={t.key}>
-              <label>
-                Year
-                <input
-                  inputMode="numeric"
-                  className="adm-year"
-                  value={t.year}
-                  maxLength={4}
-                  aria-label={`Year of entry ${i + 1}`}
-                  onChange={(e) => setItem(t.key, { year: e.target.value })}
-                />
-              </label>
-              <label className="adm-grow">
-                What happened
-                <input
-                  value={t.text}
-                  maxLength={300}
-                  aria-label={`What happened, entry ${i + 1}`}
-                  onChange={(e) => setItem(t.key, { text: e.target.value })}
-                />
-              </label>
-              <span className="adm-quick">
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={i === 0}
-                  aria-label={`Move entry ${i + 1} up`}
-                  onClick={() => setItems((list) => moveItem(list, i, -1))}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={i === items.length - 1}
-                  aria-label={`Move entry ${i + 1} down`}
-                  onClick={() => setItems((list) => moveItem(list, i, 1))}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  aria-label={`Remove entry ${i + 1}`}
-                  onClick={() => setItems((list) => list.filter((x) => x.key !== t.key))}
-                >
-                  Remove
-                </button>
-              </span>
-            </li>
-          ))}
-        </ol>
-        <button
-          type="button"
-          className="btn"
-          disabled={items.length >= 50}
-          onClick={() => setItems((list) => [...list, item(new Date().getFullYear(), '')])}
-        >
-          Add an entry
-        </button>
-      </fieldset>
+      <SectionsEditor sections={sections} onChange={setSections} />
 
       {touched && problem && (
         <p role="alert" className="adm-error" id={`${id}-problem`}>
@@ -215,6 +209,26 @@ export function AuthorAdmin({ upload = uploadMedia }: { upload?: Upload }) {
   );
 }
 
+/** "Show …" for a part of the header the owner can hide. */
+function ShowBox({
+  part,
+  label,
+  shown,
+  onShow,
+}: {
+  part: HeaderPart;
+  label: string;
+  shown: (part: HeaderPart) => boolean;
+  onShow: (part: HeaderPart, on: boolean) => void;
+}) {
+  return (
+    <label className="adm-inline">
+      <input type="checkbox" checked={shown(part)} onChange={(e) => onShow(part, e.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
 /**
  * The author's photo (owner request): shown on the Author page instead of the initials.
  * Uploaded like any image (EXIF and GPS removed), or chosen from the media library.
@@ -225,11 +239,13 @@ function PhotoField({
   name,
   upload,
   onChange,
+  children,
 }: {
   photo: Photo | null;
   name: string;
   upload: Upload;
   onChange: (p: Photo | null) => void;
+  children?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState('');
@@ -301,6 +317,7 @@ function PhotoField({
             e.target.value = '';
           }}
         />
+        {children}
         <p className="adm-live" role="status">
           {note}
         </p>

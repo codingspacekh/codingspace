@@ -89,7 +89,11 @@ describe('public page data', () => {
   it('loads the author page', async () => {
     const author = await getAuthorPage();
     expect(author.profile?.name).toBe('CodingSpace');
-    expect(author.timeline).toHaveLength(4);
+    expect(author.profile?.bioHtml).toMatch(/^<p>I teach competition maths/);
+    expect(author.description).toMatch(/^I teach competition maths/);
+    // Sections with nothing to show are left out; life posts always show (or say "No posts yet").
+    expect(author.sections.map((s) => s.kind)).toEqual(['timeline', 'life_posts']);
+    expect(author.sections[0]!.items.map((i) => i.period)).toEqual(['2018', '2021', '2023', '2026']);
     expect(author.lifePosts.map((p) => p.slug).sort()).toEqual(['study-tips-km', 'why-i-started-codingspace']);
   });
 

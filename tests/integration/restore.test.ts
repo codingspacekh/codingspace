@@ -17,10 +17,13 @@ beforeAll(async () => {
 
 /** Children first; post_revisions and post_media go with their posts. */
 async function emptyContent(db: SupabaseClient) {
-  for (const table of ['posts', 'featured_problems', 'timeline_items', 'projects', 'media', 'sections']) {
+  for (const table of ['posts', 'featured_problems', 'author_items', 'projects', 'media', 'sections']) {
     const { error } = await db.from(table).delete().not('id', 'is', null);
     if (error) throw new Error(`${table}: ${error.message}`);
   }
+  // The built-in Author sections are part of every database, like the subjects.
+  const custom = await db.from('author_sections').delete().eq('kind', 'custom');
+  if (custom.error) throw new Error(`author_sections: ${custom.error.message}`);
   const { error } = await db.from('profile').delete().eq('id', true);
   if (error) throw new Error(`profile: ${error.message}`);
 }

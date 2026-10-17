@@ -51,6 +51,10 @@ describe('describeEvent', () => {
       href: '/admin/problems',
     });
     expect(describeEvent(event('timeline.update')).text).toBe('Edited the Author timeline');
+    expect(describeEvent(event('author.update', { entity: 'profile' }))).toEqual({
+      text: 'Edited the Author page',
+      href: '/admin/author',
+    });
     expect(describeEvent(event('auth.sign_in', { entity: 'session' }))).toEqual({ text: 'Signed in', href: null });
     expect(describeEvent(event('content.export'))).toEqual({ text: 'Downloaded an export of all content', href: null });
   });

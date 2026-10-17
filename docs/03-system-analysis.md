@@ -93,7 +93,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | ADM-11 | Problem of the week editor with live maths preview and week date. | M |
 | ADM-12 | Study structure: add, rename, describe, reorder and delete sections (deleting one deletes its lessons, after a confirmation that lists them; owner change 2026-10-17); reorder lessons inside a section. | M |
 | ADM-13 | Projects: create, edit, delete; one featured; landing URL validated (https only). | M |
-| ADM-14 | Author profile: name, bio, stats, timeline, public email. | M |
+| ADM-14 | Author page: photo, name, bio (Markdown), stats, public email, and sections in the owner's order: timeline, experience, education, skills, awards & certificates, hobbies & interests, life posts and any number of custom sections. Every part except the name can be hidden, down to single items; hidden parts never reach visitors (owner request 2026-10-17). | M |
 | ADM-15 | Admin audit log (who did what, when) visible on the dashboard. | S |
 | ADM-16 | Export all content to Markdown + JSON (backup and portability). | S |
 

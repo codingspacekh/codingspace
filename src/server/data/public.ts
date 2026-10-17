@@ -1,7 +1,18 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { renderSnippet } from '@/server/render/snippet';
 import { isSubjectId, SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
-import type { FeaturedProblem, Post, PostCard, PostPageData, Profile, Project, SectionWithLessons } from './types';
+import { plainText, type SectionKind } from '@/lib/author';
+import type {
+  AuthorPageItem,
+  AuthorPageSection,
+  FeaturedProblem,
+  Post,
+  PostCard,
+  PostPageData,
+  Profile,
+  Project,
+  SectionWithLessons,
+} from './types';
 
 /**
  * Read side for public pages (getStaticProps only). Uses the anon key and the public_*
@@ -248,31 +259,52 @@ export async function getProjects(): Promise<Project[]> {
   }));
 }
 
-type ProfileRow = Omit<Profile, 'photo'> & {
-  photo: string | null;
-  photo_widths: number[];
-  photo_width: number | null;
-  photo_height: number | null;
+type AuthorPageRow = {
+  profile:
+    | (Omit<Profile, 'photo' | 'bioHtml'> & {
+        photo: string | null;
+        photo_widths: number[];
+        photo_width: number | null;
+        photo_height: number | null;
+      })
+    | null;
+  sections: {
+    id: string;
+    kind: SectionKind;
+    title: string;
+    items: (Omit<AuthorPageItem, 'noteHtml'> & { note: string })[];
+  }[];
 };
 
+/**
+ * The Author page (03 ADM-14): everything the owner chose to show, in their order. author_page()
+ * leaves hidden parts out in the database. Sections with no items are dropped here, except life
+ * posts (which says "No posts yet"); the bio and notes are Markdown, rendered like a problem.
+ */
 export async function getAuthorPage(): Promise<{
   profile: Profile | null;
-  timeline: { year: number; text: string }[];
+  description: string;
+  sections: AuthorPageSection[];
   lifePosts: PostCard[];
+  hasMath: boolean;
 }> {
-  const [profile, timeline, life] = await Promise.all([
-    db()
-      .from('public_profile')
-      .select('name, bio, years, students, email, photo, photo_widths, photo_width, photo_height')
-      .maybeSingle(),
-    db().from('public_timeline').select('year, text').order('sort'),
+  const [page, life] = await Promise.all([
+    db().rpc('author_page'),
     db().from('public_posts').select(CARD_COLUMNS).eq('kind', 'life').order('published_at', { ascending: false }),
   ]);
-  const p = must<ProfileRow | null>(profile, 'profile');
+  const { profile: p, sections } = must<AuthorPageRow>(page, 'author page');
+  let hasMath = false;
+  const render = async (md: string) => {
+    const out = await renderSnippet(md);
+    hasMath ||= out.hasMath;
+    return out.html;
+  };
+  const shown = sections.filter((s) => s.kind === 'life_posts' || s.items.length > 0);
   return {
     profile: p && {
       name: p.name,
       bio: p.bio,
+      bioHtml: await render(p.bio),
       years: p.years,
       students: p.students,
       email: p.email,
@@ -281,8 +313,17 @@ export async function getAuthorPage(): Promise<{
           ? { id: p.photo, widths: p.photo_widths, width: p.photo_width, height: p.photo_height }
           : null,
     },
-    timeline: must<{ year: number; text: string }[]>(timeline, 'timeline'),
+    description: plainText(p?.bio ?? ''),
+    sections: await Promise.all(
+      shown.map(async (s) => ({
+        id: s.id,
+        kind: s.kind,
+        title: s.title,
+        items: await Promise.all(s.items.map(async ({ note, ...i }) => ({ ...i, noteHtml: await render(note) }))),
+      })),
+    ),
     lifePosts: must<CardRow[]>(life, 'life posts').map(toCard),
+    hasMath,
   };
 }
 
@@ -305,6 +346,5 @@ export async function getFeedPosts(limit = 20): Promise<PostCard[]> {
 }
 
 export async function getAuthorName(): Promise<string | null> {
-  const row = must<{ name: string } | null>(await db().from('public_profile').select('name').maybeSingle(), 'author');
-  return row?.name ?? null;
+  return must<AuthorPageRow>(await db().rpc('author_page'), 'author').profile?.name ?? null;
 }

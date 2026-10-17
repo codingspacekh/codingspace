@@ -1416,6 +1416,78 @@ figure.code pre {
     gap: 2px;
   }
 }
+.profile .prose.lead {
+  gap: 12px;
+}
+/* Author sections (ADM-14): jobs, schools, awards and custom entries on the timeline line. */
+.timeline--plain .tl {
+  grid-template-columns: minmax(0, 1fr);
+}
+.tl-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.tl-body h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.tl-where {
+  color: var(--muted);
+  font-size: 14px;
+}
+.tl-note :is(p, li),
+.hobby .prose :is(p, li) {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tl-note {
+  gap: 10px;
+  margin-top: 4px;
+  color: var(--fg2);
+}
+.skill-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.skill-group {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 18px;
+}
+.skill-group h3,
+.hobby h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skill-tags .tag::before {
+  display: none;
+}
+.hobbies {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hobby {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 18px;
+}
+.hobby .prose {
+  gap: 8px;
+  color: var(--fg2);
+}
 
 /* Motion off (OS setting or the top-bar toggle): no CSS animation either. */
 html[data-motion='off'] *,
@@ -2504,6 +2576,39 @@ img.ProseMirror-separator {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+/* Author page sections (ADM-14) */
+.adm-author-sections {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.adm-author-sections > legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 18px;
+}
+.adm-timeline .adm-full {
+  flex: 1 1 100%;
+}
+.adm-timeline .adm-period {
+  flex: 0 1 13em;
+}
+.adm-fact,
+.adm-bio {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.adm-bio-preview {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+.adm-bio-preview h2 {
+  margin: 0;
+}
 .adm-section h2 .adm-status {
   margin-left: 8px;
   vertical-align: middle;
@@ -2680,7 +2785,7 @@ html[data-motion='on'][data-transition='in'] #main :is(.eyebrow, .crumbs, .tag, 
 html[data-motion='on'][data-transition='in']
   #main
   :is(
-    :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > *,
+    :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > *,
     .profile,
     .toc,
     .art,
@@ -2689,24 +2794,24 @@ html[data-motion='on'][data-transition='in']
   animation: card-in 0.5s ease-out both;
   animation-delay: calc(0.1s + var(--i, 0) * 0.09s);
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(2),
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(2),
 .art {
   --i: 1;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(3),
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(3),
 .rail > * {
   --i: 2;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(4) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(4) {
   --i: 3;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(5) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(5) {
   --i: 4;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(6) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(6) {
   --i: 5;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline) > :nth-child(n + 7) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(n + 7) {
   --i: 6;
 }
 @keyframes card-in {

@@ -1,12 +1,19 @@
 import type { GetStaticProps } from 'next';
+import Head from 'next/head';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
 import { imageKey, mediaUrl, srcset } from '@/lib/media-urls';
 import { getAuthorPage } from '@/server/data/public';
-import type { PostCard, Profile } from '@/server/data/types';
-import { PostTile } from '@/views/cards';
+import type { AuthorPageSection, PostCard, Profile } from '@/server/data/types';
+import { AuthorSections } from '@/views/author-sections';
 
-type Props = { profile: Profile | null; timeline: { year: number; text: string }[]; lifePosts: PostCard[] };
+type Props = {
+  profile: Profile | null;
+  description: string;
+  sections: AuthorPageSection[];
+  lifePosts: PostCard[];
+  hasMath: boolean;
+};
 
 export const getStaticProps: GetStaticProps<Props> = async () => ({
   props: await getAuthorPage(),
@@ -40,10 +47,15 @@ function Photo({ photo, name }: { photo: NonNullable<Profile['photo']>; name: st
   );
 }
 
-export default function Author({ profile, timeline, lifePosts }: Props) {
+export default function Author({ profile, description, sections, lifePosts, hasMath }: Props) {
   const name = profile?.name ?? 'CodingSpace';
   return (
-    <Layout title={`Author · ${name}`} description={profile?.bio || undefined} path="/author" active="author">
+    <Layout title={`Author · ${name}`} description={description || undefined} path="/author" active="author">
+      {hasMath && (
+        <Head>
+          <link rel="stylesheet" href="/katex/katex.min.css" />
+        </Head>
+      )}
       <section className="frame profile c-cyan" aria-labelledby="who">
         {profile?.photo ? (
           <div className="avatar avatar--photo">
@@ -57,65 +69,35 @@ export default function Author({ profile, timeline, lifePosts }: Props) {
         <div className="who">
           <span className="eyebrow">Author</span>
           <h1 id="who">{name}</h1>
-          {profile?.bio && <p className="lead">{profile.bio}</p>}
-          <dl className="facts">
-            {profile?.years != null && (
-              <div className="fact">
-                <dt>Years teaching</dt>
-                <dd>{profile.years}</dd>
-              </div>
-            )}
-            {profile?.students != null && (
-              <div className="fact">
-                <dt>Students</dt>
-                <dd>{profile.students}+</dd>
-              </div>
-            )}
-            {profile?.email && (
-              <div className="fact">
-                <dt>Email</dt>
-                <dd>
-                  <a href={`mailto:${profile.email}`}>{profile.email}</a>
-                </dd>
-              </div>
-            )}
-          </dl>
+          {profile?.bioHtml && <div className="prose lead" dangerouslySetInnerHTML={{ __html: profile.bioHtml }} />}
+          {(profile?.years != null || profile?.students != null || profile?.email) && (
+            <dl className="facts">
+              {profile?.years != null && (
+                <div className="fact">
+                  <dt>Years teaching</dt>
+                  <dd>{profile.years}</dd>
+                </div>
+              )}
+              {profile?.students != null && (
+                <div className="fact">
+                  <dt>Students</dt>
+                  <dd>{profile.students}+</dd>
+                </div>
+              )}
+              {profile?.email && (
+                <div className="fact">
+                  <dt>Email</dt>
+                  <dd>
+                    <a href={`mailto:${profile.email}`}>{profile.email}</a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
         </div>
       </section>
 
-      {timeline.length > 0 && (
-        <section className="section" aria-labelledby="timeline">
-          <div className="shead">
-            <h2 id="timeline">Timeline</h2>
-          </div>
-          <ol className="timeline">
-            {timeline.map((t) => (
-              <li key={`${t.year}-${t.text}`} className="tl">
-                <span className="y">{t.year}</span>
-                <p>{t.text}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      <section className="section" aria-labelledby="life">
-        <div className="shead">
-          <div>
-            <span className="eyebrow">Notes from outside class</span>
-            <h2 id="life">Life posts</h2>
-          </div>
-        </div>
-        {lifePosts.length > 0 ? (
-          <div className="grid3">
-            {lifePosts.map((p) => (
-              <PostTile key={p.slug} post={p} />
-            ))}
-          </div>
-        ) : (
-          <p className="empty">No posts yet.</p>
-        )}
-      </section>
+      <AuthorSections sections={sections} lifePosts={lifePosts} />
     </Layout>
   );
 }

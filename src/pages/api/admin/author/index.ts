@@ -2,7 +2,7 @@ import { withOwner } from '@/server/auth/guard';
 import { revalidate, sendError } from '@/server/admin/http';
 import { getAuthor, saveAuthor } from '@/server/admin/site';
 
-/** GET → { profile, timeline }. PUT { profile, timeline } → saves both (03 ADM-14). */
+/** GET → { profile, photo, sections }. PUT { profile, sections } → saves the whole page (03 ADM-14). */
 export default withOwner(['GET', 'PUT'], async (req, res, { supabase }) => {
   try {
     if (req.method === 'GET') return res.status(200).json(await getAuthor(supabase));
