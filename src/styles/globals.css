@@ -707,7 +707,7 @@ html {
 }
 .headline {
   font-family: var(--font-display), var(--font-body), var(--font-khmer), sans-serif;
-  font-size: clamp(38px, 6.4vw, 76px);
+  font-size: clamp(38px, 4.6vw, 57px);
   line-height: 1.05;
   text-transform: uppercase;
   letter-spacing: 0.02em;
