@@ -1,8 +1,8 @@
--- Study structure (03 ADM-12): rename, describe, reorder and delete (only if empty) sections;
--- reorder lessons inside a section. Orders stay 1..n with no gaps.
+-- Study structure (03 ADM-12): rename, describe, reorder and delete sections (with their
+-- lessons); reorder lessons inside a section. Orders stay 1..n with no gaps.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(27);
 
 select ok(not has_function_privilege('anon', f, 'execute'), format('anon cannot call %s', f))
   from unnest(array['public.admin_update_section(uuid,text,text)', 'public.admin_delete_section(uuid)',
@@ -19,6 +19,15 @@ insert into public.posts (id, kind, slug, subject_id, section_id, sort, title)
          ('20000000-0000-0000-0000-000000000002', 'lesson', 'b', 'math', '10000000-0000-0000-0000-000000000001', 3, 'B'),
          ('20000000-0000-0000-0000-000000000003', 'lesson', 'c', 'math', '10000000-0000-0000-0000-000000000001', 7, 'C'),
          ('20000000-0000-0000-0000-000000000004', 'lesson', 'd', 'math', '10000000-0000-0000-0000-000000000002', 1, 'D');
+-- E is live in Waves but its draft was taken out of it (not re-published); F was unpublished,
+-- then moved from Empty to Sequences.
+insert into public.posts (id, kind, slug, subject_id, section_id, sort, title, status, revision, live_revision,
+                          live_title, published_at,
+                          live_subject_id, live_section_id, live_level, live_minutes, live_problem_count, live_lang)
+  values ('20000000-0000-0000-0000-000000000005', 'lesson', 'e', 'physics', null, 1, 'E', 'published', 1, 1,
+          'E', now(), 'physics', '10000000-0000-0000-0000-000000000004', 1, 5, 0, 'en'),
+         ('20000000-0000-0000-0000-000000000006', 'lesson', 'f', 'math', '10000000-0000-0000-0000-000000000002', 2, 'F', 'draft', 1, 1,
+          'F', now(), 'math', '10000000-0000-0000-0000-000000000003', 1, 5, 0, 'en');
 
 set local role authenticated;
 select set_config('request.jwt.claims',
@@ -58,12 +67,26 @@ select throws_ok($$select public.admin_reorder_lessons('10000000-0000-0000-0000-
                  'the order must list exactly the section''s lessons');
 select is((select action from public.audit_events order by id desc limit 1), 'section.reorder_lessons', 'audited');
 
--- ── Delete ────────────────────────────────────────────────────────────────
-select throws_ok($$select public.admin_delete_section('10000000-0000-0000-0000-000000000001')$$, 'PT409', null,
-                 'a section with lessons cannot be deleted');
-select lives_ok($$select public.admin_delete_section('10000000-0000-0000-0000-000000000003')$$, 'an empty one can');
+-- ── Delete (with its lessons) ─────────────────────────────────────────────
+select is(public.admin_delete_section('10000000-0000-0000-0000-000000000001') -> 'lessons',
+          '[{"slug": "b", "kind": "lesson", "subject": null, "section": null, "was_published": false},
+            {"slug": "c", "kind": "lesson", "subject": null, "section": null, "was_published": false},
+            {"slug": "a", "kind": "lesson", "subject": null, "section": null, "was_published": false}]'::jsonb,
+          'a section with lessons is deleted, and says which lessons went with it');
+select is((select count(*)::int from public.posts where slug in ('a', 'b', 'c')), 0, 'its lessons are gone');
+select is((select count(*)::int from public.audit_events where action = 'post.delete' and meta ->> 'with_section' = 'inequalities'),
+          3, 'each lesson is audited');
+select is((select meta ->> 'lessons' from public.audit_events where action = 'section.delete' order by id desc limit 1),
+          '3', 'and the section, with how many lessons');
+select is((select count(*)::int from public.posts where slug in ('d', 'f')), 2, 'other sections keep theirs');
+select lives_ok($$select public.admin_delete_section('10000000-0000-0000-0000-000000000003')$$,
+                'an empty one can be deleted, even if a moved, unpublished lesson was once live in it');
+select is((select live_section_id from public.posts where slug = 'f'), null, 'that lesson forgets it');
 select results_eq($$select slug, sort from public.sections where subject_id = 'math' order by sort$$,
-                  $$values ('inequalities'::text, 1), ('sequences', 2)$$, 'the rest close the gap');
+                  $$values ('sequences'::text, 1)$$, 'the rest close the gap');
+select throws_ok($$select public.admin_delete_section('10000000-0000-0000-0000-000000000004')$$, 'PT409', null,
+                 'a lesson live here but moved elsewhere (not re-published) blocks the delete');
+select is((select count(*)::int from public.posts where slug = 'e'), 1, 'and nothing was deleted');
 
 -- ── Not the owner ─────────────────────────────────────────────────────────
 select set_config('request.jwt.claims',

@@ -73,19 +73,40 @@ describe('StudyStructure (ADM-12)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Moved “Sequences” up.');
   });
 
-  it('only an empty section can be deleted, after confirming', async () => {
+  it('deleting a section with lessons names every lesson that goes with it, then deletes them all', async () => {
     const calls = mockApi();
     const user = userEvent.setup();
     render(<StudyStructure subject="math" onSubject={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'Inequalities' });
-    expect(screen.getByRole('button', { name: 'Delete Inequalities' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Delete Inequalities' })).toHaveAccessibleDescription(
-      'To delete it, move or delete its 2 lessons first.',
+    await user.click(await screen.findByRole('button', { name: 'Delete Inequalities' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete “Inequalities”?' });
+    expect(within(dialog).getByRole('list', { name: 'Lessons that will be deleted' })).toHaveTextContent(
+      /AM–GM.*Cauchy/,
     );
-    await user.click(screen.getByRole('button', { name: 'Delete Sequences' }));
-    await user.click(within(card('Sequences')).getByRole('button', { name: 'Delete permanently' }));
+    expect(dialog).toHaveTextContent('2 of them are live');
+    // Cancel keeps everything.
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(calls).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Inequalities' }));
+    await user.click(screen.getByRole('button', { name: 'Delete section and 2 lessons' }));
+    expect(calls[0]).toMatchObject({ url: '/api/admin/sections/s1', method: 'DELETE' });
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Inequalities' })).toBeNull());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Deleted “Inequalities” and its 2 lessons.');
+  });
+
+  it('an empty section is deleted after a plain confirmation; a refusal keeps it', async () => {
+    const calls = mockApi(() => [409, { error: '1 lesson(s) live in this section were moved to another one' }]);
+    const user = userEvent.setup();
+    render(<StudyStructure subject="math" onSubject={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Delete Sequences' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('The section has no lessons.');
+    await user.click(screen.getByRole('button', { name: 'Delete section' }));
     expect(calls[0]).toMatchObject({ url: '/api/admin/sections/s2', method: 'DELETE' });
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Sequences' })).toBeNull());
+    expect(await screen.findByRole('status')).toHaveTextContent('Not done: 1 lesson(s) live in this section');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sequences' })).toBeInTheDocument();
   });
 
   it('renames and describes a section', async () => {

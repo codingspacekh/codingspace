@@ -280,8 +280,8 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
 
     await page.getByRole('button', { name: `Delete ${name} renamed` }).click();
     await page
-      .getByRole('group', { name: 'Confirm delete' })
-      .getByRole('button', { name: 'Delete permanently' })
+      .getByRole('dialog', { name: `Delete “${name} renamed”?` })
+      .getByRole('button', { name: 'Delete section' })
       .click();
     await expect(page.getByRole('heading', { level: 2, name: `${name} renamed` })).toHaveCount(0);
     await student.goto('/study/it');

@@ -2307,6 +2307,18 @@ img.ProseMirror-separator {
 .adm-modal-head .btn {
   padding: 4px 10px;
 }
+.adm-doomed {
+  display: grid;
+  gap: 6px;
+  max-height: 40vh;
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+.adm-modal p {
+  margin: 0;
+}
 @keyframes modal-in {
   from {
     opacity: 0;
