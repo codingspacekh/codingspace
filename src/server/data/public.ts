@@ -148,7 +148,13 @@ export async function getPostSlugs(): Promise<string[]> {
   return must<{ slug: string }[]>(await db().from('public_posts').select('slug'), 'post slugs').map((r) => r.slug);
 }
 
+/** A real post slug (matches the DB CHECK on posts.slug). Anything else can't exist, so the page
+ *  is a 404 and we never send it to the database — a junk address (e.g. an injection probe) would
+ *  otherwise reach the WAF in front of the DB and come back as a non-JSON error, i.e. a 500. */
+export const isPostSlug = (slug: string): boolean => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
+
 export async function getPostPage(slug: string): Promise<PostPageData | null> {
+  if (!isPostSlug(slug)) return null;
   const row = must<{
     slug: string;
     kind: 'lesson' | 'life';

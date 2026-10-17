@@ -82,3 +82,13 @@ test('the admin and its API are not open', async ({ request }) => {
   expect(login.status()).toBe(200);
   expect(login.headers()['x-robots-tag']).toContain('noindex');
 });
+
+test('a malformed lesson address is a clean 404, not a 500', async ({ request }) => {
+  // An injection-shaped slug must be rejected before any database query (it would otherwise reach
+  // the WAF in front of the DB and surface as a 500). The body leaks nothing either way.
+  for (const slug of ["x' OR 1=1--", "' UNION SELECT NULL--", 'a/../b']) {
+    const res = await request.get(`/posts/${encodeURIComponent(slug)}`);
+    expect(res.status(), slug).toBe(404);
+    expect(await res.text(), slug).not.toMatch(/syntax error|PGRST|SQLSTATE|relation "|supabase\.co/);
+  }
+});
