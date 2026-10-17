@@ -1,5 +1,5 @@
 import { mediaBaseUrl, r2Endpoint } from '@/config/content-origins.mjs';
-import { buildCsp, securityHeaders } from '@/config/security-headers.mjs';
+import { BOOT_SCRIPT_HASH, buildCsp, securityHeaders } from '@/config/security-headers.mjs';
 import { renderContent } from '@/server/render';
 
 const directives = (csp: string) => csp.split(';').map((d) => d.trim());
@@ -7,8 +7,9 @@ const directives = (csp: string) => csp.split(';').map((d) => d.trim());
 describe('Content-Security-Policy (03 §8.3, ADR 0001)', () => {
   const csp = buildCsp({});
 
-  it('keeps scripts strict: self only, no inline, no eval', () => {
-    expect(directives(csp)).toContain("script-src 'self'");
+  it('keeps scripts strict: self and one hashed boot script, no unsafe-inline, no eval', () => {
+    expect(directives(csp)).toContain(`script-src 'self' ${BOOT_SCRIPT_HASH}`);
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).not.toContain("'unsafe-eval'");
   });
 

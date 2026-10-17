@@ -155,7 +155,7 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
     expect(problems, problems.join('\n')).toEqual([]);
   });
 
-  test('opening a subject shows a short loading screen, then the page', async ({ page, isMobile }) => {
+  test('opening a subject shows skeleton cards, then the page', async ({ page, isMobile }) => {
     test.skip(isMobile, 'same code; the desktop bar has the link in view');
     const problems = await collectProblems(page);
     await page.goto('/projects');
@@ -168,10 +168,9 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
       );
     });
     await page.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: 'Physics' }).click();
-    await expect(page.getByTestId('page-loader')).toBeVisible();
-    await expect(page.getByTestId('page-loader')).toContainText(/loading physics/i);
+    await expect(page.getByTestId('page-skeleton')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(page.getByTestId('page-loader')).toHaveCount(0);
+    await expect(page.getByTestId('page-skeleton')).toBeHidden();
     await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
     expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(
       expect.arrayContaining(['loading', 'in', '-']),
@@ -179,8 +178,48 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
     expect(problems, problems.join('\n')).toEqual([]);
   });
 
+  /** Records every data-transition value from before the page's own scripts run. (<html> may
+   * not exist yet when this runs, so it watches the whole document.) */
+  const recordFromStart = (page: import('@playwright/test').Page) =>
+    page.addInitScript(() => {
+      const seen: string[] = [];
+      (window as unknown as { seen: string[] }).seen = seen;
+      new MutationObserver(() => seen.push(document.documentElement.dataset.transition ?? '-')).observe(document, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['data-transition'],
+      });
+    });
+
+  test('a refresh plays the same arrival: skeleton, then the cards fade in', async ({ page }) => {
+    const problems = await collectProblems(page);
+    await recordFromStart(page);
+    await page.goto('/study/physics');
+    await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
+    expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(['loading', 'in', '-']);
+    // The inline boot script ran under the strict CSP (collectProblems reports violations).
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  test.describe('without JavaScript', () => {
+    test.use({ javaScriptEnabled: false });
+    test('the page is simply there: no skeleton, nothing hidden', async ({ page }) => {
+      await page.goto('/study/physics');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByTestId('page-skeleton')).toBeHidden();
+      await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
+    });
+  });
+
   test.describe('reduced motion', () => {
     test.use({ reducedMotion: 'reduce' });
+    test('a first load is not animated', async ({ page }) => {
+      await recordFromStart(page);
+      await page.goto('/study/physics');
+      await page.waitForTimeout(1500);
+      expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual([]);
+    });
+
     test('page changes are instant', async ({ page }) => {
       await page.goto('/');
       await page.evaluate(() => {

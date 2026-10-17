@@ -1,7 +1,12 @@
 // Security headers for every response (03 §8.3). Plain ESM so next.config.mjs can import it.
 // The CSP shape was proven in the M0 spike (docs/adr/0001-arwes.md).
 
+import { createHash } from 'node:crypto';
+import { BOOT_SCRIPT } from './boot-script.mjs';
 import { EMBED_ORIGINS, MEDIA_ORIGIN } from './content-origins.mjs';
+
+/** The one inline script (the first-load arrival, ./boot-script.mjs), allowed by its hash only. */
+export const BOOT_SCRIPT_HASH = `'sha256-${createHash('sha256').update(BOOT_SCRIPT).digest('base64')}'`;
 
 const HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]+(:\d+)?$/i;
 
@@ -23,7 +28,7 @@ export function buildCsp({ supabaseUrl, uploadOrigin } = {}) {
   const upload = origin(uploadOrigin ?? undefined, 'uploadOrigin');
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    `script-src 'self' ${BOOT_SCRIPT_HASH}`,
     "style-src 'self'",
     // KaTeX, Shiki and Arwes set style="" attributes. Attributes can't run code; <style> elements stay 'self'.
     "style-src-attr 'unsafe-inline'",

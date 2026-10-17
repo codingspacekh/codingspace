@@ -10,7 +10,7 @@ const events = mitt();
 let pathname = '/';
 vi.mock('next/router', () => ({ useRouter: () => ({ events, pathname }) }));
 import { PageEffects, UiRoot } from '@/ui';
-import { ARRIVE_MS, LOADER_MS, loaderFor } from '@/ui/page-effects';
+import { ARRIVE_MS, LOADER_MS } from '@/ui/page-effects';
 
 const html = document.documentElement;
 const route = (name: string, url: string, shallow = false) => act(() => events.emit(name, url, { shallow }));
@@ -37,12 +37,11 @@ beforeEach(() => {
 });
 
 describe('page changes (after soulextract.com)', () => {
-  it('every page change: loading screen, then the new page comes in, then the page is left alone', () => {
+  it('every page change: skeleton (loading), then the new page comes in, then the page is left alone', () => {
     vi.useFakeTimers();
     setup();
     route('routeChangeStart', '/projects');
     expect(html.dataset.transition).toBe('loading');
-    expect(screen.getByTestId('page-loader')).toHaveTextContent('Loading Projects');
     route('routeChangeComplete', '/projects');
     act(() => vi.advanceTimersByTime(LOADER_MS));
     expect(html.dataset.transition).toBe('in');
@@ -51,14 +50,12 @@ describe('page changes (after soulextract.com)', () => {
     vi.useRealTimers();
   });
 
-  it('a subject or a lesson shows a loading screen first, for at least LOADER_MS, then arrives', () => {
+  it('the skeleton stays for at least LOADER_MS, even when the page is ready sooner', () => {
     vi.useFakeTimers();
     setup({ sound: true });
     route('routeChangeStart', '/study/physics');
     expect(html.dataset.transition).toBe('loading');
-    expect(screen.getByTestId('page-loader')).toHaveTextContent('Loading Physics');
-    expect(screen.getByTestId('page-loader')).toHaveClass('c-violet');
-    // The page is ready quickly: the loading screen still stays up for the rest of LOADER_MS.
+    // The page is ready quickly: the skeleton still stays up for the rest of LOADER_MS.
     act(() => vi.advanceTimersByTime(100));
     route('routeChangeComplete', '/study/physics');
     expect(html.dataset.transition).toBe('loading');
@@ -66,7 +63,6 @@ describe('page changes (after soulextract.com)', () => {
     expect(html.dataset.transition).toBe('loading');
     act(() => vi.advanceTimersByTime(1));
     expect(html.dataset.transition).toBe('in');
-    expect(screen.queryByTestId('page-loader')).toBeNull();
     act(() => vi.advanceTimersByTime(ARRIVE_MS));
     expect(html.dataset.transition).toBeUndefined();
     vi.useRealTimers();
@@ -76,7 +72,6 @@ describe('page changes (after soulextract.com)', () => {
     vi.useFakeTimers();
     setup();
     route('routeChangeStart', '/posts/am-gm-inequality');
-    expect(screen.getByTestId('page-loader')).toHaveTextContent('Loading Lesson');
     act(() => vi.advanceTimersByTime(LOADER_MS + 500));
     expect(html.dataset.transition).toBe('loading');
     route('routeChangeComplete', '/posts/am-gm-inequality');
@@ -84,15 +79,17 @@ describe('page changes (after soulextract.com)', () => {
     vi.useRealTimers();
   });
 
-  it('the loading screen names where it is going, in the subject colour', () => {
-    expect(loaderFor('/study/math')).toEqual({ label: 'Math', color: 'cyan' });
-    expect(loaderFor('/study/it?x=1#arrays')).toEqual({ label: 'IT', color: 'lime' });
-    expect(loaderFor('/posts/am-gm')).toEqual({ label: 'Lesson', color: 'cyan' });
-    expect(loaderFor('/')).toEqual({ label: 'Home', color: 'cyan' });
-    expect(loaderFor('/search?q=cauchy')).toEqual({ label: 'Search', color: 'cyan' });
-    expect(loaderFor('/projects/')).toEqual({ label: 'Projects', color: 'cyan' });
-    expect(loaderFor('/author')).toEqual({ label: 'Author', color: 'cyan' });
-    expect(loaderFor('/study/nope')).toEqual({ label: 'Page', color: 'cyan' });
+  it('moving on during the first-load arrival stops its timers (the boot script)', () => {
+    vi.useFakeTimers();
+    setup();
+    html.dataset.transition = 'loading';
+    const late = vi.fn(() => (html.dataset.transition = 'in'));
+    (window as { __csArrival?: number[] }).__csArrival = [window.setTimeout(late, 300)];
+    route('routeChangeStart', '/projects');
+    act(() => vi.advanceTimersByTime(400));
+    expect(late).not.toHaveBeenCalled();
+    expect(html.dataset.transition).toBe('loading');
+    vi.useRealTimers();
   });
 
   it('with motion off, nothing animates', () => {
@@ -103,7 +100,6 @@ describe('page changes (after soulextract.com)', () => {
     expect(html.dataset.transition).toBeUndefined();
     route('routeChangeStart', '/study/math');
     expect(html.dataset.transition).toBeUndefined();
-    expect(screen.queryByTestId('page-loader')).toBeNull();
   });
 
   it('a failed navigation puts the page back', () => {
@@ -114,7 +110,6 @@ describe('page changes (after soulextract.com)', () => {
     route('routeChangeStart', '/study/math');
     route('routeChangeError', '/study/math');
     expect(html.dataset.transition).toBeUndefined();
-    expect(screen.queryByTestId('page-loader')).toBeNull();
   });
 
   it('nothing happens in the admin, or for shallow changes (filters in the address bar)', () => {

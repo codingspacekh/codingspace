@@ -13,7 +13,18 @@ export declare function noise(
 ): Float32Array;
 export declare const SOUNDS: Record<'hover' | 'transition' | 'click', () => Float32Array>;
 export declare const ALTERNATIVES: Record<
-  'click' | 'typing' | 'deploy' | 'start' | 'tap' | 'droplet' | 'glass' | 'key',
+  | 'click'
+  | 'transition'
+  | 'typing'
+  | 'deploy'
+  | 'start'
+  | 'tap'
+  | 'droplet'
+  | 'glass'
+  | 'key'
+  | 'breeze'
+  | 'swish'
+  | 'hum',
   () => Float32Array
 >;
 export declare function wav(samples: Float32Array | number[]): Buffer;

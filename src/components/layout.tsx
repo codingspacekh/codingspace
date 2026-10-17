@@ -46,6 +46,7 @@ export function Layout({
       <main id="main" tabIndex={-1} className="wrap">
         {children}
       </main>
+      <PageSkeleton />
       <footer className="site-footer">
         <div className="footer-inner">
           <span>© 2026 codingspace.io · Teach · Build · Live</span>
@@ -63,5 +64,30 @@ export function Layout({
         </div>
       </footer>
     </>
+  );
+}
+
+/**
+ * Placeholder cards that shimmer while a page loads (src/ui/page-effects.tsx). Hidden unless
+ * html[data-transition='loading'] with motion on; decorative, so screen readers skip it.
+ */
+function PageSkeleton() {
+  return (
+    <div className="page-skeleton" aria-hidden="true" data-testid="page-skeleton">
+      <div className="sk-inner">
+        <span className="sk-line sk-eyebrow" />
+        <span className="sk-line sk-title" />
+        <span className="sk-line sk-lead" />
+        <div className="sk-grid">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="sk-card">
+              <span className="sk-line sk-short" />
+              <span className="sk-line" />
+              <span className="sk-line sk-mid" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
