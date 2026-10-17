@@ -1,12 +1,11 @@
--- Site-content admin (03 ADM-11, ADM-13, ADM-14): projects, profile, timeline, problem of the week.
+-- Site-content admin (03 ADM-11, ADM-13): projects and the problem of the week (the Author page: author_sections.test.sql).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(34);
 
 select ok(not has_function_privilege('anon', f, 'execute'), format('anon cannot call %s', f))
   from unnest(array['public.admin_save_project(uuid,jsonb)', 'public.admin_feature_project(uuid)',
                     'public.admin_delete_project(uuid)', 'public.admin_reorder_projects(uuid[])',
-                    'public.admin_save_profile(jsonb)', 'public.admin_save_timeline(jsonb)',
                     'public.admin_save_problem(uuid,jsonb)', 'public.admin_set_current_problem(uuid,boolean)',
                     'public.admin_delete_problem(uuid)']) f;
 
@@ -21,8 +20,6 @@ select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-0000000000b2","role":"authenticated","aal":"aal2"}', true);
 select throws_ok($$select public.admin_save_project(null, '{"slug":"x","name":"X","description":"d","landing_url":"https://x.example"}')$$,
                  '42501', null, 'a non-owner cannot add a project');
-select throws_ok($$select public.admin_save_profile('{"name":"Mallory"}')$$, '42501', null,
-                 'a non-owner cannot change the profile');
 
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
@@ -67,21 +64,9 @@ select lives_ok($$select public.admin_delete_project((select id from ids where n
 select results_eq($$select name, sort from public.projects$$, $$values ('Quiz'::text, 1)$$, 'the order closes the gap');
 select is((select action from public.audit_events order by id desc limit 1), 'project.delete', 'audited');
 
--- ── Profile and timeline ──────────────────────────────────────────────────
-select lives_ok($$select public.admin_save_profile('{"name":"Teacher","bio":"Hi.","years":"9","students":null,"email":" "}')$$,
-                'save the profile');
-select results_eq($$select name, bio, years, students, email from public.profile$$,
-                  $$values ('Teacher'::text, 'Hi.'::text, 9::smallint, null::integer, null::text)$$,
-                  'one row; empty email and stats are not shown');
-select throws_ok($$select public.admin_save_profile('{"name":"T","email":"not-an-email"}')$$, '23514', null,
-                 'a malformed email is refused');
-select lives_ok($$select public.admin_save_timeline('[{"year":2018,"text":"Started teaching."},{"year":2026,"text":" Launched the site. "}]')$$,
-                'save the timeline');
-select results_eq($$select year::int, text, sort from public.timeline_items order by sort$$,
-                  $$values (2018, 'Started teaching.'::text, 1), (2026, 'Launched the site.', 2)$$,
-                  'the timeline is replaced, in the order given');
-select throws_ok($$select public.admin_save_timeline('[{"year":2018,"text":""}]')$$, '23514', null,
-                 'an empty timeline entry is refused');
+-- ── Profile and timeline: now one admin_save_author() (author_sections.test.sql) ──
+select hasnt_function('public', f, format('the old %s is gone', f))
+  from unnest(array['admin_save_profile', 'admin_save_timeline']) f;
 
 -- ── Problem of the week ───────────────────────────────────────────────────
 insert into ids select 'p1', (public.admin_save_problem(null,

@@ -225,7 +225,7 @@ erDiagram
   subjects ||--o{ featured_problems : has
   sections ||--o{ featured_problems : topic
   media ||--o{ projects : icon
-  profile ||--o{ timeline_items : has
+  author_sections ||--o{ author_items : has
 ```
 
 | Table | Key columns |
@@ -238,11 +238,12 @@ erDiagram
 | `post_media` | `post_id`, `media_id` (for "unused media" detection) |
 | `featured_problems` | `id`, `subject_id`, `section_id`, `week_of`, `statement`, `hint`, `solution` (LaTeX-flavoured text), `is_current` |
 | `projects` | `id`, `name`, `glyph`, `subject_id`, `tag`, `description`, `platforms`, `landing_url` (https only), `is_featured` (partial unique index: only one true), `sort` |
-| `profile` / `timeline_items` | single-row profile (`name`, `bio`, `years`, `students`, `email`); timeline (`year`, `text`, `sort`) |
+| `profile` | single row: `name`, `bio` (Markdown), `years`, `students`, `email`, photo (`photo_media_id` + copied sizes), `hidden` (header parts not shown) |
+| `author_sections` / `author_items` | the Author page's sections in order (`kind`, `title`, `visible`, `sort`; a built-in section's id is its kind) and their items (`title`, `subtitle`, `period`, `note` (Markdown), `url`, `tags`, `visible`, `sort`) |
 | `audit_events` | `id`, `actor`, `action`, `entity`, `entity_id`, `at`, `meta` |
 
 **Row-level security**
-- `anon`: `SELECT` only. Pages read through `security_invoker` views that expose **published live fields** (`public_posts`, `public_sections`, `public_projects`, `public_profile`, `public_timeline`, `public_featured_problems`); RLS and column grants on the tables still apply underneath. No access to drafts, past featured problems, media metadata or audit data.
+- `anon`: `SELECT` only. Pages read through `security_invoker` views that expose **published live fields** (`public_posts`, `public_sections`, `public_projects`, `public_featured_problems`); RLS and column grants on the tables still apply underneath. The Author page is read only through `author_page()` (security definer), which leaves out every part the owner hid; anon can't read `profile` or the section tables. No access to drafts, past featured problems, media metadata or audit data.
 - Writes go **only** through admin API routes using a server-side client. Policies also require `auth.uid() = OWNER_ID` **and** `auth.jwt()->>'aal' = 'aal2'`, so even a leaked anon key or a non-MFA session can't write.
 
 ---

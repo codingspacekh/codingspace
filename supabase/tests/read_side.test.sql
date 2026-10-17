@@ -6,23 +6,24 @@ select plan(44);
 -- ── Structure ─────────────────────────────────────────────────────────────
 select has_table('public', 'projects', 'projects table exists');
 select has_table('public', 'profile', 'profile table exists');
-select has_table('public', 'timeline_items', 'timeline_items table exists');
+select hasnt_table('public', 'timeline_items', 'the old timeline table is gone (Author sections replace it)');
 select has_table('public', 'featured_problems', 'featured_problems table exists');
 
 select ok((select bool_and(relrowsecurity) from pg_class
            where oid in ('public.projects'::regclass, 'public.profile'::regclass,
-                         'public.timeline_items'::regclass, 'public.featured_problems'::regclass)),
+                         'public.featured_problems'::regclass)),
           'RLS is enabled on every new table');
 
 select has_view('public', v, format('view %s exists', v))
-  from unnest(array['public_posts', 'public_sections', 'public_projects', 'public_profile',
-                    'public_timeline', 'public_featured_problems']) as v;
+  from unnest(array['public_posts', 'public_sections', 'public_projects', 'public_featured_problems']) as v;
+select hasnt_view('public', v, format('the old view %s is gone (visitors use author_page())', v))
+  from unnest(array['public_profile', 'public_timeline']) as v;
 
 -- Invoker views keep RLS and column grants in force underneath the view.
 select is((select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
            where n.nspname = 'public' and c.relkind = 'v' and c.relname like 'public\_%'
              and 'security_invoker=true' = any (c.reloptions)),
-          6, 'every public view runs with the caller''s rights (security_invoker)');
+          4, 'every public view runs with the caller''s rights (security_invoker)');
 
 select hasnt_column('public', 'public_posts', c, format('public_posts hides %s', c))
   from unnest(array['content_json', 'live_title', 'status', 'scheduled_at']) as c;
@@ -46,7 +47,6 @@ insert into public.profile (name, bio, years, students, email)
 select throws_ok($$insert into public.profile (name, bio) values ('Second', 'x')$$,
                  '23505', null, 'the profile has a single row');
 
-insert into public.timeline_items (year, text, sort) values (2018, 'Started teaching', 1);
 
 select throws_ok($$insert into public.posts (kind, slug, subject_id, level) values ('lesson', 'lv', 'math', 4)$$,
                  '23514', null, 'lesson level is 1–3');
@@ -103,8 +103,9 @@ select results_eq($$select slug, lesson_count from public.public_sections
 
 select results_eq('select slug from public.public_projects order by sort',
                   $$values ('runner'), ('drills')$$, 'anon reads projects in order');
-select is((select name from public.public_profile), 'CodingSpace', 'anon reads the profile');
-select is((select count(*)::int from public.public_timeline), 1, 'anon reads the timeline');
+select is(public.author_page() -> 'profile' ->> 'name', 'CodingSpace', 'anon reads the profile through author_page()');
+select throws_ok('select name from public.profile', '42501', null,
+                 'but not the profile table itself, so hidden parts stay hidden');
 select results_eq('select statement from public.public_featured_problems',
                   $$values ('Prove a+b+c ≥ 3')$$, 'anon sees only the current featured problem');
 
@@ -115,7 +116,7 @@ select throws_ok($$insert into public.public_posts (slug) values ('x')$$, '42501
 select throws_ok($$insert into public.projects (slug, name, description, landing_url)
                   values ('z', 'Z', 'z', 'https://example.com/z')$$, '42501', null, 'anon cannot insert projects');
 select throws_ok($$update public.profile set bio = 'hacked'$$, '42501', null, 'anon cannot update the profile');
-select throws_ok('delete from public.timeline_items', '42501', null, 'anon cannot delete timeline items');
+select throws_ok('delete from public.author_items', '42501', null, 'anon cannot delete Author items');
 select throws_ok($$insert into public.featured_problems (subject_id, week_of, statement)
                   values ('math', '2026-10-26', 'x')$$, '42501', null, 'anon cannot insert featured problems');
 
@@ -131,7 +132,7 @@ select throws_ok($$insert into public.projects (slug, name, description, landing
 
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated","aal":"aal1"}', true);
-select throws_ok($$insert into public.timeline_items (year, text) values (2020, 'x')$$, '42501', null,
+select throws_ok($$insert into public.author_items (section_id, title) values ('timeline', 'x')$$, '42501', null,
                  'the owner cannot write without 2FA');
 
 -- ── Owner with 2FA ────────────────────────────────────────────────────────
