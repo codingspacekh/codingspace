@@ -2,7 +2,7 @@
 -- sections and items keep the owner's order, and hidden parts never reach visitors.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(33);
 
 select has_table('public', 'author_sections', 'author_sections table exists');
 select has_table('public', 'author_items', 'author_items table exists');
@@ -91,6 +91,8 @@ select throws_ok($$select public.admin_save_author(pg_temp.page('{"name":"Teache
 select throws_ok($$select public.admin_save_author(pg_temp.page('{"name":"Teacher"}',
                    '[{"kind":"weird","title":"X","visible":true,"items":[]}]'))$$,
                  'PT422', null, 'a section is a built-in kind or custom');
+select throws_ok($$select public.admin_save_author(pg_temp.page('{"name":"T","email":"not-an-email"}'))$$, '23514', null,
+                 'a malformed email is refused');
 select throws_ok($$select public.admin_save_author(pg_temp.page('{"name":"Teacher","hidden":["name"]}'))$$,
                  '23514', null, 'the name cannot be hidden');
 select throws_ok($$select public.admin_save_author(pg_temp.page('{"name":"Teacher"}',
@@ -116,6 +118,15 @@ select is((select s -> 'items' from jsonb_array_elements(public.author_page() ->
           '[{"tags":[],"url":null,"note":"With *honours*.","title":"BSc Physics","period":"2012–2016","subtitle":"RUPP"}]'::jsonb,
           'and so is a hidden item');
 reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","aal":"aal2"}', true);
+select lives_ok($$select public.admin_save_author(pg_temp.page('{"name":"Teacher","years":"9","students":null,"email":" "}'))$$,
+                'an empty email and empty stats are saved as nothing to show');
+reset role;
+select results_eq($$select years, students, email from public.profile$$,
+                  $$values (9::smallint, null::integer, null::text)$$, 'stored as null');
 
 select * from finish();
 rollback;
