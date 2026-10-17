@@ -34,10 +34,10 @@ flowchart LR
 | **M1** | Walking skeleton | Repo, CI gates, Supabase local + RLS baseline, security headers, preview deploys, first green E2E | NFR-SEC-2, NFR-MAINT-1 | 4 days |
 | **M2** | Public read path | Home, Study ×4, lesson, Projects, Author pages from the DB; renderer; SEO; content import script | PUB-01…08, 10, 12 | 8 days |
 | **M3** ✅ | Admin core | 2FA sign-in, dashboard, posts list, block editor, autosave, revisions, checklist, preview, publish/update/schedule, study structure | ADM-01…09, ADM-12 | 10 days |
-| **M4** 🔨 | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
+| **M4** ✅ | Media & files | R2 uploads, image variants, EXIF strip, attachments, media library | ADM-10 | 5 days |
 | — | **R1: private beta** | Production deploy on a `*.vercel.app` URL, `noindex`; owner writes real lessons; 3–5 students try it | | |
 | **M5** 🔨 | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
-| **M6** 🔨 | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
+| **M6** ✅ | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
 | — | **R2: public launch** | `codingspace.io` live and indexed | | |
 
@@ -190,7 +190,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** the acceptance journey is green on preview, and the owner has published a test lesson end to end.
 
-### M4 — Media & files (5 days) — 🔨 BUILT 2026-10-16, waiting for R2 setup on staging
+### M4 — Media & files (5 days) — ✅ DONE 2026-10-16 (verified on staging with R2)
 > **Status** (PRs #27–#30):
 > - **Temporary address:** no domain yet, so media are served from the bucket's R2 public address (`https://pub-….r2.dev`), set in `NEXT_PUBLIC_MEDIA_BASE_URL`. Content stores media **ids**, not URLs, so moving to `files.codingspace.io` (M7) is: connect the domain, change the setting, redeploy, re-publish posts with images. r2.dev is rate-limited and uncached: fine for the beta, not for launch.
 > - **Catalogue:** `media` + `post_media` (draft / live use, kept in step by a trigger); a used file can't be deleted (database and UI); same file twice → the first copy.
@@ -198,7 +198,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 > - **Editor:** Image and File in the Insert and "/" menus, paste and drop, alt text and caption, "From the media library". **Library** at `/admin/media`: search, filter, unused, rename, default alt, used-in, delete unused.
 > - **Public pages:** `<picture>` with AVIF/WebP `srcset` and `sizes`; files download with `Content-Disposition: attachment`.
 > - Tests: pgTAP 27, unit/component (rules, magic bytes, pipeline, stores, editor, library), integration 11 against the local DB, and the E2E journey (paste → caption → attach → publish → variants load from the media address → library delete rules). E2E and local runs use `MEDIA_STORE=local` instead of R2.
-> - **Owner, before R1:** push migration `20261021000000_media.sql` to staging; set up the bucket (README → Media (R2)); add the 5 Vercel variables; redeploy; upload an image and a PDF on staging.
+> - **On staging (2026-10-16):** migration pushed; bucket `codingspace-media` with its r2.dev address, CORS (production site only) and the five Vercel settings checked; the `u/` clean-up rule set up by the owner (not visible from outside). The owner's test lesson loaded all six image variants (no EXIF), and its PDF downloaded as an attachment.
 
 **Goal:** lessons can include images and downloadable worksheets.
 
@@ -226,7 +226,8 @@ Each milestone lists the **tests written first**. They start red and define "don
 > - **Public pages:** each subject page now shows its own problem of the week (PUB-05: Math and Home).
 > - **content:import** keeps projects, profile, timeline and problems once they exist, so a re-import can't wipe admin edits (`--replace-site-content` to overwrite).
 > - Tests: pgTAP 41, integration 8, component tests for the three screens, and E2E in a `site-admin` Playwright project that runs after the public-page tests and restores what it changes (change the problem of the week → Home and Math show it).
-> - **Owner:** push the migration to staging; then replace the placeholder projects, profile, timeline and problem in the admin (exit criterion). The dummy lessons go when real ones are written.
+> - **Author photo** (owner request, PR #40, migration `20261024000000_author_photo.sql`): an image from the media library shown in the Author page hexagon instead of the initials; it counts as a use in the library.
+> - **On staging:** both migrations pushed. **Owner:** replace the placeholder projects, profile, timeline and problem in the admin (exit criterion). The dummy lessons go when real ones are written.
 
 **Goal:** everything students see can be managed from the admin.
 
@@ -244,14 +245,15 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 **Exit criteria:** no placeholder content left on the public site.
 
-### M6 — Arwes experience & search (6 days) — 🔨 BUILT 2026-10-16, waiting for owner sign-off on look and sound
+### M6 — Arwes experience & search (6 days) — ✅ DONE 2026-10-17 (owner signed off on look and sound)
 > **Status** (PRs #35–#37):
 > - **Remembered choices** (PUB-11): motion (follows the device until the visitor picks), sound (off until turned on), **reading mode**; localStorage only, hydration-safe. **Print** stylesheet: the lesson only, black on white, hints and solutions opened.
 > - **Orbit hero** on Home: the prototype's canvas, loaded only after the page is idle and the hero is on screen; stops off screen, in hidden tabs, with motion off or in reading mode. Decipher headline, CSS backdrop and the lazy bleeps were already in place from M2.
 > - **Search** (PUB-09): `/search` (works without JavaScript), weighted index (title > summary > body), prefix matching, Khmer inside words, highlighted snippets, drafts never; cached at the CDN for 5 minutes per query; 30 searches a minute per visitor (salted daily hash of the IP, nothing stored in clear), 429 after.
 > - **Bundle budget** in CI (`npm run check:bundle`): Home 158 KB of 260, lessons 132 KB of 200. Lighthouse locally: Home 0.95 with the orbit (TBT 45 ms, CLS 0), lessons 0.95–0.97.
-> - **Sound and page changes after soulextract.com** (owner request, PR #38): our own synthesised sound set (hover, click, typing, deploy, transition, start; `scripts/make-sounds.mjs`, no third-party audio — soulextract's files are GPL); hover/click sounds on every link and button; page changes inside the site fade out with a scan line, then frame corners draw in, the heading types itself in and cards arrive in sequence (CSS; never on the first page, so LCP is untouched); circuit traces with light streaks in the backdrop (CSS transforms, hidden on phones); a one-time, non-blocking "turn on sound?" offer instead of soulextract's ENTER gate. Lighthouse unchanged (Home 0.95, lessons 0.97).
-> - **Owner:** push migration `20261023000000_search.sql`; look at Home (orbit), turn sound on, try reading mode and Print on a lesson, and sign off (exit criterion).
+> - **Sound and page changes after soulextract.com** (owner request, PRs #38–#39): the ARWES sound set (MIT, `public/sounds/LICENSE-arwes.txt`) for click, typing, page arrival and the sound-on chime — the family soulextract's sounds come from, its click being the same file (soulextract's other sounds are GPL, so not used) — plus our own synthesised hover tick and page-leave whoosh (`scripts/make-sounds.mjs`); hover/click sounds on every link and button; page changes inside the site fade out with a scan line, then frame corners draw in, the heading types itself in and cards arrive in sequence (CSS; never on the first page, so LCP is untouched); circuit traces with light streaks in the backdrop (CSS transforms, hidden on phones); a one-time, non-blocking "turn on sound?" offer instead of soulextract's ENTER gate. Lighthouse unchanged (Home 0.95, lessons 0.97).
+> - `Animator` page transitions from the plan became the CSS page changes above (no Arwes code on lesson pages).
+> - **On staging:** search migration pushed (2026-10-17); the owner reviewed the orbit, sounds, page changes, reading mode and print, and signed off.
 
 **Goal:** the futuristic feel, without hurting speed or readability.
 
