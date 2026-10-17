@@ -1,4 +1,4 @@
-# CodingSpace (codingspace.io) — System Requirements Specification
+# CodingSpace (codingspacekh.dev) — System Requirements Specification
 
 > **Superseded.** The current baseline is [03-system-analysis.md](./03-system-analysis.md), with the build plan in [04-milestones.md](./04-milestones.md). This file is kept as history.
 
@@ -175,7 +175,7 @@ Priority: **M** = Must (v1), **S** = Should (v1 if time allows), **C** = Could (
 | 1 | Comment moderation | **No comments at launch.** Revisit later (§3.3 stays as the future spec). |
 | 2 | Khmer | English UI and content. Individual articles may be written in **Khmer** (per-post `lang`, Khmer font). No translations. |
 | 3 | Software size / hosting | Software is **not hosted here**. Projects link to their own landing pages. |
-| 4 | Domain | **`codingspace.io`** once bought. Until then, use the Vercel preview URL. |
+| 4 | Domain | **`codingspacekh.dev`** (bought 2026-10-17). |
 | 6 | Site structure (redesign feedback) | Menu is **Home · Study ▾ (Math, Physics, Coding, IT) · Projects · Author**. Lessons are grouped by section inside each subject. Math covers **competition topics** (inequalities, sequences, functional equations, number theory, combinatorics), not pure maths. Life posts appear on the Author page. The home hero should be more creative. |
 | 5 | Access control | **Everything is public.** |
 

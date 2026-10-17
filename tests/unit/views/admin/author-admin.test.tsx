@@ -4,7 +4,7 @@ import { AuthorAdmin } from '@/views/admin/author-admin';
 import type { UploadedMedia } from '@/lib/media-upload';
 
 const loaded = {
-  profile: { name: 'CodingSpace', bio: 'I teach.', years: 8, students: null, email: 'hello@codingspace.io' },
+  profile: { name: 'CodingSpace', bio: 'I teach.', years: 8, students: null, email: 'hello@codingspacekh.dev' },
   timeline: [
     { year: 2018, text: 'Started teaching.' },
     { year: 2026, text: 'Launched the site.' },
@@ -55,7 +55,7 @@ describe('author page admin (03 ADM-14)', () => {
             bio: 'Maths and code.',
             years: 8,
             students: 500,
-            email: 'hello@codingspace.io',
+            email: 'hello@codingspacekh.dev',
             photo_media_id: null,
           },
           timeline: [
@@ -138,7 +138,7 @@ describe('author page admin (03 ADM-14)', () => {
       expect(upload).toHaveBeenCalledWith(expect.objectContaining({ name: 'me.jpg' }), 'image');
       expect(await screen.findByRole('img', { name: 'CodingSpace, as shown on the Author page' })).toHaveAttribute(
         'src',
-        `https://files.codingspace.io/i/${PHOTO}/480.webp`,
+        `https://files.codingspacekh.dev/i/${PHOTO}/480.webp`,
       );
       await user.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>

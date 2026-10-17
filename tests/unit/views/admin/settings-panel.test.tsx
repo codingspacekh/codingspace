@@ -71,7 +71,7 @@ describe('SettingsPanel (ADM-05)', () => {
     expect(onChange).toHaveBeenLastCalledWith({ problem_count: 500 });
     await user.type(screen.getByRole('textbox', { name: 'Summary' }), 'Means');
     expect(screen.getByText(/^5\/500 characters/)).toBeInTheDocument();
-    expect(screen.getByText('codingspace.io/posts/am-gm')).toBeInTheDocument();
+    expect(screen.getByText('codingspacekh.dev/posts/am-gm')).toBeInTheDocument();
   });
 
   it('a life post has no subject, section, level or problems', () => {

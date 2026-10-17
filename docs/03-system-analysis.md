@@ -1,4 +1,4 @@
-# CodingSpace (codingspace.io) — System Analysis v1.0
+# CodingSpace (codingspacekh.dev) — System Analysis v1.0
 
 | | |
 |---|---|
@@ -47,11 +47,11 @@ The owner teaches competition mathematics, physics, programming and Cambridge AS
 | D2 | **Arwes isolated in `src/ui/arwes/`**, pinned to `1.0.0-next.25020502`, with the safe-math patch replacing its `eval` | Arwes is no longer maintained; contain the risk and keep CSP free of `'unsafe-eval'` ([ADR 0001](./adr/0001-arwes.md)). |
 | D3 | **Static pages + on-demand revalidation (ISR)** for every public page | Fast, cheap, survives database hiccups; scales far past 1,000 visits/day. |
 | D4 | **Supabase** (Postgres, Auth, RLS) | Managed Postgres with auth and row-level security on a free tier. |
-| D5 | **Cloudflare R2** for media and lesson files, served from `files.codingspace.io` | No egress fees. The capacity analysis in §5 shows image traffic would exceed Supabase Storage's free egress. *This reverses the v0.2 note that suggested Supabase Storage.* |
+| D5 | **Cloudflare R2** for media and lesson files, served from `files.codingspacekh.dev` | No egress fees. The capacity analysis in §5 shows image traffic would exceed Supabase Storage's free egress. *This reverses the v0.2 note that suggested Supabase Storage.* |
 | D6 | **Tiptap** editor; content stored as JSON and compiled to HTML **at publish time** (KaTeX + Shiki + sanitiser) | Public pages ship no editor, maths or highlighter JavaScript. |
 | D7 | Menu: **Home · Study ▾ (Math, Physics, Coding, IT) · Projects · Author** | Owner's redesign. Math = competition topics. |
 | D8 | **No comments in v1** | Owner decision; removes the biggest abuse surface. |
-| D9 | **Domain `codingspace.io`, brand "CodingSpace"** | Owner decision. |
+| D9 | **Domain `codingspacekh.dev`, brand "CodingSpace"** | Owner decision (2026-10-17: `codingspacekh.dev` instead of the planned `codingspace.io`). |
 | D10 | **TDD** is the core process (§10) | Owner preference; also the main quality and security safety net for a solo developer. |
 | D11 | **Vercel** hosting (Hobby to start) | First-class Next.js ISR and CDN. *M3: on Hobby, Vercel Cron runs only once a day, so the 5-minute scheduled-publish timer is a GitHub Actions workflow calling `/api/cron/publish-due` with a secret.* |
 
@@ -161,7 +161,7 @@ flowchart LR
   end
   subgraph Cloudflare
     R2[("R2 bucket")]
-    FCDN["files.codingspace.io<br/>CDN"]
+    FCDN["files.codingspacekh.dev<br/>CDN"]
   end
   S --> CDN --> ISR
   S -- images / files --> FCDN --- R2
@@ -263,11 +263,11 @@ erDiagram
 | **Repudiation** | "Who deleted that lesson?" | `audit_events` written in the same transaction as each change | Test: every mutating route writes one audit row |
 | **Information disclosure** | Drafts leaking before publish; secrets in the client bundle | Public views expose live fields only; preview requires auth; secrets only in server env; bundle scan for secret patterns in CI | Tests: anon cannot read drafts; CI grep of the `.next` client output |
 | **Denial of service** | Search hammering, huge uploads | CDN-cached pages; search rate limit + CDN cache; upload size limits enforced by the presigned URL and server checks | k6 test; unit tests for limits |
-| **Elevation / XSS** | Script injected through content, an SVG upload or an embed URL | Renderer emits only allow-listed nodes; links limited to `https:`/`mailto:`; images only from `files.codingspace.io`; embeds only from allow-listed hosts (`youtube-nocookie.com`, `desmos.com`, `geogebra.org`); **SVG uploads rejected**; strict CSP | **XSS payload corpus test** against the renderer; CSP header test; ZAP baseline |
+| **Elevation / XSS** | Script injected through content, an SVG upload or an embed URL | Renderer emits only allow-listed nodes; links limited to `https:`/`mailto:`; images only from `files.codingspacekh.dev`; embeds only from allow-listed hosts (`youtube-nocookie.com`, `desmos.com`, `geogebra.org`); **SVG uploads rejected**; strict CSP | **XSS payload corpus test** against the renderer; CSP header test; ZAP baseline |
 
 ### 8.3 Controls checklist
 - **Headers** (set in middleware/`next.config.js`):
-  - `Content-Security-Policy` (tested in M0): `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https://files.codingspace.io data:; font-src 'self'; connect-src 'self' https://<project>.supabase.co; frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. The only relaxation is `style-src-attr 'unsafe-inline'`, for `style=""` attributes from KaTeX, Shiki and Arwes, which can't execute code.
+  - `Content-Security-Policy` (tested in M0): `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https://files.codingspacekh.dev data:; font-src 'self'; connect-src 'self' https://<project>.supabase.co; frame-src https://www.youtube-nocookie.com https://www.desmos.com https://www.geogebra.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. The only relaxation is `style-src-attr 'unsafe-inline'`, for `style=""` attributes from KaTeX, Shiki and Arwes, which can't execute code.
   - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
   - `X-Content-Type-Options: nosniff`
   - `Referrer-Policy: strict-origin-when-cross-origin`
@@ -352,7 +352,7 @@ Features start **outside-in**: a Playwright acceptance test for the user journey
 |---|---|---|
 | Local | Development with Supabase CLI (Docker) and MinIO for R2 | Seed script |
 | Preview | One per pull request (Vercel) using a staging Supabase project | Seed + anonymised copy |
-| Production | `codingspace.io` | Real |
+| Production | `codingspacekh.dev` | Real |
 
 Runbook items (written in M7): deploy and rollback, restore from backup, rotate secrets, recover a lost 2FA device, what to do if the DB pauses.
 

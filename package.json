@@ -2,7 +2,7 @@
   "name": "codingspace",
   "private": true,
   "version": "0.1.0",
-  "description": "codingspace.io: lessons in competition maths, physics, coding and IT",
+  "description": "codingspacekh.dev: lessons in competition maths, physics, coding and IT",
   "license": "UNLICENSED",
   "sideEffects": [
     "*.css"

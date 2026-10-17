@@ -109,7 +109,7 @@ describe('EditPost autosave (ADM-06)', () => {
     await waitFor(() => expect(status()).toHaveTextContent('All changes saved'));
     expect(calls.puts).toHaveLength(1);
     expect(calls.puts[0]).toMatchObject({ revision: 3, fields: { title: 'AM–GM', section_id: 's1' } });
-    expect(screen.getByText('codingspace.io/posts/am-gm')).toBeInTheDocument();
+    expect(screen.getByText('codingspacekh.dev/posts/am-gm')).toBeInTheDocument();
   });
 
   it('an edit while a save is in flight is saved next, with the new revision', async () => {

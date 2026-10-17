@@ -76,7 +76,7 @@ describe('media library (03 ADM-10)', () => {
     const [image, file] = within(list).getAllByRole('button');
     expect(image).toHaveTextContent('graph.png');
     expect(image).toHaveTextContent('1200×600 · 20 KB · used in 2');
-    expect(image!.querySelector('img')).toHaveAttribute('src', `https://files.codingspace.io/i/${IMG}/480.webp`);
+    expect(image!.querySelector('img')).toHaveAttribute('src', `https://files.codingspacekh.dev/i/${IMG}/480.webp`);
     expect(file).toHaveTextContent('PDF');
     expect(file).toHaveTextContent('240 KB · unused');
   });
@@ -147,7 +147,7 @@ describe('media library (03 ADM-10)', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /worksheet\.pdf/ }));
     const detail = await screen.findByRole('region', { name: 'Details of worksheet.pdf' });
-    expect(detail).toHaveTextContent(`https://files.codingspace.io/f/${PDF}`);
+    expect(detail).toHaveTextContent(`https://files.codingspacekh.dev/f/${PDF}`);
     expect(within(detail).queryByRole('textbox', { name: /alt/ })).toBeNull();
     await user.click(within(detail).getByRole('button', { name: 'Delete…' }));
     await user.click(screen.getByRole('button', { name: 'Delete permanently' }));

@@ -3,7 +3,7 @@
 # GitHub may start scheduled runs a few minutes late; a post goes live within ~5–15 minutes.
 #
 # Setup (once): repository secret CRON_SECRET (same value as the CRON_SECRET env var in
-# Vercel, ≥ 32 characters) and repository variable SITE_URL (e.g. https://codingspace.io).
+# Vercel, ≥ 32 characters) and repository variable SITE_URL (e.g. https://codingspacekh.dev).
 name: Publish scheduled posts
 
 on:

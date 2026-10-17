@@ -1,4 +1,4 @@
-# CodingSpace (codingspace.io) — Milestones & Build Order
+# CodingSpace (codingspacekh.dev) — Milestones & Build Order
 
 Companion to [03-system-analysis.md](./03-system-analysis.md). Requirement IDs (PUB-, ADM-, NFR-) refer to that document. Date: 2026-10-15.
 
@@ -9,7 +9,7 @@ Companion to [03-system-analysis.md](./03-system-analysis.md). Requirement IDs (
 1. **Biggest risk first.** Arwes is unmaintained and tied to React 18, so if it fails, much of the plan changes. A short spike (M0) settles this before anything else depends on it.
 2. **Testing pipeline before features.** TDD needs working tests, CI and preview deploys on day one (M1). Every later milestone adds tests to that pipeline.
 3. **Students' value early.** The read path (M2) is built before the editor. It also fixes the **content format** (Tiptap JSON → HTML) that the editor must produce, so the editor is built against a tested contract.
-4. **Shippable steps.** After M4 the owner can write real lessons in a private beta. After M7 the site launches publicly at `codingspace.io`.
+4. **Shippable steps.** After M4 the owner can write real lessons in a private beta. After M7 the site launches publicly at `codingspacekh.dev`.
 5. **Polish late, but not last.** Arwes styling (frames, theme, tokens) arrives in M1–M2 so every page looks right from the start. The expensive effects (orbit hero, sound design) come in M6, once content and workflow are stable.
 
 ```mermaid
@@ -22,7 +22,7 @@ flowchart LR
   M4 --> M5["M5<br/>Study, POTW, projects,<br/>profile admin"]
   M5 --> M6["M6<br/>Arwes experience<br/>& search"]
   M6 --> M7["M7<br/>Hardening, load test,<br/>launch"]
-  M7 --> R2(["R2 · Public launch<br/>codingspace.io"])
+  M7 --> R2(["R2 · Public launch<br/>codingspacekh.dev"])
   R2 --> V11["v1.1<br/>Comments & more"]
 ```
 
@@ -39,7 +39,7 @@ flowchart LR
 | **M5** 🔨 | Site-content admin | Problem of the week, projects, profile editors | ADM-11, 13, 14, PUB-05…07 | 4 days |
 | **M6** ✅ | Arwes experience & search | Orbit hero, decipher text, sound design, backdrop, motion/reading modes, print, search | PUB-09, PUB-11, NFR-A11Y-1 | 6 days |
 | **M7** | Hardening & launch | Security review (ASVS L1), ZAP, k6 load test, backup restore drill, audit log, export, runbook, domain | NFR-CAP-1, NFR-SEC-1, NFR-REL-2, ADM-15, ADM-16 | 5 days |
-| — | **R2: public launch** | `codingspace.io` live and indexed | | |
+| — | **R2: public launch** | `codingspacekh.dev` live and indexed | | |
 
 \* *Effort = focused working days for one developer, including tests. Total ≈ **46 focused days**. At 2–3 focused days a week alongside teaching, that is roughly **4–5 months** of calendar time. Treat the estimates as planning ranges (±30 %), not promises.*
 
@@ -192,7 +192,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 ### M4 — Media & files (5 days) — ✅ DONE 2026-10-16 (verified on staging with R2)
 > **Status** (PRs #27–#30):
-> - **Temporary address:** no domain yet, so media are served from the bucket's R2 public address (`https://pub-….r2.dev`), set in `NEXT_PUBLIC_MEDIA_BASE_URL`. Content stores media **ids**, not URLs, so moving to `files.codingspace.io` (M7) is: connect the domain, change the setting, redeploy, re-publish posts with images. r2.dev is rate-limited and uncached: fine for the beta, not for launch.
+> - **Temporary address:** no domain yet, so media are served from the bucket's R2 public address (`https://pub-….r2.dev`), set in `NEXT_PUBLIC_MEDIA_BASE_URL`. Content stores media **ids**, not URLs, so moving to `files.codingspacekh.dev` (M7) is: connect the domain, change the setting, redeploy, re-publish posts with images. r2.dev is rate-limited and uncached: fine for the beta, not for launch.
 > - **Catalogue:** `media` + `post_media` (draft / live use, kept in step by a trigger); a used file can't be deleted (database and UI); same file twice → the first copy.
 > - **Uploads:** presigned PUT straight to R2 (10 min, signed type and length) → the server checks magic bytes, re-encodes images with sharp to AVIF + WebP at 480/960/1600 (EXIF/GPS stripped, auto-rotated) and stores files as attachments. SVG, HEIC, programs, mismatched content, damaged or > 50 MP images are refused with a reason.
 > - **Editor:** Image and File in the Insert and "/" menus, paste and drop, alt text and caption, "From the media library". **Library** at `/admin/media`: search, filter, unused, rename, default alt, used-in, delete unused.
@@ -203,7 +203,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 **Goal:** lessons can include images and downloadable worksheets.
 
 **Build:**
-- R2 bucket + `files.codingspace.io`.
+- R2 bucket + `files.codingspacekh.dev`.
 - Presigned upload API.
 - Server verification (magic bytes, size) and `sharp` variants (WebP/AVIF at 480/960/1600) with EXIF stripping.
 - Editor image block (upload, paste, drag) with caption/alt.
@@ -287,7 +287,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 - Daily DB keep-alive cron; weekly export to R2; **restore drill**.
 - Audit log view (ADM-15); export to Markdown/JSON (ADM-16).
 - Runbook.
-- Buy and configure `codingspace.io` and `files.codingspace.io` (DNS, HSTS preload later); remove `noindex`; submit the sitemap.
+- Configure `codingspacekh.dev` (bought 2026-10-17) and `files.codingspacekh.dev` (DNS; `.dev` is HTTPS-only by browser preload); remove `noindex`; submit the sitemap.
 - Uptime monitor, Sentry, Speed Insights.
 
 **Tests first:**

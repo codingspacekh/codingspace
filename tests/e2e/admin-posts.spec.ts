@@ -99,7 +99,7 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     // No Save click: autosave (03 ADM-06) stores it a second after the last edit.
     await expect(page.getByText('All changes saved')).toBeVisible();
     const slug = title.toLowerCase().replace(/\s+/g, '-');
-    await expect(page.getByText(`codingspace.io/posts/${slug}`)).toBeVisible();
+    await expect(page.getByText(`codingspacekh.dev/posts/${slug}`)).toBeVisible();
 
     await page.reload();
     await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(title);

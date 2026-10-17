@@ -1,10 +1,10 @@
 import { absoluteUrl, articleJsonLd, buildRobots, buildRss, buildSitemap, siteUrl } from '@/lib/seo';
 
-const BASE = 'https://codingspace.io';
+const BASE = 'https://codingspacekh.dev';
 
 describe('siteUrl', () => {
   it('prefers NEXT_PUBLIC_SITE_URL, then the Vercel production domain, then localhost', () => {
-    expect(siteUrl({ NEXT_PUBLIC_SITE_URL: 'https://codingspace.io/' })).toBe('https://codingspace.io');
+    expect(siteUrl({ NEXT_PUBLIC_SITE_URL: 'https://codingspacekh.dev/' })).toBe('https://codingspacekh.dev');
     expect(siteUrl({ VERCEL_PROJECT_PRODUCTION_URL: 'codingspace-tawny.vercel.app' })).toBe(
       'https://codingspace-tawny.vercel.app',
     );
@@ -12,8 +12,8 @@ describe('siteUrl', () => {
   });
 
   it('joins paths onto the base', () => {
-    expect(absoluteUrl('/posts/a', BASE)).toBe('https://codingspace.io/posts/a');
-    expect(absoluteUrl('/', BASE)).toBe('https://codingspace.io/');
+    expect(absoluteUrl('/posts/a', BASE)).toBe('https://codingspacekh.dev/posts/a');
+    expect(absoluteUrl('/', BASE)).toBe('https://codingspacekh.dev/');
   });
 });
 
@@ -29,8 +29,8 @@ describe('buildSitemap', () => {
     expect(xml).toMatch(
       /^<\?xml version="1.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9">/,
     );
-    expect(xml).toContain('<url><loc>https://codingspace.io/</loc></url>');
-    expect(xml).toContain('<url><loc>https://codingspace.io/posts/a&amp;b</loc><lastmod>2026-10-16</lastmod></url>');
+    expect(xml).toContain('<url><loc>https://codingspacekh.dev/</loc></url>');
+    expect(xml).toContain('<url><loc>https://codingspacekh.dev/posts/a&amp;b</loc><lastmod>2026-10-16</lastmod></url>');
     expect(xml.trim().endsWith('</urlset>')).toBe(true);
   });
 });
@@ -50,14 +50,16 @@ describe('buildRss', () => {
 
   it('is an RSS 2.0 channel with a self link', () => {
     expect(xml).toContain('<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">');
-    expect(xml).toContain('<atom:link href="https://codingspace.io/rss.xml" rel="self" type="application/rss+xml"/>');
-    expect(xml).toContain('<link>https://codingspace.io/</link>');
+    expect(xml).toContain(
+      '<atom:link href="https://codingspacekh.dev/rss.xml" rel="self" type="application/rss+xml"/>',
+    );
+    expect(xml).toContain('<link>https://codingspacekh.dev/</link>');
   });
 
   it('escapes item text and uses RFC 822 dates', () => {
     expect(xml).toContain('<title>AM–GM &lt;inequality&gt;</title>');
     expect(xml).toContain('<description>Means &amp; order</description>');
-    expect(xml).toContain('<guid isPermaLink="true">https://codingspace.io/posts/am-gm-inequality</guid>');
+    expect(xml).toContain('<guid isPermaLink="true">https://codingspacekh.dev/posts/am-gm-inequality</guid>');
     expect(xml).toContain('<pubDate>Fri, 16 Oct 2026 08:00:00 GMT</pubDate>');
   });
 });
@@ -69,7 +71,7 @@ describe('buildRobots', () => {
 
   it('allows crawling (except the admin and APIs) and points to the sitemap once indexable', () => {
     expect(buildRobots(true, BASE)).toBe(
-      'User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: https://codingspace.io/sitemap.xml\n',
+      'User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: https://codingspacekh.dev/sitemap.xml\n',
     );
   });
 });
@@ -96,7 +98,7 @@ describe('articleJsonLd', () => {
       inLanguage: 'en',
       datePublished: '2026-10-16T08:00:00Z',
       dateModified: '2026-10-20T08:00:00Z',
-      mainEntityOfPage: 'https://codingspace.io/posts/am-gm',
+      mainEntityOfPage: 'https://codingspacekh.dev/posts/am-gm',
       author: { '@type': 'Person', name: 'CodingSpace' },
       publisher: { '@type': 'Organization', name: 'CodingSpace' },
     });
