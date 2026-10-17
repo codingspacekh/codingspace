@@ -8,7 +8,7 @@ change it in the same PR as whatever it describes.
 | What | Where |
 | --- | --- |
 | Site | Vercel project `codingspace` (team `codingspacekhs-projects`), `main` → production |
-| Domain, DNS | Cloudflare: `codingspacekh.dev` (DNS only, grey cloud, for Vercel's records) |
+| Domain, DNS | Cloudflare: `codingspacekh.dev`, registered with Cloudflare Registrar; DNS only (grey cloud) for Vercel's records |
 | Database, sign-in | Supabase project `codingspace-staging` (Singapore) |
 | Images and files | Cloudflare R2 bucket `codingspace-media`, served at `https://files.codingspacekh.dev` |
 | Scheduled publishing | GitHub Actions → "Publish scheduled posts", every 5 minutes (also keeps the free database awake) |
@@ -17,6 +17,38 @@ change it in the same PR as whatever it describes.
 
 Repository settings used by the workflows: secret `CRON_SECRET`; variables `SITE_URL`
 (`https://codingspacekh.dev`) and, from launch, `SITE_INDEXABLE=true`.
+
+## Accounts that control the site
+
+These accounts can do far more than the admin: whoever holds one can change the code, read the
+secrets, or take the database, files or domain. Each needs its own 2FA (an authenticator app or a
+security key, not SMS), a password used nowhere else, and its recovery codes kept offline.
+
+| Account | Whoever holds it can |
+| --- | --- |
+| **The e-mail behind the accounts below** (`codingspacekh@gmail.com`) | Reset the passwords of every account that signs in with it. Protect it first. |
+| **GitHub** (`codingspacekh`) | Push code to `main`, which deploys; change the workflows and their secrets; delete the repository |
+| **Vercel** (`codingspacekh`, team `codingspacekhs-projects`) | Read every production secret (database service key, R2 keys, `CRON_SECRET`); deploy any code; take the site down |
+| **Supabase** | Read and change all data; reset the admin password; remove the admin's 2FA (see "Lost 2FA device") |
+| **Cloudflare** (also the domain registrar) | Point the domain elsewhere (DNS) or transfer it away; read, replace or delete every image and file in R2. Keep **Registrar Lock** on. |
+| **The admin's sign-in e-mail** (a personal address, separate from the above) | Ask Supabase for a password-reset e-mail. The 2FA code is still needed to get in. |
+
+Also: GitHub branch protection on `main` (CI must pass, no force pushes), so nothing reaches
+production without the tests.
+
+**Check once a term:** 2FA is still on everywhere; no unknown devices or sessions in Google, GitHub,
+Vercel, Supabase and Cloudflare; no unknown members, tokens or deploy keys.
+
+**If one of these accounts may have been taken over:**
+
+1. Take it back: change its password, sign out every other session, check its 2FA and recovery
+   options (an attacker may have added their own).
+2. Look for what changed: GitHub (recent pushes, workflows, secrets, deploy keys, collaborators),
+   Vercel (deployments, environment variables, members), Supabase (users, auth settings),
+   Cloudflare (DNS records, R2, API tokens). The admin's **Activity** page shows content changes.
+3. Roll back a bad deploy ("Deploy and roll back") and restore content if needed ("Backups and restore").
+4. Rotate every secret ("Rotate secrets"), even ones that look untouched.
+5. In the admin: **Sign out everywhere**, then change the admin password.
 
 ## Deploy and roll back
 
