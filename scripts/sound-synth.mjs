@@ -213,7 +213,21 @@ export const key = () =>
  * whoosh felt harsh (the rest are ARWES's, see public/sounds/LICENSE-arwes.txt). The others stay
  * here to compare. */
 export const SOUNDS = { hover, transition: hush, click: tap };
-export const ALTERNATIVES = { click, transition, typing, deploy, start, tap, droplet, glass, key, breeze, hush, swish, hum };
+export const ALTERNATIVES = {
+  click,
+  transition,
+  typing,
+  deploy,
+  start,
+  tap,
+  droplet,
+  glass,
+  key,
+  breeze,
+  hush,
+  swish,
+  hum,
+};
 
 /** 16-bit mono PCM WAV. */
 export function wav(samples) {
