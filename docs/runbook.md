@@ -7,7 +7,7 @@ change it in the same PR as whatever it describes.
 
 | What | Where |
 | --- | --- |
-| Site | Vercel project `codingspace` (team `codingspacekhs-projects`), `main` → production |
+| Site | Vercel project `codingspace` (team `codingspacekhs-projects`), `main` → production; functions run in `sin1` (Singapore, set in `vercel.json`) to sit next to the database |
 | Domain, DNS | Cloudflare: `codingspacekh.dev`, registered with Cloudflare Registrar; DNS only (grey cloud) for Vercel's records |
 | Database, sign-in | Supabase project `codingspace-staging` (Singapore) |
 | Images and files | Cloudflare R2 bucket `codingspace-media`, served at `https://files.codingspacekh.dev` |
