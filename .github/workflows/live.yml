@@ -1,0 +1,76 @@
+# Checks against the live site (M7, 03 §10.3): run by hand (Actions → Live site checks → Run),
+# and the light ones every Monday. Repository variable SITE_URL is the site (https://codingspacekh.dev);
+# SITE_INDEXABLE=true once search engines are let in (launch). Nothing here signs in or writes.
+name: Live site checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      load_test:
+        description: 'Also run the k6 load test: 20 page requests a second for 10 minutes (NFR-CAP-1)'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-checks
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+  SITE_URL: ${{ vars.SITE_URL }}
+
+jobs:
+  site:
+    name: Headers, redirects, links and media
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:live
+        env:
+          LIVE_URL: ${{ env.SITE_URL }}
+          EXPECT_INDEXABLE: ${{ vars.SITE_INDEXABLE }}
+
+  zap:
+    name: ZAP baseline (0 high-risk alerts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # A passive scan: ZAP crawls the site for a few minutes and reports what it sees.
+      # Medium and low alerts are listed in the report; only high-risk ones fail the job.
+      - name: Scan
+        run: |
+          mkdir -p zap && chmod 777 zap
+          docker run --rm -v "$PWD/zap:/zap/wrk" ghcr.io/zaproxy/zaproxy:2.17.0 \
+            zap-baseline.py -t "$SITE_URL" -m 3 -J report.json -r report.html -I
+      - name: Fail on high-risk alerts
+        run: |
+          jq -r '.site[].alerts[] | "\(.riskdesc)\t\(.name)\t\(.count) URL(s)"' zap/report.json | sort | tee zap/summary.txt
+          high=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' zap/report.json)
+          echo "High-risk alerts: $high"
+          test "$high" -eq 0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: zap-report
+          path: zap
+          retention-days: 30
+
+  load:
+    name: k6 load test (20 req/s for 10 min, p95 < 300 ms, 0 errors)
+    if: github.event_name == 'workflow_dispatch' && inputs.load_test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker run --rm -i -e BASE_URL="$SITE_URL" grafana/k6:1.5.0 run - < tests/load/html.js

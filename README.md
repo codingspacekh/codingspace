@@ -10,6 +10,7 @@ Built with Next.js (Pages Router), React 18, [Arwes](https://github.com/arwes/ar
 | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | [docs/03-system-analysis.md](docs/03-system-analysis.md) | Requirements, architecture, security, performance, TDD process (current baseline) |
 | [docs/04-milestones.md](docs/04-milestones.md)           | Build order (M0–M7) and the tests that define each milestone                      |
+| [docs/runbook.md](docs/runbook.md)                       | Deploy, roll back, back up and restore, rotate secrets, lost 2FA, outages         |
 | [docs/adr/](docs/adr/)                                   | Architecture decision records                                                     |
 
 ## Run it locally
@@ -79,9 +80,11 @@ npm run test:e2e       # Playwright + axe against a production build
 npm run db:start       # local Supabase (Docker)
 npm run db:test        # pgTAP row-level-security tests
 npm run test:int       # integration tests against the local database (content import, admin sign-in)
+LIVE_URL=https://codingspacekh.dev npm run test:live   # read-only checks against the live site
 ```
 
-Every pull request runs the same gates in GitHub Actions. A red check blocks the merge.
+Every pull request runs the same gates in GitHub Actions. A red check blocks the merge. The live
+site has its own workflow, "Live site checks" (headers, ZAP scan, k6 load test): see the runbook.
 
 ## Security
 
