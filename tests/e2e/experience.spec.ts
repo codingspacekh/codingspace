@@ -150,7 +150,7 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
     expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(
-      expect.arrayContaining(['out', 'in', '-']),
+      expect.arrayContaining(['loading', 'in', '-']),
     );
     expect(problems, problems.join('\n')).toEqual([]);
   });

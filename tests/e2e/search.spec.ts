@@ -11,8 +11,12 @@ test('search from the top bar: results with highlighted matches, accessible', as
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Search' }).click();
   await expect(page).toHaveURL(/\/search$/);
   await page.getByRole('searchbox', { name: 'Search lessons' }).fill('cauchy');
+  // With JavaScript, searching is a page change inside the site (loading screen, no reload).
+  await page.evaluate(() => ((window as unknown as { same: boolean }).same = true));
   await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByTestId('page-loader')).toContainText(/loading search/i);
   await expect(page).toHaveURL(/\/search\?q=cauchy$/);
+  expect(await page.evaluate(() => (window as unknown as { same?: boolean }).same)).toBe(true);
   await expect(page.getByRole('status')).toContainText('for “cauchy”');
   const results = page.getByRole('list', { name: 'Results' }).getByRole('listitem');
   await expect(results.first().getByRole('heading')).toHaveText('The Cauchy–Schwarz inequality');

@@ -1,6 +1,8 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import type { FormEvent } from 'react';
 import { Layout } from '@/components/layout';
 import { formatDate } from '@/lib/format';
 import { cleanQuery, snippetParts } from '@/lib/search-text';
@@ -55,7 +57,17 @@ function Result({ r }: { r: SearchResult }) {
 }
 
 export default function Search({ q, results, limited }: Props) {
+  const router = useRouter();
   const count = results?.length ?? 0;
+
+  // With JavaScript, a search moves inside the site (page change and loading screen) instead of
+  // reloading the whole page. Without it, the form submits as usual.
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const next = String(new FormData(e.currentTarget).get('q') ?? '');
+    void router.push({ pathname: '/search', query: { q: next } });
+  }
+
   return (
     <Layout title={q ? `“${q}” · Search · CodingSpace` : 'Search · CodingSpace'} path="/search" active="search">
       <Head>
@@ -68,12 +80,13 @@ export default function Search({ q, results, limited }: Props) {
           <h1>Search lessons</h1>
         </div>
       </header>
-      <form role="search" action="/search" method="get" className="search-form">
+      <form role="search" action="/search" method="get" className="search-form" onSubmit={submit}>
         <label htmlFor="search-q" className="sr-only">
           Search lessons
         </label>
         <input
           id="search-q"
+          key={q}
           type="search"
           name="q"
           defaultValue={q}
