@@ -39,7 +39,7 @@ A GitHub Actions schedule (`.github/workflows/publish-due.yml`) calls `/api/cron
 
 1. Make a random secret of at least 32 characters, e.g. `openssl rand -hex 32`.
 2. In Vercel (Production): environment variables `CRON_SECRET` (that secret) and `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API keys), then redeploy.
-3. In GitHub (Settings → Secrets and variables → Actions): secret `CRON_SECRET` (the same value) and variable `SITE_URL` (e.g. `https://codingspace-tawny.vercel.app`).
+3. In GitHub (Settings → Secrets and variables → Actions): secret `CRON_SECRET` (the same value) and variable `SITE_URL` (`https://codingspacekh.dev`).
 
 Until then the workflow skips itself, and scheduled posts wait.
 
@@ -53,7 +53,7 @@ Images and files are uploaded to a Cloudflare R2 bucket. Until `codingspacekh.de
    ```json
    [
      {
-       "AllowedOrigins": ["https://codingspace-tawny.vercel.app", "http://localhost:3000"],
+       "AllowedOrigins": ["https://codingspacekh.dev", "https://codingspace-tawny.vercel.app", "http://localhost:3000"],
        "AllowedMethods": ["PUT"],
        "AllowedHeaders": ["content-type"],
        "MaxAgeSeconds": 3600
