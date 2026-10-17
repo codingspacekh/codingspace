@@ -1,6 +1,7 @@
 import type { GetStaticProps } from 'next';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
+import { imageKey, mediaUrl, srcset } from '@/lib/media-urls';
 import { getAuthorPage } from '@/server/data/public';
 import type { PostCard, Profile } from '@/server/data/types';
 import { PostTile } from '@/views/cards';
@@ -20,14 +21,39 @@ const initials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
+/** The author's photo in the hexagon (about 200 px wide), as AVIF or WebP. */
+function Photo({ photo, name }: { photo: NonNullable<Profile['photo']>; name: string }) {
+  const sizes = '(max-width: 760px) 140px, 200px';
+  return (
+    <picture>
+      <source type="image/avif" srcSet={srcset(photo.id, photo.widths, 'avif')} sizes={sizes} />
+      <img
+        src={mediaUrl(imageKey(photo.id, photo.widths[0]!, 'webp'))}
+        srcSet={srcset(photo.id, photo.widths, 'webp')}
+        sizes={sizes}
+        width={photo.width}
+        height={photo.height}
+        alt={name}
+        decoding="async"
+      />
+    </picture>
+  );
+}
+
 export default function Author({ profile, timeline, lifePosts }: Props) {
   const name = profile?.name ?? 'CodingSpace';
   return (
     <Layout title={`Author · ${name}`} description={profile?.bio || undefined} path="/author" active="author">
       <section className="frame profile c-cyan" aria-labelledby="who">
-        <div className="avatar" aria-hidden="true">
-          <span>{initials(name)}</span>
-        </div>
+        {profile?.photo ? (
+          <div className="avatar avatar--photo">
+            <Photo photo={profile.photo} name={name} />
+          </div>
+        ) : (
+          <div className="avatar" aria-hidden="true">
+            <span>{initials(name)}</span>
+          </div>
+        )}
         <div className="who">
           <span className="eyebrow">Author</span>
           <h1 id="who">{name}</h1>

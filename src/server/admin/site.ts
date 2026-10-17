@@ -133,6 +133,8 @@ export const authorInput = z.object({
       .max(200)
       .refine((v) => v === '' || EMAIL.test(v), 'not an email address')
       .default(''),
+    /** An image from the media library, shown on the Author page instead of the initials. */
+    photo_media_id: uuid.nullable().default(null),
   }),
   timeline: z
     .array(z.object({ year: z.number().int().min(1900).max(2200), text: z.string().trim().min(1).max(300) }))
@@ -140,16 +142,28 @@ export const authorInput = z.object({
 });
 export type AuthorInput = z.input<typeof authorInput>;
 
+export type AuthorPhoto = { id: string; widths: number[] };
+
 export async function getAuthor(supabase: SupabaseClient) {
   const [profile, timeline] = await Promise.all([
-    supabase.from('profile').select('name, bio, years, students, email').maybeSingle(),
+    supabase.from('profile').select('name, bio, years, students, email, photo_media_id, photo_widths').maybeSingle(),
     supabase.from('timeline_items').select('year, text').order('sort'),
   ]);
   if (profile.error) refused(profile.error, 'profile');
   if (timeline.error) refused(timeline.error, 'timeline');
-  const p = profile.data ?? { name: '', bio: '', years: null, students: null, email: null };
+  const { photo_widths, ...p } = profile.data ?? {
+    name: '',
+    bio: '',
+    years: null,
+    students: null,
+    email: null,
+    photo_media_id: null,
+    photo_widths: [],
+  };
   return {
     profile: { ...p, email: p.email ?? '' } as z.infer<typeof authorInput>['profile'],
+    /** For the preview in the admin. */
+    photo: (p.photo_media_id ? { id: p.photo_media_id, widths: photo_widths } : null) as AuthorPhoto | null,
     timeline: timeline.data as { year: number; text: string }[],
   };
 }

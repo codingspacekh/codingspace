@@ -46,19 +46,21 @@ const uuid = z.uuid();
 
 export async function getMedia(supabase: SupabaseClient, id: string) {
   const mediaId = uuid.parse(id);
-  const [media, uses] = await Promise.all([
+  const [media, uses, profile] = await Promise.all([
     supabase.from('admin_media').select(SELECT).eq('id', mediaId).maybeSingle(),
     supabase.from('post_media').select('in_draft, in_live, posts(id, title, slug)').eq('media_id', mediaId),
+    supabase.from('profile').select('photo_media_id').eq('photo_media_id', mediaId).maybeSingle(),
   ]);
   if (media.error) throw new Error(`admin_media: ${media.error.message}`);
   if (uses.error) throw new Error(`post_media: ${uses.error.message}`);
+  if (profile.error) throw new Error(`profile: ${profile.error.message}`);
   if (!media.data) throw new PostError(404, 'file not found');
   const used_by = (uses.data ?? []).map((u) => {
     const post = u.posts as unknown as { id: string; title: string; slug: string };
     return { ...post, in_draft: u.in_draft as boolean, in_live: u.in_live as boolean };
   });
   used_by.sort((a, b) => a.title.localeCompare(b.title));
-  return { ...(media.data as MediaItem), used_by: used_by as MediaUse[] };
+  return { ...(media.data as MediaItem), used_by: used_by as MediaUse[], author_photo: !!profile.data };
 }
 
 export const mediaEdit = z.object({

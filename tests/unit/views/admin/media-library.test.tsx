@@ -106,6 +106,21 @@ describe('media library (03 ADM-10)', () => {
     expect(detail).toHaveTextContent('remove it from these posts first');
   });
 
+  it('the author photo counts as a use, and blocks deleting', async () => {
+    mockApi((c) =>
+      c.method === 'GET' && c.url === `/api/admin/media/${PDF}`
+        ? [200, { ...items[1], kind: 'image', widths: [480], width: 10, height: 10, used_by: [], author_photo: true }]
+        : undefined,
+    );
+    render(<MediaLibrary />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /worksheet\.pdf/ }));
+    const detail = await screen.findByRole('region', { name: 'Details of worksheet.pdf' });
+    expect(within(detail).getByRole('link', { name: 'Author page' })).toHaveAttribute('href', '/admin/author');
+    expect(within(detail).queryByRole('button', { name: /Delete/ })).toBeNull();
+    expect(detail).toHaveTextContent('remove it from the Author page first');
+  });
+
   it('renames and sets the default alt text', async () => {
     const calls = mockApi();
     render(<MediaLibrary />);

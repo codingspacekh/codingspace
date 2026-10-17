@@ -74,4 +74,6 @@ export type Profile = {
   years: number | null;
   students: number | null;
   email: string | null;
+  /** The author's photo (an uploaded image: its media id and variant widths), or null. */
+  photo: { id: string; widths: number[]; width: number; height: number } | null;
 };
