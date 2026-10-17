@@ -101,6 +101,8 @@ describe('security headers', () => {
     expect(byKey['X-Content-Type-Options']).toBe('nosniff');
     expect(byKey['Referrer-Policy']).toBe('strict-origin-when-cross-origin');
     expect(byKey['Permissions-Policy']).toBe('camera=(), microphone=(), geolocation=()');
+    expect(byKey['Cross-Origin-Opener-Policy']).toBe('same-origin');
+    expect(byKey['Cross-Origin-Resource-Policy']).toBe('same-origin');
     expect(byKey['Content-Security-Policy']).toBe(buildCsp({}));
   });
 });

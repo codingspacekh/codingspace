@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { countPosts, searchPattern, type Dashboard, type PostFilters, type PostListItem } from '@/lib/admin-posts';
+import { listActivity } from './activity';
 
 /** Reads for the posts list and dashboard, through the admin_posts view (owner only, via RLS). */
 
@@ -25,11 +26,16 @@ export async function listPosts(supabase: SupabaseClient, f: PostFilters): Promi
 }
 
 export async function dashboard(supabase: SupabaseClient): Promise<Dashboard> {
-  const [all, recent] = await Promise.all([
+  const [all, recent, activity] = await Promise.all([
     supabase.from('admin_posts').select('kind, status'),
     supabase.from('admin_posts').select(LIST_COLUMNS).order('updated_at', { ascending: false }).limit(5),
+    listActivity(supabase, { limit: 8 }),
   ]);
   if (all.error) throw new Error(`admin_posts: ${all.error.message}`);
   if (recent.error) throw new Error(`admin_posts: ${recent.error.message}`);
-  return { counts: countPosts(all.data as Parameters<typeof countPosts>[0]), recent: recent.data as PostListItem[] };
+  return {
+    counts: countPosts(all.data as Parameters<typeof countPosts>[0]),
+    recent: recent.data as PostListItem[],
+    activity: activity.events,
+  };
 }

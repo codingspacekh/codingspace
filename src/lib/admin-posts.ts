@@ -3,6 +3,8 @@
  * No zod here: it probes eval() when it loads, which the CSP blocks in the browser.
  */
 
+import type { ActivityEvent } from './activity';
+
 export type PostKind = 'lesson' | 'life';
 export type PostStatus = 'draft' | 'scheduled' | 'published';
 
@@ -22,6 +24,7 @@ export type PostListItem = {
 export type Dashboard = {
   counts: ReturnType<typeof countPosts>;
   recent: PostListItem[];
+  activity: ActivityEvent[];
 };
 
 export type PostFilters = {

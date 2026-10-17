@@ -1689,6 +1689,23 @@ html[data-reading='on'] .prose li {
   gap: 4px 14px;
   align-items: baseline;
 }
+.adm-activity {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.adm-activity li {
+  display: grid;
+  grid-template-columns: 11.5em 1fr;
+  gap: 4px 14px;
+  align-items: baseline;
+}
+@media (max-width: 560px) {
+  .adm-activity li {
+    grid-template-columns: 1fr;
+  }
+}
 .adm-filters {
   display: flex;
   flex-wrap: wrap;

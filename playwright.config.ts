@@ -8,7 +8,9 @@ const baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
 // same test account.
 const ADMIN_POSTS = /admin-posts\.spec\.ts$/;
 const SITE_ADMIN = /admin-site\.spec\.ts$/;
-const CHANGES_CONTENT = [ADMIN_POSTS, SITE_ADMIN];
+// Pauses the database: after everything else.
+const CHAOS = /chaos\.spec\.ts$/;
+const CHANGES_CONTENT = [ADMIN_POSTS, SITE_ADMIN, CHAOS];
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -39,6 +41,8 @@ export default defineConfig({
     },
     // Projects, the profile and the problem of the week (they put the content back afterwards).
     { name: 'site-admin', use: { ...devices['Desktop Chrome'] }, testMatch: SITE_ADMIN, dependencies: ['admin'] },
+    // The database goes down (NFR-REL-1): last of all.
+    { name: 'chaos', use: { ...devices['Desktop Chrome'] }, testMatch: CHAOS, dependencies: ['site-admin'] },
   ],
   webServer: process.env.BASE_URL
     ? undefined

@@ -57,6 +57,11 @@ export function securityHeaders(options = {}) {
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    // M7 ZAP baseline. A page opened from elsewhere can't reach back into ours, and other sites
+    // can't load our pages' resources into theirs. No Cross-Origin-Embedder-Policy: it would block
+    // the YouTube/Desmos/GeoGebra embeds and the images from the media domain.
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
     // Keep the site out of search results until launch (M7 sets SITE_INDEXABLE=true in production).
     ...(indexable ? [] : [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }]),
   ];

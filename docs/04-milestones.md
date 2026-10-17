@@ -275,6 +275,18 @@ Each milestone lists the **tests written first**. They start red and define "don
 **Exit criteria:** a Lighthouse pass on Home and lesson pages, and owner sign-off on the look and sound.
 
 ### M7 — Hardening & launch (5 days)
+> **Status** (in progress, 2026-10-17):
+> - **Domain:** `codingspacekh.dev` (bought by the owner) live on Vercel, `www` → bare domain, media at `files.codingspacekh.dev` (PR #46). `noindex` stays until launch.
+> - **Audit log** (ADM-15): recent activity on the dashboard, the whole log at `/admin/activity` (autosaves left out).
+> - **Export** (ADM-16): Dashboard → Backup → *Download all content*: `content.json` (every row of every content table) and every post as Markdown in content:import's format (a new `docToMarkdown`; every post in `content/posts` round-trips). Past 4 MB (Vercel's response limit) the revision history is left out.
+> - **Restore:** `npm run restore -- export.zip` into an empty database (`RESTORE_URL`, never the site's own variables). Integration test: export → empty → restore → identical.
+> - **Live checks** (`.github/workflows/live.yml`, by hand and Mondays): headers, redirects, links and media on the real domain (`npm run test:live`); ZAP baseline (fails on high-risk alerts; locally 0 high); k6 load test (`tests/load/html.js`, by hand only).
+> - **Chaos test** (NFR-REL-1): `tests/e2e/chaos.spec.ts` pauses the database container; the public pages still serve.
+> - **Headers:** `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy: same-origin` (from the ZAP scan).
+> - **Runbook:** [docs/runbook.md](./runbook.md).
+> - **Still to do:** ASVS L1 review, secrets rotation, the restore drill on a spare project, weekly export to a private R2 bucket, production database decision, Sentry, uptime monitor, Speed Insights, the k6 run on the live site, then launch (remove `noindex`, submit the sitemap).
+> - **Daily keep-alive:** not needed as a separate job: "Publish scheduled posts" queries the database every 5 minutes.
+
 **Goal:** safe to open to every student.
 
 **Build / do:**
