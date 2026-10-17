@@ -65,6 +65,8 @@ describe('public page data', () => {
       siblings: [],
     });
     expect(await getPostPage('no-such-post')).toBeNull();
+    // A malformed slug (e.g. an injection probe) is a 404 without ever querying the database.
+    expect(await getPostPage("x' OR 1=1--")).toBeNull();
   });
 
   it('lists every published slug for the build', async () => {
