@@ -59,6 +59,7 @@ const FIXED: Record<string, string> = {
   'project.reorder': 'Reordered the projects',
   'profile.update': 'Edited the Author profile',
   'timeline.update': 'Edited the Author timeline',
+  'author.update': 'Edited the Author page',
   'auth.sign_in': 'Signed in',
   'auth.sign_out_everywhere': 'Signed out everywhere',
   'content.export': 'Downloaded an export of all content',

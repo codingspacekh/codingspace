@@ -14,12 +14,13 @@ import {
   saveProject,
   setCurrentProblem,
 } from '@/server/admin/site';
+import { BUILT_IN, KINDS, type AuthorSection } from '@/lib/author';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // Site content against a real database (03 ADM-11, ADM-13, ADM-14). The tables hold the
 // imported content other tests read, so it is saved first and put back afterwards.
 
-const TABLES = ['projects', 'profile', 'timeline_items', 'featured_problems'] as const;
+const TABLES = ['projects', 'profile', 'author_sections', 'author_items', 'featured_problems'] as const;
 let owner: SupabaseClient;
 let service: SupabaseClient;
 const saved: Record<string, unknown[]> = {};
@@ -90,30 +91,53 @@ describe('projects (ADM-13)', () => {
 });
 
 describe('author (ADM-14)', () => {
-  it('saves the profile and the whole timeline in order', async () => {
+  const item = (title: string, extra: Partial<AuthorSection['items'][number]> = {}) => ({ title, ...extra });
+  /** The whole page, every built-in section in the default order, with `changes` applied. */
+  const sections = (changes: Partial<Record<string, Record<string, unknown>>> = {}, extra: unknown[] = []) => [
+    ...BUILT_IN.map((kind) => ({ kind, title: KINDS[kind].title, visible: true, items: [], ...changes[kind] })),
+    ...extra,
+  ];
+  const profile = { name: 'IT Teacher', bio: 'I **teach**.', years: 9, students: 600, email: 'me@example.com' };
+
+  it('saves the header, what to hide, and every section and item in order', async () => {
     const out = await saveAuthor(owner, {
-      profile: { name: 'IT Teacher', bio: 'Bio.', years: 9, students: 600, email: 'me@example.com' },
-      timeline: [
-        { year: 2020, text: 'First' },
-        { year: 2019, text: 'Second, though earlier' },
-      ],
+      profile: { ...profile, hidden: ['email'] },
+      sections: sections(
+        {
+          timeline: { items: [item('First', { period: '2020' }), item('Second, though earlier', { period: '2019' })] },
+          education: {
+            title: 'Study',
+            items: [item('BSc', { subtitle: 'RUPP', url: 'https://ignored.example', visible: false })],
+          },
+          skills: { items: [item('Code', { tags: ['Python', 'C++'] })] },
+          hobbies: { visible: false },
+        },
+        [{ kind: 'custom', title: 'Languages', visible: true, items: [item('Khmer')] }],
+      ),
     });
     expect(out.paths).toEqual(['/author']);
-    expect(await getAuthor(owner)).toEqual({
-      profile: {
-        name: 'IT Teacher',
-        bio: 'Bio.',
-        years: 9,
-        students: 600,
-        email: 'me@example.com',
-        photo_media_id: null,
-      },
-      photo: null,
-      timeline: [
-        { year: 2020, text: 'First' },
-        { year: 2019, text: 'Second, though earlier' },
-      ],
-    });
+    const got = await getAuthor(owner);
+    expect(got.profile).toEqual({ ...profile, hidden: ['email'], photo_media_id: null });
+    expect(got.photo).toBeNull();
+    expect(got.sections.map((s) => [s.kind, s.title, s.visible])).toEqual([
+      ['timeline', 'Timeline', true],
+      ['experience', 'Experience', true],
+      ['education', 'Study', true],
+      ['skills', 'Skills', true],
+      ['awards', 'Awards & certificates', true],
+      ['hobbies', 'Hobbies & interests', false],
+      ['life_posts', 'Life posts', true],
+      ['custom', 'Languages', true],
+    ]);
+    expect(got.sections[0]!.items.map((i) => [i.period, i.title])).toEqual([
+      ['2020', 'First'],
+      ['2019', 'Second, though earlier'],
+    ]);
+    // Fields a kind doesn't use are dropped (education has no link).
+    expect(got.sections[2]!.items).toEqual([
+      { title: 'BSc', subtitle: 'RUPP', period: '', note: '', url: null, tags: [], visible: false },
+    ]);
+    expect(got.sections[3]!.items[0]!.tags).toEqual(['Python', 'C++']);
   });
 
   it('takes an image from the library as the photo, and refuses anything else', async () => {
@@ -134,28 +158,32 @@ describe('author (ADM-14)', () => {
       widths: [480, 600],
       original_name: 'it-photo.jpg',
     });
-    const profile = { name: 'IT Teacher', photo_media_id: image };
-    await saveAuthor(owner, { profile, timeline: [] });
+    const withPhoto = { name: 'IT Teacher', photo_media_id: image };
+    await saveAuthor(owner, { profile: withPhoto, sections: sections() });
     expect((await getAuthor(owner)).photo).toEqual({ id: image, widths: [480, 600] });
-    const { data } = await service
-      .from('public_profile')
-      .select('photo, photo_widths, photo_width, photo_height')
-      .single();
-    expect(data).toEqual({ photo: image, photo_widths: [480, 600], photo_width: 600, photo_height: 600 });
     await expect(
-      saveAuthor(owner, { profile: { ...profile, photo_media_id: 'not-a-uuid' }, timeline: [] }),
-    ).rejects.toMatchObject({
-      status: 422,
-    });
-    await saveAuthor(owner, { profile: { ...profile, photo_media_id: null }, timeline: [] });
+      saveAuthor(owner, { profile: { ...withPhoto, photo_media_id: 'not-a-uuid' }, sections: sections() }),
+    ).rejects.toMatchObject({ status: 422 });
+    await saveAuthor(owner, { profile: { ...withPhoto, photo_media_id: null }, sections: sections() });
     await service.from('media').delete().eq('id', image);
   });
 
-  it('refuses a bad email or an empty name', async () => {
-    await expect(saveAuthor(owner, { profile: { name: 'X', email: 'nope' }, timeline: [] })).rejects.toBeInstanceOf(
-      PostError,
-    );
-    await expect(saveAuthor(owner, { profile: { name: ' ' }, timeline: [] })).rejects.toMatchObject({ status: 422 });
+  it('refuses a bad email, an empty name, a missing section or an http link', async () => {
+    await expect(
+      saveAuthor(owner, { profile: { name: 'X', email: 'nope' }, sections: sections() }),
+    ).rejects.toBeInstanceOf(PostError);
+    await expect(saveAuthor(owner, { profile: { name: ' ' }, sections: sections() })).rejects.toMatchObject({
+      status: 422,
+    });
+    await expect(
+      saveAuthor(owner, { profile, sections: sections().filter((s) => (s as { kind: string }).kind !== 'skills') }),
+    ).rejects.toMatchObject({ status: 422 });
+    await expect(
+      saveAuthor(owner, {
+        profile,
+        sections: sections({ awards: { items: [item('A', { url: 'http://x.example' })] } }),
+      }),
+    ).rejects.toMatchObject({ status: 422 });
   });
 });
 

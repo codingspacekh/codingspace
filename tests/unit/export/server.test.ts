@@ -54,7 +54,8 @@ function content() {
     post_media: [{ post_id: 'p1', media_id: 'm1' }],
     projects: [{ id: 'pr1', name: 'Orbit' }],
     profile: [{ id: true, name: 'Owner' }],
-    timeline_items: [{ id: 't1', year: 2026 }],
+    author_sections: [{ id: 'timeline', kind: 'timeline', title: 'Timeline', sort: 1 }],
+    author_items: [{ id: 'i1', section_id: 'timeline', title: 'Started', period: '2018', sort: 1 }],
     featured_problems: [{ id: 'f1', subject_id: 'math' }],
   };
 }
@@ -166,6 +167,21 @@ describe('restore (NFR-REL-2)', () => {
     const posts = Array.from({ length: 450 }, (_, i) => ({ id: `p${i}` }));
     await restoreContent(client, { ...data(), tables: { ...content(), posts } } as never);
     expect(writes.filter((w) => w.table === 'posts').map((w) => w.rows.length)).toEqual([200, 200, 50]);
+  });
+
+  it('puts the timeline of an older export (its own table then) into the Timeline section', async () => {
+    const tables: Record<string, unknown> = {
+      ...content(),
+      timeline_items: [{ id: 't1', year: 2018, text: 'Started teaching', sort: 1 }],
+    };
+    delete tables.author_sections;
+    delete tables.author_items;
+    const { client, writes } = empty();
+    await restoreContent(client, { ...data(), tables } as never);
+    expect(writes.find((w) => w.table === 'author_items')?.rows).toEqual([
+      { section_id: 'timeline', title: 'Started teaching', period: '2018', sort: 1 },
+    ]);
+    expect(writes.some((w) => (w.table as string) === 'timeline_items')).toBe(false);
   });
 
   it('refuses a database with content, and passes write errors on', async () => {

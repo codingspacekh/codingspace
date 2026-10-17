@@ -18,7 +18,8 @@ const CONFLICT: Record<TableName, string> = {
   post_media: 'post_id,media_id', // also rebuilt by a trigger as each post goes in
   projects: 'id',
   profile: 'id',
-  timeline_items: 'id',
+  author_sections: 'id', // the built-in ones are already there, like the subjects
+  author_items: 'id',
   featured_problems: 'id',
 };
 const BATCH = 200;
@@ -41,6 +42,18 @@ export function readExport(file: Buffer): ExportData {
   return data;
 }
 
+type Row = Record<string, unknown>;
+
+/** Exports made before the Author page had sections kept the timeline in its own table. */
+function upgrade(tables: ExportData['tables']): ExportData['tables'] {
+  const legacy = (tables as Record<string, Row[] | undefined>).timeline_items;
+  if (!legacy?.length || tables.author_items?.length) return tables;
+  return {
+    ...tables,
+    author_items: legacy.map((t) => ({ section_id: 'timeline', title: t.text, period: String(t.year), sort: t.sort })),
+  };
+}
+
 export async function restoreContent(db: SupabaseClient, data: ExportData): Promise<Record<TableName, number>> {
   for (const table of ['posts', 'sections', 'projects'] as const) {
     const { count, error } = await db.from(table).select('*', { count: 'exact', head: true });
@@ -48,9 +61,10 @@ export async function restoreContent(db: SupabaseClient, data: ExportData): Prom
     if (count) throw new RestoreError(`the database already has ${table}: restore only into an empty one`);
   }
 
+  const tables = upgrade(data.tables);
   const restored = {} as Record<TableName, number>;
   for (const { name } of EXPORT_TABLES) {
-    let rows = data.tables[name] ?? [];
+    let rows = tables[name] ?? [];
     if (name === 'post_revisions') rows = rows.map((r) => without(r, 'id'));
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);

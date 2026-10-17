@@ -20,7 +20,8 @@ export const EXPORT_TABLES = [
   { name: 'post_media', order: 'post_id' },
   { name: 'projects', order: 'id' },
   { name: 'profile', order: 'id' },
-  { name: 'timeline_items', order: 'id' },
+  { name: 'author_sections', order: 'id' },
+  { name: 'author_items', order: 'id' },
   { name: 'featured_problems', order: 'id' },
 ] as const;
 
@@ -87,7 +88,7 @@ const README = (data: ExportData) => `# CodingSpace export
 Made ${data.exported_at}.
 
 - \`content.json\`: every row of every content table (posts with drafts, revisions, sections,
-  media records, projects, the Author profile and timeline, problems of the week). This is
+  media records, projects, the Author page and its sections, problems of the week). This is
   what a restore reads: see docs/runbook.md, "Restore from a backup".
 - \`posts/<subject>/<slug>.md\`: each post's latest version as Markdown, in the format
   \`npm run content:import\` reads. Images, files and embeds are links.

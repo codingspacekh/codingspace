@@ -64,7 +64,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
     expect(problems).toEqual([]);
   });
 
-  test('author: edit the bio and add a timeline entry → the Author page shows them; then put them back', async ({
+  test('author: edit the bio, add entries, hide the email → the Author page shows exactly that; then put it back', async ({
     page,
     context,
     baseURL,
@@ -75,19 +75,41 @@ test.describe('site content', { tag: '@single-account' }, () => {
 
     await page.goto('/admin/author');
     const bio = page.getByRole('textbox', { name: 'About you' });
-    await bio.fill(`${original.profile.bio} ${marker}`);
-    await page.getByRole('button', { name: 'Add an entry' }).click();
-    const n = original.timeline.length + 1;
-    await page.getByRole('textbox', { name: `Year of entry ${n}` }).fill('2030');
-    await page.getByRole('textbox', { name: `What happened, entry ${n}` }).fill(`Timeline ${marker}`);
+    await bio.fill(`${original.profile.bio}\n\n**${marker}**`);
+    await expect(page.getByRole('region', { name: 'Bio preview' }).locator('strong')).toHaveText(marker);
+    await page.getByRole('checkbox', { name: 'Show the email' }).uncheck();
+
+    const timeline = page.getByRole('group', { name: 'Timeline' });
+    await timeline.getByRole('button', { name: 'Add an entry' }).click();
+    await timeline.getByRole('textbox', { name: 'Year' }).last().fill('2030');
+    await timeline.getByRole('textbox', { name: 'What happened' }).last().fill(`Timeline ${marker}`);
+    const education = page.getByRole('group', { name: 'Education' });
+    await education.getByRole('button', { name: 'Add a qualification' }).click();
+    await education.getByRole('textbox', { name: 'Qualification' }).fill(`Degree ${marker}`);
+    await education.getByRole('textbox', { name: 'School or university' }).fill('E2E University');
+    await page.getByRole('button', { name: 'Add a custom section' }).click();
+    const custom = page.getByRole('group', { name: 'Custom section 1' });
+    await custom.getByRole('textbox', { name: 'Heading' }).fill(`Hidden ${marker}`);
+    await custom.getByRole('button', { name: 'Add an item' }).click();
+    await custom.getByRole('textbox', { name: 'Item' }).fill('Not for visitors');
+    await custom.getByRole('checkbox', { name: 'Show this section' }).uncheck();
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByRole('status')).toHaveText('Saved. The Author page is updated.');
+    await expect(page.getByRole('status').last()).toHaveText('Saved. The Author page is updated.');
     await expectAccessible(page);
 
     const student = await (await context.browser()!.newContext({ baseURL })).newPage();
     await student.goto('/author');
-    await expect(student.getByText(marker, { exact: false }).first()).toBeVisible();
+    await expect(student.locator('.profile strong')).toHaveText(marker);
     await expect(student.getByText(`Timeline ${marker}`)).toBeVisible();
+    const studies = student.getByRole('region', { name: 'Education' });
+    await expect(studies.getByRole('heading', { level: 3, name: `Degree ${marker}` })).toBeVisible();
+    await expect(studies).toContainText('E2E University');
+    // Hidden parts are not in the page at all, not just out of sight.
+    const html = await student.content();
+    expect(html).not.toContain(original.profile.email || 'never-in-the-page');
+    expect(html).not.toContain(`Hidden ${marker}`);
+    expect(html).not.toContain('Not for visitors');
+    await expectAccessible(student);
 
     const put = await page.request.put('/api/admin/author', { headers: { Origin: baseURL! }, data: original });
     expect(put.status()).toBe(200);

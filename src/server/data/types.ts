@@ -1,3 +1,4 @@
+import type { SectionKind } from '@/lib/author';
 import type { SubjectId } from '@/lib/subjects';
 
 // Shapes the pages receive (serialisable props). Read from the public_* views only.
@@ -70,10 +71,23 @@ export type FeaturedProblem = {
 
 export type Profile = {
   name: string;
+  /** Markdown, and as HTML from the same renderer as lessons. */
   bio: string;
+  bioHtml: string;
   years: number | null;
   students: number | null;
   email: string | null;
   /** The author's photo (an uploaded image: its media id and variant widths), or null. */
   photo: { id: string; widths: number[]; width: number; height: number } | null;
 };
+
+/** One entry of an Author page section; which fields are filled depends on the kind (src/lib/author.ts). */
+export type AuthorPageItem = {
+  title: string;
+  subtitle: string;
+  period: string;
+  noteHtml: string;
+  url: string | null;
+  tags: string[];
+};
+export type AuthorPageSection = { id: string; kind: SectionKind; title: string; items: AuthorPageItem[] };

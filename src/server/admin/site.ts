@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { BUILT_IN, cleanItem, HEADER_PARTS, type AuthorItem, type AuthorSection } from '@/lib/author';
 import { postSlug } from '@/lib/post-rules';
 import { EMAIL, landingUrlProblem } from '@/lib/site-rules';
 import type { SubjectId } from '@/lib/subjects';
@@ -115,16 +116,43 @@ export async function reorderProjects(supabase: SupabaseClient, input: unknown) 
   return { paths: PROJECT_PAGES };
 }
 
-// ── Author profile and timeline (ADM-14) ────────────────────────────────────
+// ── Author page (ADM-14) ────────────────────────────────────────────────────
 
 export const AUTHOR_PAGES = ['/author'];
 
 const count = z.number().int().min(0).max(1_000_000).nullable().default(null);
 
+const authorItem = z.object({
+  title: z.string().trim().min(1).max(300),
+  subtitle: z.string().trim().max(200).default(''),
+  period: z.string().trim().max(40).default(''),
+  note: z.string().trim().max(2000).default(''),
+  url: z
+    .string()
+    .trim()
+    .nullable()
+    .default(null)
+    .transform((v) => v || null)
+    .superRefine((v, ctx) => {
+      const problem = v && landingUrlProblem(v);
+      if (problem) ctx.addIssue({ code: 'custom', message: problem });
+    }),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  visible: z.boolean().default(true),
+});
+
+const authorSection = z.object({
+  kind: z.enum([...BUILT_IN, 'custom']),
+  title: z.string().trim().min(1).max(80),
+  visible: z.boolean().default(true),
+  items: z.array(authorItem).max(50).default([]),
+});
+
 export const authorInput = z.object({
   profile: z.object({
     name: z.string().trim().min(1).max(80),
-    bio: z.string().trim().max(2000).default(''),
+    /** Markdown. */
+    bio: z.string().trim().max(5000).default(''),
     years: count.refine((v) => v === null || v <= 100, 'at most 100 years'),
     students: count,
     email: z
@@ -135,22 +163,42 @@ export const authorInput = z.object({
       .default(''),
     /** An image from the media library, shown on the Author page instead of the initials. */
     photo_media_id: uuid.nullable().default(null),
+    /** Parts of the header that visitors don't see. */
+    hidden: z.array(z.enum(HEADER_PARTS)).max(HEADER_PARTS.length).default([]),
   }),
-  timeline: z
-    .array(z.object({ year: z.number().int().min(1900).max(2200), text: z.string().trim().min(1).max(300) }))
-    .max(50),
+  /** The page's sections in order: each built-in once, custom ones as many as wanted (up to 40 in all). */
+  sections: z
+    .array(authorSection)
+    .max(40)
+    .superRefine((list, ctx) => {
+      for (const kind of BUILT_IN) {
+        const n = list.filter((s) => s.kind === kind).length;
+        if (n !== 1) ctx.addIssue({ code: 'custom', message: `the ${kind} section must be there once` });
+      }
+      if (list.some((s) => s.kind === 'life_posts' && s.items.length))
+        ctx.addIssue({ code: 'custom', message: 'life posts come from the posts, not items' });
+    }),
 });
 export type AuthorInput = z.input<typeof authorInput>;
 
 export type AuthorPhoto = { id: string; widths: number[] };
 
+type SectionRow = Omit<AuthorSection, 'items'> & { author_items: (AuthorItem & { sort: number })[] };
+
 export async function getAuthor(supabase: SupabaseClient) {
-  const [profile, timeline] = await Promise.all([
-    supabase.from('profile').select('name, bio, years, students, email, photo_media_id, photo_widths').maybeSingle(),
-    supabase.from('timeline_items').select('year, text').order('sort'),
+  const [profile, sections] = await Promise.all([
+    supabase
+      .from('profile')
+      .select('name, bio, years, students, email, photo_media_id, photo_widths, hidden')
+      .maybeSingle(),
+    supabase
+      .from('author_sections')
+      .select('kind, title, visible, author_items(title, subtitle, period, note, url, tags, visible, sort)')
+      .order('sort')
+      .order('sort', { referencedTable: 'author_items' }),
   ]);
   if (profile.error) refused(profile.error, 'profile');
-  if (timeline.error) refused(timeline.error, 'timeline');
+  if (sections.error) refused(sections.error, 'author_sections');
   const { photo_widths, ...p } = profile.data ?? {
     name: '',
     bio: '',
@@ -159,21 +207,32 @@ export async function getAuthor(supabase: SupabaseClient) {
     email: null,
     photo_media_id: null,
     photo_widths: [],
+    hidden: [],
   };
   return {
     profile: { ...p, email: p.email ?? '' } as z.infer<typeof authorInput>['profile'],
     /** For the preview in the admin. */
     photo: (p.photo_media_id ? { id: p.photo_media_id, widths: photo_widths } : null) as AuthorPhoto | null,
-    timeline: timeline.data as { year: number; text: string }[],
+    sections: (sections.data as unknown as SectionRow[]).map(({ author_items, ...s }) => ({
+      ...s,
+      items: author_items.map((i) => cleanItem(s.kind, i)),
+    })) as AuthorSection[],
   };
 }
 
-/** Saves the profile and the whole timeline (in the order given). */
+/** Saves the whole page in one go: the header, then every section and item in the order given. */
 export async function saveAuthor(supabase: SupabaseClient, input: unknown) {
-  const { profile, timeline } = parse(authorInput, input);
-  await call(supabase, 'admin_save_profile', { p: profile });
-  await call(supabase, 'admin_save_timeline', { p_items: timeline });
+  const { profile, sections } = parse(authorInput, input);
+  await call(supabase, 'admin_save_author', {
+    p: { profile, sections: sections.map((s) => ({ ...s, items: s.items.map((i) => cleanItem(s.kind, i)) })) },
+  });
   return { paths: AUTHOR_PAGES };
+}
+
+/** The bio's live preview: exactly what visitors will see, from the same renderer. */
+export async function previewBio(input: unknown) {
+  const { bio } = parse(z.object({ bio: z.string().max(5000).default('') }), input);
+  return { html: (await renderSnippet(bio)).html };
 }
 
 // ── Problem of the week (ADM-11) ────────────────────────────────────────────
