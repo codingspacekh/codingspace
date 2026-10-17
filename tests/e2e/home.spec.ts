@@ -5,7 +5,7 @@ test('home renders the brand, tracks and latest lessons, and is accessible', asy
   const problems = await collectProblems(page);
   await page.goto('/');
   await expect(page).toHaveTitle(/CodingSpace/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Prove it.');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Math is my love.');
   const study = page.getByRole('region', { name: 'Study' });
   for (const subject of ['Math', 'Physics', 'Coding', 'IT']) {
     await expect(study.getByRole('link', { name: new RegExp(`^${subject}`) })).toBeVisible();
@@ -39,7 +39,7 @@ test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
   test('content is readable from the server HTML', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Code it.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Coding is my life.');
     await expect(page.getByTestId('intro')).toBeVisible();
   });
 });

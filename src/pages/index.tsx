@@ -37,17 +37,16 @@ export default function Home({ counts, latest, problem, projects }: Props) {
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">Link established · student terminal</span>
-          <h1 className="headline" aria-label="Prove it. Model it. Code it.">
+          <h1 className="headline" aria-label="Math is my love. Physics is my crush. Coding is my life.">
             <Stagger>
-              <Decipher className="w1">Prove it.</Decipher>
-              <Decipher className="w2">Model it.</Decipher>
-              <Decipher className="w3">Code it.</Decipher>
+              <Decipher className="w1">Math is my love.</Decipher>
+              <Decipher className="w2">Physics is my crush.</Decipher>
+              <Decipher className="w3">Coding is my life.</Decipher>
             </Stagger>
           </h1>
           {/* Body copy is never wrapped in an animator: readable on first paint. */}
           <p className="intro" data-testid="intro">
-            Competition maths, physics, programming and Cambridge IT. Lessons I teach in class, written up so you can
-            review them anytime. Plus the tools I build for my students.
+            A personal site to share about educational contents on Math, Physics, Coding and Personal Life.
           </p>
           <div className="cta">
             <Link className="btn pri" href="/study/math">
