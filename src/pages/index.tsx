@@ -46,7 +46,7 @@ export default function Home({ counts, latest, problem, projects }: Props) {
           </h1>
           {/* Body copy is never wrapped in an animator: readable on first paint. */}
           <p className="intro" data-testid="intro">
-            A personal site to share about educational contents on Math, Physics, Coding and Personal Life.
+            A personal site to share educational content on Math, Physics, Coding and my personal life.
           </p>
           <div className="cta">
             <Link className="btn pri" href="/study/math">
