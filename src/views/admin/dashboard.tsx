@@ -99,6 +99,16 @@ export function Dashboard() {
           <p>
             <Link href="/admin/activity">All activity →</Link>
           </p>
+          <h2>Backup</h2>
+          <p className="meta">
+            Every post (as Markdown and JSON), section, project, problem and the Author page, in one .zip file. Uploaded
+            images and files stay in storage.
+          </p>
+          <p>
+            <a className="btn" href="/api/admin/export" download>
+              Download all content
+            </a>
+          </p>
         </>
       )}
     </>

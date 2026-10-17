@@ -1,6 +1,7 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test';
 import sharp from 'sharp';
 import { EDITOR, resetUser, serviceClient, totp } from '../support/admin-users';
+import { unzip } from '../support/unzip';
 import { collectProblems, expectAccessible } from './helpers';
 
 // M3 dashboard and posts list (03 ADM-02, ADM-03), signed in as a second allow-listed test
@@ -39,6 +40,26 @@ test.describe('dashboard and posts list', { tag: '@single-account' }, () => {
     await page.getByRole('button', { name: 'New lesson' }).click();
     await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
     await expect(page.getByRole('heading', { name: 'Edit post' })).toBeVisible();
+    expect(problems).toEqual([]);
+  });
+
+  test('activity log and export (ADM-15, ADM-16): the new lesson is listed; the export downloads', async ({ page }) => {
+    const problems = await collectProblems(page);
+    await page.goto('/admin/activity');
+    await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Created “/ }).first()).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto('/admin');
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('link', { name: 'Download all content' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^codingspace-export-\d{4}-\d{2}-\d{2}\.zip$/);
+    const { readFile } = await import('node:fs/promises');
+    const files = unzip(await readFile((await download.path())!));
+    expect(files.has('content.json')).toBe(true);
+    expect(files.has('posts/math/am-gm-inequality.md')).toBe(true);
     expect(problems).toEqual([]);
   });
 

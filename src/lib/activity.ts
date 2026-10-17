@@ -61,6 +61,7 @@ const FIXED: Record<string, string> = {
   'timeline.update': 'Edited the Author timeline',
   'auth.sign_in': 'Signed in',
   'auth.sign_out_everywhere': 'Signed out everywhere',
+  'content.export': 'Downloaded an export of all content',
 };
 
 export function describeEvent(e: ActivityEvent): { text: string; href: string | null } {
@@ -89,7 +90,7 @@ export function describeEvent(e: ActivityEvent): { text: string; href: string | 
     return { text: `${PROBLEM[a]} a ${subject(m.subject)}problem of the week`, href: '/admin/problems' };
 
   if (a in FIXED) {
-    const href = a.startsWith('auth.') ? null : a.startsWith('project.') ? '/admin/projects' : '/admin/author';
+    const href = /^(auth|content)\./.test(a) ? null : a.startsWith('project.') ? '/admin/projects' : '/admin/author';
     return { text: FIXED[a]!, href };
   }
   return { text: `${a} ${q}`, href: null };

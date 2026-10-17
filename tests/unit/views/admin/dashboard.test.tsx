@@ -76,6 +76,7 @@ describe('Dashboard (ADM-02)', () => {
     expect(within(list).getByRole('link', { name: 'Published “AM–GM”' })).toHaveAttribute('href', '/admin/posts/p1');
     expect(list).toHaveTextContent('Signed in');
     expect(screen.getByRole('link', { name: 'All activity →' })).toHaveAttribute('href', '/admin/activity');
+    expect(screen.getByRole('link', { name: 'Download all content' })).toHaveAttribute('href', '/api/admin/export');
   });
 
   it('“New lesson” creates a draft and opens it', async () => {

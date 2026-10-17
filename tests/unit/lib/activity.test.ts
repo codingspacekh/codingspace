@@ -52,6 +52,7 @@ describe('describeEvent', () => {
     });
     expect(describeEvent(event('timeline.update')).text).toBe('Edited the Author timeline');
     expect(describeEvent(event('auth.sign_in', { entity: 'session' }))).toEqual({ text: 'Signed in', href: null });
+    expect(describeEvent(event('content.export'))).toEqual({ text: 'Downloaded an export of all content', href: null });
   });
 
   it('shows an unknown action as it is rather than hiding it', () => {
