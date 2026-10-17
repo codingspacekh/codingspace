@@ -10,7 +10,7 @@ import { StatusBadge } from './posts-browser';
 type Reply = { error?: string; failed?: string[] };
 
 /**
- * 03 ADM-12: a subject's sections — add, rename, describe, reorder, delete (only when empty) —
+ * 03 ADM-12: a subject's sections — add, rename, describe, reorder, delete (with their lessons) —
  * and the order of the lessons inside each one. Every change rebuilds the pages that show it.
  */
 export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onSubject: (s: SubjectId) => void }) {
@@ -118,11 +118,13 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
                     return ok;
                   }}
                   onDelete={async () => {
+                    const n = s.lessons.length;
                     const ok = await change(
                       () => api(`/api/admin/sections/${s.id}`, { method: 'DELETE' }),
-                      `Deleted “${s.title}”.`,
+                      n ? `Deleted “${s.title}” and its ${lessonCount(n)}.` : `Deleted “${s.title}”.`,
                     );
                     if (ok) setSections((list) => list?.filter((x) => x.id !== s.id) ?? null);
+                    return ok;
                   }}
                 />
               ))}
@@ -168,7 +170,7 @@ function SectionCard({
   onMove: (delta: -1 | 1) => void;
   onMoveLesson: (index: number, delta: -1 | 1) => void;
   onSave: (title: string, description: string) => Promise<boolean>;
-  onDelete: () => void;
+  onDelete: () => Promise<boolean>;
 }) {
   const id = useId();
   const [editing, setEditing] = useState(false);
@@ -257,34 +259,21 @@ function SectionCard({
               {open ? 'Hide lessons' : 'Order lessons'}
             </button>
           )}
-          {confirming ? (
-            <span className="adm-confirm" role="group" aria-label="Confirm delete">
-              <span>Delete “{s.title}”? This can’t be undone.</span>
-              <button type="button" className="btn adm-danger" disabled={busy} onClick={onDelete}>
-                Delete permanently
-              </button>
-              <button type="button" className="btn" onClick={() => setConfirming(false)}>
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="btn"
-              disabled={count > 0}
-              aria-describedby={count > 0 ? `${id}-del` : undefined}
-              aria-label={`Delete ${s.title}`}
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </button>
-          )}
-          {count > 0 && (
-            <span id={`${id}-del`} className="adm-hint">
-              To delete it, move or delete its {count} lesson{count === 1 ? '' : 's'} first.
-            </span>
-          )}
+          <button type="button" className="btn" aria-label={`Delete ${s.title}`} onClick={() => setConfirming(true)}>
+            Delete…
+          </button>
         </div>
+      )}
+
+      {confirming && (
+        <ConfirmDelete
+          section={s}
+          busy={busy}
+          onCancel={() => setConfirming(false)}
+          onDelete={async () => {
+            if (!(await onDelete())) setConfirming(false);
+          }}
+        />
       )}
 
       {open && (
@@ -319,6 +308,62 @@ function SectionCard({
         </ol>
       )}
     </li>
+  );
+}
+
+const lessonCount = (n: number) => `${n} lesson${n === 1 ? '' : 's'}`;
+
+/** Deleting a section deletes its lessons too: the modal names every one before it goes. */
+function ConfirmDelete({
+  section: s,
+  busy,
+  onDelete,
+  onCancel,
+}: {
+  section: StructureSection;
+  busy: boolean;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  const count = s.lessons.length;
+  const live = s.lessons.filter((l) => l.status === 'published').length;
+  return (
+    <Modal title={`Delete “${s.title}”?`} onClose={onCancel}>
+      {count === 0 ? (
+        <p>The section has no lessons. This can’t be undone.</p>
+      ) : (
+        <>
+          <p>
+            Its {lessonCount(count)} will be deleted with it, with their history. <strong>This can’t be undone.</strong>
+          </p>
+          <ul className="adm-doomed" aria-label="Lessons that will be deleted">
+            {s.lessons.map((l) => (
+              <li key={l.id}>
+                {l.title || 'Untitled'}{' '}
+                <StatusBadge
+                  post={{ status: l.status as 'draft', has_unpublished_changes: l.has_unpublished_changes }}
+                />
+              </li>
+            ))}
+          </ul>
+          {live > 0 && (
+            <p className="adm-error">
+              {live === 1 ? '1 of them is live' : `${live} of them are live`}: students will no longer find{' '}
+              {live === 1 ? 'it' : 'them'}, and links to {live === 1 ? 'it' : 'them'} will stop working.
+            </p>
+          )}
+          <p className="adm-hint">To keep a lesson, move it to another section first (in its settings).</p>
+        </>
+      )}
+      <div className="adm-quick">
+        <button type="button" className="btn adm-danger" disabled={busy} onClick={onDelete}>
+          {count === 0 ? 'Delete section' : `Delete section and ${lessonCount(count)}`}
+        </button>
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </Modal>
   );
 }
 

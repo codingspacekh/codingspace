@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { postSlug } from '@/lib/post-rules';
+import { postSlug, revalidationPaths, type PublishedRef } from '@/lib/post-rules';
 import { PostError } from './posts';
 
 export const newSection = z.object({
@@ -123,11 +123,22 @@ export async function updateSection(supabase: SupabaseClient, id: string, input:
   return { paths: await pagesFor(supabase, subject, [id]) };
 }
 
+type DeletedLesson = PublishedRef & { was_published: boolean };
+
+/**
+ * Deletes a section and every lesson filed under it (owner request, 2026-10-17). Rebuilds the
+ * subject page and, for lessons that were live, their pages (now 404), Home, and the lessons
+ * left in any other section one of them was live in.
+ */
 export async function deleteSection(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.rpc('admin_delete_section', { p_id: uuid.parse(id) });
   if (error) refused(error, 'admin_delete_section');
-  const { subject } = data as { subject: string };
-  return { paths: [`/study/${subject}`] };
+  const { subject, lessons } = data as { subject: string; lessons: DeletedLesson[] };
+  const live = lessons.filter((l) => l.was_published);
+  const otherSections = [...new Set(live.map((l) => l.section).filter((s): s is string => !!s && s !== id))];
+  const neighbours = otherSections.length ? (await pagesFor(supabase, subject, otherSections)).slice(1) : [];
+  const paths = [`/study/${subject}`, ...live.flatMap((l) => revalidationPaths(l)), ...neighbours];
+  return { paths: [...new Set(paths)], deleted: lessons.length };
 }
 
 export const sectionOrder = z.object({ subject_id: subjectId, ids: z.array(uuid).max(200) });

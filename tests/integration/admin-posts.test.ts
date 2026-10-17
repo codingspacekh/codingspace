@@ -375,7 +375,7 @@ describe('adding a section', () => {
 });
 
 describe('study structure', () => {
-  it('rename, reorder sections and lessons, delete an empty one; each returns the pages to rebuild', async () => {
+  it('rename, reorder sections and lessons, delete an empty one and one with lessons; each returns the pages to rebuild', async () => {
     const a = await createSection(owner, { subject_id: 'it', title: 'IT test struct A' });
     const b = await createSection(owner, { subject_id: 'it', title: 'IT test struct B' });
     const one = await createPost(owner, {
@@ -413,7 +413,6 @@ describe('study structure', () => {
       'IT test struct: one',
     ]);
 
-    await expect(deleteSection(owner, a.id)).rejects.toMatchObject({ status: 409 });
     expect((await deleteSection(owner, b.id)).paths).toEqual(['/study/it']);
     // Listing a section twice (or leaving one out) is refused.
     await expect(reorderSections(owner, { subject_id: 'it', ids: [a.id, a.id] })).rejects.toMatchObject({
@@ -421,7 +420,11 @@ describe('study structure', () => {
     });
     await expect(updateSection(owner, a.id, { title: ' ' })).rejects.toMatchObject({ status: 422 });
 
-    await service.from('posts').delete().in('id', [one.id, two.id]);
-    await deleteSection(owner, a.id);
+    // Deleting a section deletes its lessons; the live ones' pages are rebuilt (now 404).
+    const gone = await deleteSection(owner, a.id);
+    expect(gone.deleted).toBe(2);
+    expect(gone.paths).toEqual(expect.arrayContaining(['/study/it', '/', '/posts/it-test-struct-one']));
+    const { data: left } = await service.from('posts').select('id').in('id', [one.id, two.id]);
+    expect(left).toEqual([]);
   });
 });

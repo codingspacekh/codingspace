@@ -91,7 +91,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | ADM-09 | **Publish / Update / Unpublish / Schedule.** A published post keeps a live snapshot; edits show "Unpublished changes" until Update. Publishing regenerates the affected pages within 10 s. | M |
 | ADM-10 | Media library: browse, search, reuse, delete unused files; images auto-resized to WebP/AVIF; metadata (EXIF/GPS) stripped. | M |
 | ADM-11 | Problem of the week editor with live maths preview and week date. | M |
-| ADM-12 | Study structure: add, rename, describe, reorder and delete (only if empty) sections; reorder lessons inside a section. | M |
+| ADM-12 | Study structure: add, rename, describe, reorder and delete sections (deleting one deletes its lessons, after a confirmation that lists them; owner change 2026-10-17); reorder lessons inside a section. | M |
 | ADM-13 | Projects: create, edit, delete; one featured; landing URL validated (https only). | M |
 | ADM-14 | Author profile: name, bio, stats, timeline, public email. | M |
 | ADM-15 | Admin audit log (who did what, when) visible on the dashboard. | S |

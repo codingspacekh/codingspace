@@ -10,9 +10,9 @@ import { setPref } from './prefs-store';
  *  - Sounds, only once the visitor turns sound on: a tick when the pointer reaches a link or
  *    button, a click when one is used, a whoosh when leaving a page, then the new page
  *    "deploys" and its heading types in.
- *  - Page changes inside the site (motion on): the old page fades with a scan line; the new
- *    one draws its frame corners, types its heading and brings in its cards in sequence.
- *    Opening a subject or a lesson shows a short loading screen first (at least LOADER_MS).
+ *  - Page changes inside the site (motion on): the old page goes with a scan line and a short
+ *    loading screen shows (at least LOADER_MS); then the new page draws its frame corners,
+ *    types its heading and brings in its cards in sequence.
  *    CSS does the drawing (html[data-transition] in globals.css); this only sets the state.
  *    The first page a visitor opens is never animated, so it appears at once (LCP).
  *
@@ -30,12 +30,20 @@ const inAdmin = (path: string) => path.startsWith('/admin');
 
 type Loader = { label: string; color: string };
 
-/** Subject and lesson pages open with a loading screen, like soulextract.com's; others don't. */
-export function loaderFor(url: string): Loader | null {
-  const path = url.split(/[?#]/)[0]!;
-  const subject = /^\/study\/([^/]+)\/?$/.exec(path)?.[1];
-  if (subject) return isSubjectId(subject) ? { label: SUBJECTS[subject].name, color: SUBJECTS[subject].color } : null;
-  return /^\/posts\/[^/]+\/?$/.test(path) ? { label: 'Lesson', color: 'cyan' } : null;
+const PAGES: Record<string, string> = {
+  '/': 'Home',
+  '/projects': 'Projects',
+  '/author': 'Author',
+  '/search': 'Search',
+};
+
+/** What the loading screen says on the way to a page (like soulextract.com's), in its colour. */
+export function loaderFor(url: string): Loader {
+  const path = url.split(/[?#]/)[0]!.replace(/(.)\/$/, '$1');
+  const subject = /^\/study\/([^/]+)$/.exec(path)?.[1];
+  if (isSubjectId(subject)) return { label: SUBJECTS[subject].name, color: SUBJECTS[subject].color };
+  if (/^\/posts\/[^/]+$/.test(path)) return { label: 'Lesson', color: 'cyan' };
+  return { label: PAGES[path] ?? 'Page', color: 'cyan' };
 }
 
 export function PageEffects() {
@@ -92,10 +100,9 @@ export function PageEffects() {
       window.clearTimeout(timer);
       p('transition');
       if (!a) return;
-      const next = loaderFor(url);
-      loadingSince = next ? Date.now() : 0;
-      setLoader(next);
-      root.dataset.transition = next ? 'loading' : 'out';
+      loadingSince = Date.now();
+      setLoader(loaderFor(url));
+      root.dataset.transition = 'loading';
     };
     const arrive = () => {
       const { animate: a, play: p } = state.current;

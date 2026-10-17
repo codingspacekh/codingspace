@@ -17,8 +17,9 @@ export async function collectProblems(page: Page) {
   return problems;
 }
 
-/** WCAG 2.1 AA checks (NFR-A11Y-1). */
+/** WCAG 2.1 AA checks (NFR-A11Y-1), once any page change has finished fading in. */
 export async function expectAccessible(page: Page) {
+  await expect(page.locator('html')).not.toHaveAttribute('data-transition', /./);
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`)).toEqual([]);
 }

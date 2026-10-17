@@ -37,12 +37,14 @@ beforeEach(() => {
 });
 
 describe('page changes (after soulextract.com)', () => {
-  it('the old page goes out, the new one comes in, then the page is left alone', () => {
+  it('every page change: loading screen, then the new page comes in, then the page is left alone', () => {
     vi.useFakeTimers();
     setup();
     route('routeChangeStart', '/projects');
-    expect(html.dataset.transition).toBe('out');
+    expect(html.dataset.transition).toBe('loading');
+    expect(screen.getByTestId('page-loader')).toHaveTextContent('Loading Projects');
     route('routeChangeComplete', '/projects');
+    act(() => vi.advanceTimersByTime(LOADER_MS));
     expect(html.dataset.transition).toBe('in');
     act(() => vi.advanceTimersByTime(ARRIVE_MS));
     expect(html.dataset.transition).toBeUndefined();
@@ -82,13 +84,15 @@ describe('page changes (after soulextract.com)', () => {
     vi.useRealTimers();
   });
 
-  it('only subject and lesson pages get the loading screen', () => {
+  it('the loading screen names where it is going, in the subject colour', () => {
     expect(loaderFor('/study/math')).toEqual({ label: 'Math', color: 'cyan' });
     expect(loaderFor('/study/it?x=1#arrays')).toEqual({ label: 'IT', color: 'lime' });
     expect(loaderFor('/posts/am-gm')).toEqual({ label: 'Lesson', color: 'cyan' });
-    expect(loaderFor('/study/nope')).toBeNull();
-    expect(loaderFor('/projects')).toBeNull();
-    expect(loaderFor('/')).toBeNull();
+    expect(loaderFor('/')).toEqual({ label: 'Home', color: 'cyan' });
+    expect(loaderFor('/search?q=cauchy')).toEqual({ label: 'Search', color: 'cyan' });
+    expect(loaderFor('/projects/')).toEqual({ label: 'Projects', color: 'cyan' });
+    expect(loaderFor('/author')).toEqual({ label: 'Author', color: 'cyan' });
+    expect(loaderFor('/study/nope')).toEqual({ label: 'Page', color: 'cyan' });
   });
 
   it('with motion off, nothing animates', () => {

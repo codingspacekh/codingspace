@@ -2307,6 +2307,18 @@ img.ProseMirror-separator {
 .adm-modal-head .btn {
   padding: 4px 10px;
 }
+.adm-doomed {
+  display: grid;
+  gap: 6px;
+  max-height: 40vh;
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+.adm-modal p {
+  margin: 0;
+}
 @keyframes modal-in {
   from {
     opacity: 0;
@@ -2562,17 +2574,8 @@ img.ProseMirror-separator {
 /* ── Page changes and sound (src/ui/page-effects.tsx), after the original Arwes sites ──────
    Only with motion on, and only between pages: the first page a visitor opens appears at once.
    The content is always in the HTML; these only decorate its arrival. */
-html[data-motion='on'][data-transition='out'] #main {
-  opacity: 0.15;
-  transform: translateY(6px);
-  filter: saturate(0.4);
-  transition:
-    opacity 0.18s ease-in,
-    transform 0.18s ease-in,
-    filter 0.18s;
-}
 /* A scan line sweeps down the window as the old page goes. */
-html[data-motion='on']:is([data-transition='out'], [data-transition='loading']) body::after {
+html[data-motion='on'][data-transition='loading'] body::after {
   content: '';
   position: fixed;
   left: 0;
@@ -2683,8 +2686,8 @@ html[data-reading='on'] body::after {
   display: none;
 }
 
-/* Opening a subject or a lesson: the page goes, a loading panel shows for a moment, then the
-   new page arrives as above. The panel sits between the top bar and the footer. */
+/* Between pages: the old page goes, a loading panel shows for a moment, then the new page
+   arrives as above. The panel sits between the top bar and the footer. */
 html[data-motion='on'][data-transition='loading'] #main {
   opacity: 0;
   transition: opacity 0.15s ease-in;
