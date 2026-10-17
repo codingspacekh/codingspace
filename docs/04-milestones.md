@@ -284,7 +284,8 @@ Each milestone lists the **tests written first**. They start red and define "don
 > - **Chaos test** (NFR-REL-1): `tests/e2e/chaos.spec.ts` pauses the database container; the public pages still serve.
 > - **Headers:** `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy: same-origin` (from the ZAP scan).
 > - **Runbook:** [docs/runbook.md](./runbook.md).
-> - **Still to do:** ASVS L1 review, secrets rotation, the restore drill on a spare project, weekly export to a private R2 bucket, production database decision, Sentry, uptime monitor, Speed Insights, the k6 run on the live site, then launch (remove `noindex`, submit the sitemap).
+> - **ASVS L1 review:** [docs/security-review.md](./security-review.md) — Level 1 met, no code changes outstanding; the malformed-slug 500 found during it was fixed (PR #49).
+> - **Still to do (operational):** secrets rotation, the restore drill on a spare project, weekly export to a private R2 bucket, production database decision, Sentry, uptime monitor, Speed Insights, the k6 run on the live site, then launch (remove `noindex`, submit the sitemap).
 > - **Daily keep-alive:** not needed as a separate job: "Publish scheduled posts" queries the database every 5 minutes.
 
 **Goal:** safe to open to every student.
