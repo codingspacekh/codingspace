@@ -299,7 +299,7 @@ Each milestone lists the **tests written first**. They start red and define "don
 - Daily DB keep-alive cron; weekly export to R2; **restore drill**.
 - Audit log view (ADM-15); export to Markdown/JSON (ADM-16).
 - Runbook.
-- Configure `codingspacekh.dev` (bought 2026-10-17) and `files.codingspacekh.dev` (DNS; `.dev` is HTTPS-only by browser preload); remove `noindex`; submit the sitemap.
+- Configure `codingspacekh.dev` (bought 2026-10-17 at Cloudflare Registrar) and `files.codingspacekh.dev` (DNS; `.dev` is HTTPS-only by browser preload); remove `noindex`; submit the sitemap.
 - Uptime monitor, Sentry, Speed Insights.
 
 **Tests first:**

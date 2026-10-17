@@ -8,7 +8,7 @@ change it in the same PR as whatever it describes.
 | What | Where |
 | --- | --- |
 | Site | Vercel project `codingspace` (team `codingspacekhs-projects`), `main` → production |
-| Domain, DNS | Cloudflare: `codingspacekh.dev` (DNS only, grey cloud, for Vercel's records) |
+| Domain, DNS | Cloudflare: `codingspacekh.dev`, registered with Cloudflare Registrar; DNS only (grey cloud) for Vercel's records |
 | Database, sign-in | Supabase project `codingspace-staging` (Singapore) |
 | Images and files | Cloudflare R2 bucket `codingspace-media`, served at `https://files.codingspacekh.dev` |
 | Scheduled publishing | GitHub Actions → "Publish scheduled posts", every 5 minutes (also keeps the free database awake) |
@@ -30,8 +30,7 @@ security key, not SMS), a password used nowhere else, and its recovery codes kep
 | **GitHub** (`codingspacekh`) | Push code to `main`, which deploys; change the workflows and their secrets; delete the repository |
 | **Vercel** (`codingspacekh`, team `codingspacekhs-projects`) | Read every production secret (database service key, R2 keys, `CRON_SECRET`); deploy any code; take the site down |
 | **Supabase** | Read and change all data; reset the admin password; remove the admin's 2FA (see "Lost 2FA device") |
-| **Cloudflare** | Point the domain elsewhere (DNS); read, replace or delete every image and file in R2 |
-| **Domain registrar** (Cloudflare, if bought there) | Transfer the domain away. Keep **Registrar Lock** on. |
+| **Cloudflare** (also the domain registrar) | Point the domain elsewhere (DNS) or transfer it away; read, replace or delete every image and file in R2. Keep **Registrar Lock** on. |
 | **The admin's sign-in e-mail** (a personal address, separate from the above) | Ask Supabase for a password-reset e-mail. The 2FA code is still needed to get in. |
 
 Also: GitHub branch protection on `main` (CI must pass, no force pushes), so nothing reaches
