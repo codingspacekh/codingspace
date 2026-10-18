@@ -36,7 +36,10 @@ function mockApi() {
             : status === 'published'
               ? [q('q2', 'published', { answer: 'Old.' })]
               : [];
-        return new Response(JSON.stringify({ questions: list }), { status: 200 });
+        return new Response(
+          JSON.stringify({ questions: list, counts: { pending: 2, published: 1, hidden: 0 }, more: 0 }),
+          { status: 200 },
+        );
       }
       calls.push({ url, method, body: init.body ? JSON.parse(String(init.body)) : undefined });
       return new Response(JSON.stringify({ ok: true, failed: [] }), { status: 200 });
@@ -96,7 +99,7 @@ describe('QuestionsAdmin (v1.1)', () => {
     const calls = mockApi();
     const user = userEvent.setup();
     render(<QuestionsAdmin />);
-    await user.click(await screen.findByRole('button', { name: 'Published' }));
+    await user.click(await screen.findByRole('button', { name: 'Published (1)' }));
     const card = within(await screen.findByRole('list', { name: 'Published questions and comments' })).getByRole(
       'listitem',
     );
@@ -113,7 +116,57 @@ describe('QuestionsAdmin (v1.1)', () => {
       ['PUT', { status: 'hidden', answer: 'Old. More.' }],
       ['DELETE', undefined],
     ]);
-    await user.click(screen.getByRole('button', { name: 'Hidden' }));
+    await user.click(screen.getByRole('button', { name: 'Hidden (0)' }));
     expect(await screen.findByText('Nothing hidden.')).toBeInTheDocument();
+  });
+
+  it('counts each tab, loads more and narrows to one post', async () => {
+    const urls: string[] = [];
+    const page = (from: number, n: number, slug = 'am-gm') =>
+      Array.from({ length: n }, (_, i) =>
+        q(`p${from + i}`, 'pending', {
+          name: `Student ${from + i}`,
+          created_at: new Date(Date.UTC(2026, 9, 18) - (from + i) * 60_000).toISOString(),
+          lesson: { slug, title: slug === 'am-gm' ? 'The AM–GM inequality' : 'My week', live: true, kind: 'lesson' },
+        }),
+      );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        const p = new URL(url, 'http://x').searchParams;
+        const body = p.get('post')
+          ? { questions: page(0, 2), counts: { pending: 2, published: 0, hidden: 0 }, more: 0 }
+          : p.get('before')
+            ? { questions: page(5, 3), counts: { pending: 8, published: 3, hidden: 1 }, more: 0 }
+            : { questions: page(0, 5), counts: { pending: 8, published: 3, hidden: 1 }, more: 3 };
+        return new Response(JSON.stringify(body), { status: 200 });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<QuestionsAdmin />);
+    const list = await screen.findByRole('list', { name: 'Waiting questions and comments' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByRole('button', { name: 'Waiting (8)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Published (3)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hidden (1)' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Load more (3 older)' }));
+    await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(8));
+    expect(urls[1]).toBe(`/api/admin/questions?status=pending&before=${encodeURIComponent(page(4, 1)[0]!.created_at)}`);
+    expect(screen.queryByRole('button', { name: /Load more/ })).toBeNull();
+
+    const card = within(list).getAllByRole('listitem')[0]!;
+    await user.click(within(card).getByRole('button', { name: 'Only this post: The AM–GM inequality' }));
+    const narrowed = await screen.findByRole('list', { name: 'Waiting questions and comments' });
+    await waitFor(() => expect(within(narrowed).getAllByRole('listitem')).toHaveLength(2));
+    expect(urls.at(-1)).toBe('/api/admin/questions?status=pending&post=am-gm');
+    expect(screen.getByText('The AM–GM inequality', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Waiting (2)' })).toBeInTheDocument();
+    expect(within(narrowed).queryByRole('button', { name: /Only this post/ })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Show all posts' }));
+    await waitFor(() => expect(urls.at(-1)).toBe('/api/admin/questions?status=pending'));
+    expect(await screen.findByRole('button', { name: 'Waiting (8)' })).toBeInTheDocument();
   });
 });

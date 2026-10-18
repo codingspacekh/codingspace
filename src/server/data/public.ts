@@ -21,7 +21,7 @@ import type {
   SyllabusPageData,
   SyllabusSummary,
   SyllabusTag,
-  LessonQuestion,
+  QuestionsPage,
 } from './types';
 
 /**
@@ -232,15 +232,25 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     updatedAt: row.updated_at,
   };
   // Life posts have no section: only their comments (v1.1).
-  if (!row.section_id)
-    return { post, section: null, siblings: [], series: [], syllabus: [], questions: await getLessonQuestions(row.id) };
+  if (!row.section_id) {
+    const page = await getQuestionsPage(row.id);
+    return {
+      post,
+      section: null,
+      siblings: [],
+      series: [],
+      syllabus: [],
+      questions: page.questions,
+      questionsMore: page.more,
+    };
+  }
 
-  const [section, siblings, series, syllabus, questions] = await Promise.all([
+  const [section, siblings, series, syllabus, page] = await Promise.all([
     db().from('public_sections').select('slug, title').eq('id', row.section_id).maybeSingle(),
     db().from('public_posts').select('slug, title').eq('section_id', row.section_id).order('sort').order('slug'),
     getSeriesNav(row.slug),
     getSyllabusTags(row.slug),
-    getLessonQuestions(row.id),
+    getQuestionsPage(row.id),
   ]);
   return {
     post,
@@ -248,7 +258,8 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     siblings: must<{ slug: string; title: string }[]>(siblings, 'siblings'),
     series,
     syllabus,
-    questions,
+    questions: page.questions,
+    questionsMore: page.more,
   };
 }
 
@@ -345,18 +356,33 @@ export async function getSyllabusPage(slug: string): Promise<SyllabusPageData | 
   };
 }
 
-/** Approved questions under a lesson (comments under a life post), oldest first; both sides are Markdown (v1.1). */
-async function getLessonQuestions(postId: string): Promise<LessonQuestion[]> {
+/** How many questions (comments) a post shows at a time; "Show older" loads the next ones. */
+export const QUESTIONS_PAGE = 20;
+
+/** A published_at as the database sends it, e.g. 2026-10-18T03:00:00.123456+00:00 (a page's cursor). */
+export const isQuestionCursor = (v: string) =>
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.test(v) && !Number.isNaN(Date.parse(v));
+
+/**
+ * Approved questions under a lesson (comments under a life post), newest first, a page at a time:
+ * the ones published before `before` when given. `more` is how many older ones are left. Both
+ * sides are Markdown (v1.1).
+ */
+export async function getQuestionsPage(postId: string, before?: string): Promise<QuestionsPage> {
+  let query = db()
+    .from('questions')
+    .select('id, name, body, answer, published_at', { count: 'exact' })
+    .eq('post_id', postId)
+    .order('published_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(QUESTIONS_PAGE);
+  if (before) query = query.lt('published_at', before);
+  const result = await query;
   const rows = must<{ id: string; name: string; body: string; answer: string; published_at: string }[]>(
-    await db()
-      .from('questions')
-      .select('id, name, body, answer, published_at')
-      .eq('post_id', postId)
-      .order('published_at')
-      .limit(200),
+    result,
     'questions',
   );
-  return Promise.all(
+  const questions = await Promise.all(
     rows.map(async (q) => {
       const [body, answer] = await Promise.all([renderSnippet(q.body), renderSnippet(q.answer)]);
       return {
@@ -368,6 +394,15 @@ async function getLessonQuestions(postId: string): Promise<LessonQuestion[]> {
         hasMath: body.hasMath || answer.hasMath,
       };
     }),
+  );
+  return { questions, more: Math.max(0, (result.count ?? rows.length) - rows.length) };
+}
+
+/** The live post a question page belongs to (for the older-questions page and its API). */
+export async function getQuestionsPost(slug: string) {
+  return must<{ id: string; slug: string; title: string; kind: 'lesson' | 'life' } | null>(
+    await db().from('public_posts').select('id, slug, title, kind').eq('slug', slug).maybeSingle(),
+    'post',
   );
 }
 

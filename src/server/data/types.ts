@@ -43,8 +43,10 @@ export type PostPageData = {
   series: SeriesNav[];
   /** The syllabus points it covers (v1.1). */
   syllabus?: SyllabusTag[];
-  /** Approved questions under the lesson, or comments under a life post, oldest first (v1.1). */
+  /** Approved questions under the lesson, or comments under a life post: the newest page (v1.1). */
   questions?: LessonQuestion[];
+  /** How many older ones there are beyond `questions` ("Show older"). */
+  questionsMore?: number;
 };
 
 /** "9618 · 1.1 Data representation", linking to that point on /syllabus/<slug>. */
@@ -92,6 +94,9 @@ export type SeriesSummary = {
 };
 
 /** A student's question (or comment on a life post) and the teacher's answer, both rendered from Markdown. */
+/** A page of questions (comments), newest first, and how many older ones are left. */
+export type QuestionsPage = { questions: LessonQuestion[]; more: number };
+
 export type LessonQuestion = {
   id: string;
   name: string;

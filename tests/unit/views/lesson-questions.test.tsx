@@ -111,6 +111,63 @@ describe('<LessonQuestions> (v1.1)', () => {
     expect(within(first!).getByText('Teacher')).toBeInTheDocument();
   });
 
+  it('shows older ones 20 at a time: a plain link without JavaScript, loaded in place with it', async () => {
+    const older = (n: number, from: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        ...QUESTIONS[1]!,
+        id: `o${from + i}`,
+        name: `Older ${from + i}`,
+        publishedAt: `2026-10-0${from + i < 10 ? 2 : 1}T00:00:00.12345${i % 10}+00:00`,
+      }));
+    const urls: string[] = [];
+    const pages = [
+      { questions: older(2, 1), more: 1 },
+      { questions: older(1, 3), more: 0 },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        return new Response(JSON.stringify(pages.shift()), { status: 200 });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<LessonQuestions slug="my-week" kind="life" questions={QUESTIONS} more={3} />);
+    const section = screen.getByRole('region', { name: 'Comments' });
+    const link = within(section).getByRole('link', { name: 'Show older comments (3 more)' });
+    expect(link).toHaveAttribute('href', '/posts/my-week/older?before=2026-10-18T04%3A00%3A00Z');
+
+    await user.click(link);
+    expect(await within(section).findByText(/Older 1/)).toBeInTheDocument();
+    expect(urls[0]).toBe('/api/questions?post=my-week&before=2026-10-18T04%3A00%3A00Z');
+    expect(within(section).getAllByRole('listitem')).toHaveLength(4);
+    // Focus moves to the first newly shown comment.
+    expect(document.activeElement).toHaveTextContent('Older 1');
+    const next = within(section).getByRole('link', { name: 'Show older comments (1 more)' });
+    expect(urls).toHaveLength(1);
+
+    await user.click(next);
+    expect(await within(section).findByText(/Older 3/)).toBeInTheDocument();
+    expect(urls[1]).toBe(`/api/questions?post=my-week&before=${encodeURIComponent(older(2, 1)[1]!.publishedAt)}`);
+    expect(within(section).queryByRole('link', { name: /Show older/ })).toBeNull();
+    expect(within(section).getAllByRole('listitem')).toHaveLength(5);
+  });
+
+  it('says so when the older ones can’t be loaded, and shows no link when there are none', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    const user = userEvent.setup();
+    const { unmount } = render(<LessonQuestions slug="am-gm" questions={QUESTIONS} more={5} />);
+    await user.click(screen.getByRole('link', { name: 'Show older questions (5 more)' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The older questions could not be loaded.');
+    expect(screen.getByRole('link', { name: 'Show older questions (5 more)' })).toBeInTheDocument();
+    unmount();
+    render(<LessonQuestions slug="am-gm" questions={QUESTIONS} />);
+    expect(screen.queryByRole('link', { name: /Show older/ })).toBeNull();
+  });
+
   it('keeps the honeypot away from people and assistive technology', () => {
     render(<LessonQuestions slug="am-gm" questions={[]} />);
     const trap = document.querySelector('input[name="website"]')!;

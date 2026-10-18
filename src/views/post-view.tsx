@@ -167,7 +167,15 @@ function SeriesBox({ series }: { series: SeriesNav }) {
   );
 }
 
-export function PostView({ post, section, siblings, series = [], syllabus = [], questions }: PostPageData) {
+export function PostView({
+  post,
+  section,
+  siblings,
+  series = [],
+  syllabus = [],
+  questions,
+  questionsMore,
+}: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
   usePractice(article);
@@ -272,7 +280,7 @@ export function PostView({ post, section, siblings, series = [], syllabus = [], 
           ))}
           {/* The admin preview has no questions (undefined): no form there. Life posts get comments. */}
           {questions && (isLesson || post.kind === 'life') && (
-            <LessonQuestions slug={post.slug} kind={post.kind} questions={questions} />
+            <LessonQuestions slug={post.slug} kind={post.kind} questions={questions} more={questionsMore} />
           )}
         </article>
 
