@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { BUILT_IN, cleanItem, HEADER_PARTS, type AuthorItem, type AuthorSection } from '@/lib/author';
+import { BUILT_IN, cleanItem, HEADER_PARTS, PHOTO_SHAPES, type AuthorItem, type AuthorSection } from '@/lib/author';
 import { postSlug } from '@/lib/post-rules';
 import { EMAIL, landingUrlProblem } from '@/lib/site-rules';
 import type { SubjectId } from '@/lib/subjects';
@@ -163,6 +163,8 @@ export const authorInput = z.object({
       .default(''),
     /** An image from the media library, shown on the Author page instead of the initials. */
     photo_media_id: uuid.nullable().default(null),
+    /** The photo's frame (and the initials'). */
+    photo_shape: z.enum(PHOTO_SHAPES).default('hexagon'),
     /** Parts of the header that visitors don't see. */
     hidden: z.array(z.enum(HEADER_PARTS)).max(HEADER_PARTS.length).default([]),
   }),
@@ -189,7 +191,7 @@ export async function getAuthor(supabase: SupabaseClient) {
   const [profile, sections] = await Promise.all([
     supabase
       .from('profile')
-      .select('name, bio, years, students, email, photo_media_id, photo_widths, hidden')
+      .select('name, bio, years, students, email, photo_media_id, photo_shape, photo_widths, hidden')
       .maybeSingle(),
     supabase
       .from('author_sections')
@@ -206,6 +208,7 @@ export async function getAuthor(supabase: SupabaseClient) {
     students: null,
     email: null,
     photo_media_id: null,
+    photo_shape: 'hexagon',
     photo_widths: [],
     hidden: [],
   };
