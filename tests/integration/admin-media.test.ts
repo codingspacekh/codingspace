@@ -5,7 +5,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { createPost, PostError, saveDraft } from '@/server/admin/posts';
 import { fileKey, imageKey, uploadKey } from '@/lib/media-urls';
-import { deleteMedia, getMedia, listMedia, updateMedia } from '@/server/media/library';
+import {
+  deleteFolder,
+  deleteMedia,
+  getMedia,
+  listFolders,
+  listMedia,
+  moveMedia,
+  saveFolder,
+  updateMedia,
+} from '@/server/media/library';
 import { localStore, type LocalStore } from '@/server/media/store';
 import { finishUpload, startUpload } from '@/server/media/uploads';
 import { ownerSession, serviceClient } from '../support/admin-users';
@@ -37,6 +46,7 @@ async function photo(width: number, height: number, colour = '#c03030') {
 async function cleanUp() {
   await service.from('posts').delete().like('slug', 'it-media-%');
   await service.from('media').delete().like('original_name', 'it-media-%');
+  await service.from('media_folders').delete().like('name', 'IT %');
 }
 
 beforeAll(async () => {
@@ -210,5 +220,53 @@ describe('file upload and the library', () => {
     expect(keys).toEqual([imageKey(imageId, 300, 'avif'), imageKey(imageId, 300, 'webp')]);
     for (const k of keys) expect(await store.head(k)).toBeNull();
     await expect(getMedia(owner, imageId)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('folders (v1.1)', () => {
+  it('create → move files in → list by folder → rename → delete (files back to Unsorted)', async () => {
+    const ids = [crypto.randomUUID(), crypto.randomUUID()];
+    const { error } = await service.from('media').insert(
+      ids.map((id, i) => ({
+        id,
+        kind: 'file',
+        mime: 'application/pdf',
+        bytes: 10,
+        sha256: String(i).repeat(64),
+        widths: [],
+        original_name: `it-media-folder-${i}.pdf`,
+      })),
+    );
+    expect(error).toBeNull();
+
+    const { id: folder } = await saveFolder(owner, null, { name: ' IT Worksheets ' });
+    await expect(saveFolder(owner, null, { name: 'it worksheets' })).rejects.toMatchObject({ status: 409 });
+    await expect(saveFolder(owner, null, { name: '  ' })).rejects.toMatchObject({ status: 422 });
+
+    expect(await moveMedia(owner, { ids, folder })).toEqual({ moved: 2 });
+    await expect(moveMedia(owner, { ids: [], folder })).rejects.toMatchObject({ status: 422 });
+    await expect(moveMedia(owner, { ids, folder: crypto.randomUUID() })).rejects.toMatchObject({ status: 404 });
+
+    const inFolder = await listMedia(owner, { folder });
+    expect(inFolder.items.map((m) => m.original_name).sort()).toEqual([
+      'it-media-folder-0.pdf',
+      'it-media-folder-1.pdf',
+    ]);
+    expect(inFolder.items.every((m) => m.folder_id === folder)).toBe(true);
+    const unsorted = await listMedia(owner, { folder: 'none' });
+    expect(unsorted.items.some((m) => ids.includes(m.id))).toBe(false);
+    const counts = await listFolders(owner);
+    expect(counts.folders.find((f) => f.id === folder)).toMatchObject({ name: 'IT Worksheets', file_count: 2 });
+    expect(counts.all).toBe(counts.unsorted + counts.folders.reduce((n, f) => n + f.file_count, 0));
+
+    await saveFolder(owner, folder, { name: 'IT Papers' });
+    expect((await listFolders(owner)).folders.find((f) => f.id === folder)?.name).toBe('IT Papers');
+    expect(await moveMedia(owner, { ids: [ids[0]], folder: null })).toEqual({ moved: 1 });
+
+    expect(await deleteFolder(owner, folder)).toEqual({ moved: 1 });
+    const back = await listMedia(owner, { folder: 'none', q: 'it-media-folder' });
+    expect(back.items.map((m) => m.original_name).sort()).toEqual(['it-media-folder-0.pdf', 'it-media-folder-1.pdf']);
+    await expect(deleteFolder(owner, folder)).rejects.toMatchObject({ status: 404 });
+    await expect(listMedia(owner, { folder: 'nope' })).rejects.toMatchObject({ status: 400 });
   });
 });

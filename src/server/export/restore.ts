@@ -12,6 +12,7 @@ import { unzip } from './unzip';
 const CONFLICT: Record<TableName, string> = {
   subjects: 'id', // the first four are already there (seeded); added ones come with the export
   sections: 'id',
+  media_folders: 'id',
   media: 'id',
   posts: 'id',
   post_revisions: 'id',

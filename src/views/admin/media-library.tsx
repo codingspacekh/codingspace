@@ -1,26 +1,35 @@
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { FILE_ACCEPT, formatBytes, IMAGE_ACCEPT, type MediaKind } from '@/lib/media-rules';
 import { uploadMedia, type UploadedMedia } from '@/lib/media-upload';
 import { fileKey, mediaUrl, thumbnailUrl } from '@/lib/media-urls';
-import type { MediaUse } from '@/server/media/library';
+import type { MediaFolder, MediaFolders, MediaUse } from '@/server/media/library';
 import type { MediaItem } from '@/server/media/uploads';
 
 /**
  * 03 ADM-10: every uploaded image and file — browse, search, see where each is used, rename,
  * set the default alt text, delete what no post uses. The editor reuses the list (MediaPicker).
+ * v1.1: folders (one level), a grid or list view per folder, moving files between folders.
  */
 
-export type Filters = { kind: '' | MediaKind; q: string; unused: boolean };
+export type Filters = {
+  kind: '' | MediaKind;
+  q: string;
+  unused: boolean;
+  /** v1.1: a folder's id, "none" for Unsorted, '' for every folder. */
+  folder?: string;
+};
 type Detail = MediaItem & { used_by: MediaUse[]; author_photo?: boolean };
 type Upload = (file: File, kind: MediaKind) => Promise<UploadedMedia>;
+type View = 'grid' | 'list';
 
 function query(f: Filters, before?: string) {
   const p = new URLSearchParams();
   if (f.kind) p.set('kind', f.kind);
   if (f.q.trim()) p.set('q', f.q.trim());
   if (f.unused) p.set('unused', '1');
+  if (f.folder) p.set('folder', f.folder);
   if (before) p.set('before', before);
   return p.toString();
 }
@@ -57,23 +66,81 @@ export function useMediaList(filters: Filters) {
   return { items, setItems, more, failed, reload: () => load(), loadMore };
 }
 
-function Thumb({ item }: { item: MediaItem }) {
+/** The folders with their counts (v1.1); `reload` after anything that moves files. */
+function useFolders() {
+  const [folders, setFolders] = useState<MediaFolders | null>(null);
+  const reload = useCallback(async () => {
+    const { status, data } = await api<MediaFolders>('/api/admin/media/folders');
+    if (status === 200 && Array.isArray(data.folders)) setFolders(data);
+  }, []);
+  useEffect(() => {
+    // Loading the folder list is the point of this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reload();
+  }, [reload]);
+  return { folders, reload };
+}
+
+// Grid or list, remembered per folder on this device (a convenience: grid when storage is off).
+const VIEW_KEY = 'cs-media-view';
+function readViews(): Record<string, View> {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? '{}') as unknown;
+    return v && typeof v === 'object' ? (v as Record<string, View>) : {};
+  } catch {
+    return {};
+  }
+}
+function useFolderView(folder: string) {
+  const [views, setViews] = useState<Record<string, View>>({});
+  useEffect(() => {
+    // Reading this device's saved views once, after the first render, is the point of this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setViews(readViews());
+  }, []);
+  const key = folder || 'all';
+  const set = (view: View) => {
+    const next = { ...readViews(), [key]: view };
+    setViews(next);
+    try {
+      localStorage.setItem(VIEW_KEY, JSON.stringify(next));
+    } catch {
+      // Not saved; it still applies until the page is left.
+    }
+  };
+  return [views[key] === 'list' ? 'list' : 'grid', set] as const;
+}
+
+function Thumb({ item, size = 160 }: { item: MediaItem; size?: number }) {
   const src = item.kind === 'image' ? thumbnailUrl(item.id, item.widths) : null;
   return src ? (
-    <img src={src} alt="" width={160} height={Math.round((160 * (item.height ?? 1)) / (item.width ?? 1))} />
+    <img src={src} alt="" width={size} height={Math.round((size * (item.height ?? 1)) / (item.width ?? 1))} />
   ) : (
     <span className="adm-media-ext" aria-hidden="true">
-      {item.original_name.split('.').pop()?.slice(0, 5).toUpperCase() || 'FILE'}
+      {extension(item)}
     </span>
   );
 }
+
+const extension = (m: MediaItem) => m.original_name.split('.').pop()?.slice(0, 5).toUpperCase() || 'FILE';
 
 const summary = (m: MediaItem) =>
   [m.kind === 'image' && m.width ? `${m.width}×${m.height}` : null, formatBytes(m.bytes)].filter(Boolean).join(' · ');
 
 const use = (m: MediaItem) => (m.use_count ? `used in ${m.use_count}` : 'unused');
 
-function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+const files = (n: number) => `${n} file${n === 1 ? '' : 's'}`;
+
+function FilterBar({
+  filters,
+  onChange,
+  folders,
+}: {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  /** The editor's picker chooses a folder here; the library has its folder bar instead. */
+  folders?: MediaFolder[];
+}) {
   const [q, setQ] = useState(filters.q);
   return (
     <form
@@ -89,6 +156,20 @@ function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filt
         Name
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={100} />
       </label>
+      {folders && (
+        <label>
+          Folder
+          <select value={filters.folder ?? ''} onChange={(e) => onChange({ ...filters, q, folder: e.target.value })}>
+            <option value="">All folders</option>
+            <option value="none">Unsorted</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         Type
         <select
@@ -115,22 +196,216 @@ function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filt
   );
 }
 
+/** v1.1: All media, Unsorted and each folder, with counts; and "New folder". */
+function FolderBar({
+  folders,
+  current,
+  onOpen,
+  onCreate,
+}: {
+  folders: MediaFolders | null;
+  current: string;
+  onOpen: (folder: string) => void;
+  onCreate: (name: string) => Promise<string | null>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const entries = [
+    { id: '', name: 'All media', count: folders?.all },
+    { id: 'none', name: 'Unsorted', count: folders?.unsorted },
+    ...(folders?.folders ?? []).map((f) => ({ id: f.id, name: f.name, count: f.file_count })),
+  ];
+  return (
+    <nav className="adm-folders" aria-label="Folders">
+      <ul>
+        {entries.map((f) => (
+          <li key={f.id || 'all'}>
+            <button type="button" className="btn" aria-pressed={f.id === current} onClick={() => onOpen(f.id)}>
+              {f.count === undefined ? f.name : `${f.name} (${f.count})`}
+            </button>
+          </li>
+        ))}
+        <li>
+          {adding ? (
+            <form
+              className="adm-folder-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const failed = await onCreate(name);
+                if (failed) return setError(failed);
+                setAdding(false);
+                setName('');
+                setError('');
+              }}
+            >
+              <label className="sr-only" htmlFor="adm-new-folder">
+                New folder name
+              </label>
+              <input
+                id="adm-new-folder"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                required
+                // The form opened because the owner asked for it.
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                placeholder="Folder name"
+              />
+              <button type="submit" className="btn pri" disabled={!name.trim()}>
+                Create
+              </button>
+              <button type="button" className="btn" onClick={() => (setAdding(false), setError(''))}>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <button type="button" className="btn" onClick={() => setAdding(true)}>
+              + New folder
+            </button>
+          )}
+        </li>
+      </ul>
+      {error && (
+        <p role="alert" className="adm-error">
+          {error}
+        </p>
+      )}
+    </nav>
+  );
+}
+
+/** The open folder's name with Rename… and Delete… (only for real folders, not All or Unsorted). */
+function FolderHead({
+  folder,
+  onRename,
+  onDelete,
+}: {
+  folder: MediaFolder;
+  onRename: (name: string) => Promise<string | null>;
+  onDelete: () => void;
+}) {
+  const [renaming, setRenaming] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [name, setName] = useState(folder.name);
+  const [error, setError] = useState('');
+  return (
+    <div className="adm-folder-head">
+      {renaming ? (
+        <form
+          className="adm-folder-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const failed = await onRename(name);
+            if (failed) return setError(failed);
+            setRenaming(false);
+            setError('');
+          }}
+        >
+          <label className="sr-only" htmlFor="adm-rename-folder">
+            Folder name
+          </label>
+          <input
+            id="adm-rename-folder"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            required
+            // eslint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+          />
+          <button type="submit" className="btn pri" disabled={!name.trim()}>
+            Save name
+          </button>
+          <button type="button" className="btn" onClick={() => (setRenaming(false), setName(folder.name))}>
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <>
+          <h2>{folder.name}</h2>
+          <button type="button" className="btn" onClick={() => setRenaming(true)}>
+            Rename…
+          </button>
+          {confirming ? (
+            <span className="adm-confirm" role="group" aria-label="Confirm delete">
+              Delete the folder “{folder.name}”?
+              {folder.file_count > 0 && ` Its ${files(folder.file_count)} move to Unsorted.`}
+              <button type="button" className="btn adm-danger" onClick={onDelete}>
+                Delete folder
+              </button>
+              <button type="button" className="btn" onClick={() => setConfirming(false)}>
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button type="button" className="btn" onClick={() => setConfirming(true)}>
+              Delete folder…
+            </button>
+          )}
+        </>
+      )}
+      {error && (
+        <p role="alert" className="adm-error">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
-  const [filters, setFilters] = useState<Filters>({ kind: '', q: '', unused: false });
+  const [filters, setFilters] = useState<Filters>({ kind: '', q: '', unused: false, folder: '' });
   const { items, setItems, more, failed, reload, loadMore } = useMediaList(filters);
+  const { folders, reload: reloadFolders } = useFolders();
+  const folder = filters.folder ?? '';
+  const [view, setView] = useFolderView(folder);
   const [open, setOpen] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [target, setTarget] = useState('none');
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(0);
   const images = useRef<HTMLInputElement>(null);
-  const files = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const current = folders?.folders.find((f) => f.id === folder) ?? null;
+  const folderName = (id: string | null | undefined) =>
+    id ? (folders?.folders.find((f) => f.id === id)?.name ?? '') : 'Unsorted';
+
+  function openFolder(id: string) {
+    setFilters((f) => ({ ...f, folder: id }));
+    setOpen(null);
+    setSelected(new Set());
+    setMessage('');
+  }
+
+  async function moveTo(ids: string[], to: string | null) {
+    const { status, data } = await api<{ moved?: number; error?: string }>('/api/admin/media/move', {
+      method: 'POST',
+      body: { ids, folder: to },
+    });
+    if (status !== 200) {
+      setMessage(`Not moved: ${data.error ?? 'try again'}.`);
+      return false;
+    }
+    await Promise.all([reload(), reloadFolders()]);
+    return true;
+  }
 
   async function uploadAll(list: File[], kind: MediaKind) {
+    // Into the open folder; from All media or Unsorted, into Unsorted.
+    const into = current?.id ?? null;
     for (const file of list) {
       setUploading((n) => n + 1);
       try {
         const m = await upload(file, kind);
-        setMessage(m.duplicate ? `“${file.name}” was already in the library.` : `Uploaded “${m.original_name}”.`);
-        if (!m.duplicate) await reload();
+        if (m.duplicate) {
+          setMessage(`“${file.name}” was already in the library.`);
+          continue;
+        }
+        if (into) await moveTo([m.id], into);
+        else await Promise.all([reload(), reloadFolders()]);
+        setMessage(into ? `Uploaded “${m.original_name}” to ${current!.name}.` : `Uploaded “${m.original_name}”.`);
       } catch (e) {
         setMessage(`Couldn’t upload “${file.name}”: ${e instanceof Error ? e.message : 'try again'}`);
       } finally {
@@ -145,6 +420,75 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
     void uploadAll(list, kind);
   };
 
+  async function createFolder(name: string) {
+    const { status, data } = await api<{ id?: string; error?: string }>('/api/admin/media/folders', {
+      method: 'POST',
+      body: { name },
+    });
+    if (status !== 201) return `Not created: ${data.error ?? 'try again'}.`;
+    await reloadFolders();
+    openFolder(data.id!);
+    setMessage(`Created the folder “${name.trim()}”.`);
+    return null;
+  }
+
+  async function renameFolder(name: string) {
+    const { status, data } = await api<{ error?: string }>(`/api/admin/media/folders/${current!.id}`, {
+      method: 'PATCH',
+      body: { name },
+    });
+    if (status !== 200) return `Not renamed: ${data.error ?? 'try again'}.`;
+    await reloadFolders();
+    setMessage('Renamed.');
+    return null;
+  }
+
+  async function deleteFolder() {
+    const gone = current!;
+    const { status, data } = await api<{ moved?: number; error?: string }>(`/api/admin/media/folders/${gone.id}`, {
+      method: 'DELETE',
+    });
+    if (status !== 200) return setMessage(`Not deleted: ${data.error ?? 'try again'}.`);
+    await reloadFolders();
+    openFolder('');
+    setMessage(`Deleted the folder “${gone.name}”${data.moved ? `; its ${files(data.moved)} moved to Unsorted` : ''}.`);
+  }
+
+  async function moveSelected() {
+    const ids = [...selected];
+    const to = target === 'none' ? null : target;
+    if (await moveTo(ids, to)) {
+      setSelected(new Set());
+      setMessage(`Moved ${files(ids.length)} to ${folderName(to)}.`);
+    }
+  }
+
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  const details = (m: MediaItem) => (
+    <MediaDetails
+      id={m.id}
+      folders={folders?.folders ?? []}
+      onChanged={(next) => setItems((list) => list?.map((x) => (x.id === next.id ? next : x)) ?? null)}
+      onMove={async (to) => {
+        if (await moveTo([m.id], to)) setMessage(`Moved “${m.original_name}” to ${folderName(to)}.`);
+      }}
+      onDeleted={() => {
+        setItems((list) => list?.filter((x) => x.id !== m.id) ?? null);
+        setOpen(null);
+        setMessage(`Deleted “${m.original_name}”.`);
+        void reloadFolders();
+      }}
+    />
+  );
+
+  const where = current ? current.name : folder === 'none' ? 'Unsorted' : 'All media';
+
   return (
     <>
       <div className="adm-head">
@@ -153,7 +497,7 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
           <button type="button" className="btn pri" onClick={() => images.current?.click()}>
             Upload images
           </button>
-          <button type="button" className="btn" onClick={() => files.current?.click()}>
+          <button type="button" className="btn" onClick={() => fileInput.current?.click()}>
             Upload files
           </button>
           <input
@@ -166,7 +510,7 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
             onChange={picked('image')}
           />
           <input
-            ref={files}
+            ref={fileInput}
             type="file"
             hidden
             multiple
@@ -176,9 +520,43 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
           />
         </div>
       </div>
+      <FolderBar folders={folders} current={folder} onOpen={openFolder} onCreate={createFolder} />
+      {current && <FolderHead key={current.id} folder={current} onRename={renameFolder} onDelete={deleteFolder} />}
       <FilterBar filters={filters} onChange={setFilters} />
+      <div className="adm-media-tools">
+        <div role="group" aria-label="View" className="adm-view">
+          <button type="button" className="btn" aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+            Grid
+          </button>
+          <button type="button" className="btn" aria-pressed={view === 'list'} onClick={() => setView('list')}>
+            List
+          </button>
+        </div>
+        {selected.size > 0 && (
+          <div className="adm-move" role="group" aria-label="Selected files">
+            <span>{selected.size} selected</span>
+            <label>
+              Move to{' '}
+              <select value={target} onChange={(e) => setTarget(e.target.value)}>
+                <option value="none">Unsorted</option>
+                {folders?.folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="btn pri" onClick={() => void moveSelected()}>
+              Move
+            </button>
+            <button type="button" className="btn" onClick={() => setSelected(new Set())}>
+              Clear selection
+            </button>
+          </div>
+        )}
+      </div>
       <p className="adm-live" role="status">
-        {uploading ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}…` : message}
+        {uploading ? `Uploading ${files(uploading)}…` : message}
       </p>
       {failed ? (
         <p role="alert" className="adm-error">
@@ -188,12 +566,95 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
         <p aria-live="polite">Loading…</p>
       ) : items.length === 0 ? (
         <p className="empty">
-          {filters.q || filters.kind || filters.unused ? 'Nothing matches.' : 'Nothing uploaded yet.'}
+          {filters.q || filters.kind || filters.unused
+            ? 'Nothing matches.'
+            : current
+              ? 'This folder is empty. Upload here, or move files in from All media.'
+              : folder === 'none'
+                ? 'Nothing unsorted.'
+                : 'Nothing uploaded yet.'}
         </p>
+      ) : view === 'list' ? (
+        <div className="adm-table-wrap">
+          <table className="adm-table adm-media-table" aria-label={`Media in ${where}`}>
+            <thead>
+              <tr>
+                <th scope="col">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all shown"
+                    checked={items.every((m) => selected.has(m.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(items.map((m) => m.id)) : new Set())}
+                  />
+                </th>
+                <th scope="col">Name</th>
+                <th scope="col" className="adm-col-opt">
+                  Type
+                </th>
+                <th scope="col">Size</th>
+                <th scope="col" className="adm-col-opt">
+                  Used
+                </th>
+                {!folder && (
+                  <th scope="col" className="adm-col-opt">
+                    Folder
+                  </th>
+                )}
+                <th scope="col" className="adm-col-opt">
+                  Uploaded
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((m) => (
+                <Fragment key={m.id}>
+                  <tr className={open === m.id ? 'is-open' : undefined}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${m.original_name}`}
+                        checked={selected.has(m.id)}
+                        onChange={() => toggle(m.id)}
+                      />
+                    </td>
+                    <th scope="row">
+                      <button
+                        type="button"
+                        className="adm-media-row"
+                        aria-expanded={open === m.id}
+                        onClick={() => setOpen(open === m.id ? null : m.id)}
+                      >
+                        <Thumb item={m} size={40} />
+                        <span className="adm-media-name">{m.original_name}</span>
+                      </button>
+                    </th>
+                    <td className="adm-col-opt">{m.kind === 'image' ? 'Image' : extension(m)}</td>
+                    <td>{summary(m)}</td>
+                    <td className="adm-col-opt">{m.use_count ? m.use_count : '—'}</td>
+                    {!folder && <td className="adm-col-opt">{folderName(m.folder_id)}</td>}
+                    <td className="adm-col-opt">{new Date(m.created_at).toLocaleDateString('en-GB')}</td>
+                  </tr>
+                  {open === m.id && (
+                    <tr className="adm-media-detail-row">
+                      <td colSpan={folder ? 6 : 7}>{details(m)}</td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <ul className="adm-media" aria-label="Media">
           {items.map((m) => (
             <li key={m.id} className={open === m.id ? 'frame is-open' : 'frame'}>
+              <input
+                type="checkbox"
+                className="adm-media-pick"
+                aria-label={`Select ${m.original_name}`}
+                checked={selected.has(m.id)}
+                onChange={() => toggle(m.id)}
+              />
               <button
                 type="button"
                 className="adm-media-item"
@@ -207,17 +668,7 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
                   {summary(m)} · {use(m)}
                 </span>
               </button>
-              {open === m.id && (
-                <MediaDetails
-                  id={m.id}
-                  onChanged={(next) => setItems((list) => list?.map((x) => (x.id === next.id ? next : x)) ?? null)}
-                  onDeleted={() => {
-                    setItems((list) => list?.filter((x) => x.id !== m.id) ?? null);
-                    setOpen(null);
-                    setMessage(`Deleted “${m.original_name}”.`);
-                  }}
-                />
-              )}
+              {open === m.id && details(m)}
             </li>
           ))}
         </ul>
@@ -233,11 +684,16 @@ export function MediaLibrary({ upload = uploadMedia }: { upload?: Upload }) {
 
 function MediaDetails({
   id,
+  folders,
   onChanged,
+  onMove,
   onDeleted,
 }: {
   id: string;
+  folders: MediaFolder[];
   onChanged: (m: MediaItem) => void;
+  /** Into a folder, or back to Unsorted (null). */
+  onMove: (folder: string | null) => Promise<void>;
   onDeleted: () => void;
 }) {
   const uid = useId();
@@ -302,6 +758,27 @@ function MediaDetails({
           </button>
         </div>
       </form>
+      <label className="adm-media-folder">
+        Folder
+        <select
+          value={detail.folder_id ?? ''}
+          disabled={busy}
+          onChange={async (e) => {
+            const to = e.target.value || null;
+            setBusy(true);
+            await onMove(to);
+            setBusy(false);
+            setDetail({ ...detail, folder_id: to });
+          }}
+        >
+          <option value="">Unsorted</option>
+          {folders.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <p className="meta">
         {detail.mime} · {summary(detail)} · uploaded {new Date(detail.created_at).toLocaleDateString('en-GB')}
       </p>
@@ -360,8 +837,9 @@ function MediaDetails({
 
 /** The editor's "From the media library…": pick an uploaded image or file to insert again. */
 export function MediaPicker({ onPick, onClose }: { onPick: (m: MediaItem) => void; onClose: () => void }) {
-  const [filters, setFilters] = useState<Filters>({ kind: '', q: '', unused: false });
+  const [filters, setFilters] = useState<Filters>({ kind: '', q: '', unused: false, folder: '' });
   const { items, more, failed, loadMore } = useMediaList(filters);
+  const { folders } = useFolders();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
 
@@ -375,7 +853,7 @@ export function MediaPicker({ onPick, onClose }: { onPick: (m: MediaItem) => voi
           Close
         </button>
       </div>
-      <FilterBar filters={filters} onChange={setFilters} />
+      <FilterBar filters={filters} onChange={setFilters} folders={folders?.folders ?? []} />
       {failed ? (
         <p role="alert" className="adm-error">
           The media library could not be loaded.

@@ -32,6 +32,8 @@ export type MediaItem = {
   original_name: string;
   created_at: string;
   use_count: number;
+  /** Its folder in the library (null: Unsorted). */
+  folder_id?: string | null;
 };
 
 const uuid = z.uuid();

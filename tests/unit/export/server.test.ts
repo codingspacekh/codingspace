@@ -16,7 +16,8 @@ function content() {
   return {
     subjects: [{ id: 'math' }],
     sections: [{ id: 's1', subject_id: 'math', slug: 'inequalities', title: 'Inequalities' }],
-    media: [{ id: 'm1', original_name: 'tri.png' }],
+    media_folders: [{ id: 'f1', name: 'Diagrams' }],
+    media: [{ id: 'm1', original_name: 'tri.png', folder_id: 'f1' }],
     posts: [
       {
         id: 'p1',

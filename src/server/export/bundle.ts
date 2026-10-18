@@ -14,6 +14,7 @@ import { zip, type ZipEntry } from './zip';
 export const EXPORT_TABLES = [
   { name: 'subjects', order: 'id' },
   { name: 'sections', order: 'id' },
+  { name: 'media_folders', order: 'id' },
   { name: 'media', order: 'id' },
   { name: 'posts', order: 'id' },
   { name: 'post_revisions', order: 'id' },

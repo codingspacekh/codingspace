@@ -6,15 +6,20 @@ import { PostError } from '@/server/admin/posts';
 import type { MediaStore } from './store';
 import type { MediaItem } from './uploads';
 
-/** The media library (03 ADM-10): browse, search, see where a file is used, rename, delete unused. */
+/**
+ * The media library (03 ADM-10): browse, search, see where a file is used, rename, delete unused.
+ * v1.1: folders, one level deep; a file is in one folder or none (Unsorted).
+ */
 
-const SELECT = 'id, kind, mime, bytes, width, height, widths, alt, original_name, created_at, use_count';
+const SELECT = 'id, kind, mime, bytes, width, height, widths, alt, original_name, created_at, use_count, folder_id';
 export const PAGE_SIZE = 60;
 
 export const listQuery = z.object({
   kind: z.enum(['image', 'file']).optional(),
   q: z.string().max(100).optional(),
   unused: z.enum(['1']).optional(),
+  /** A folder's id, or "none" for Unsorted; left out: every folder. */
+  folder: z.union([z.uuid(), z.literal('none')]).optional(),
   /** created_at of the last item already shown (newest first). */
   before: z.iso.datetime({ offset: true }).optional(),
 });
@@ -30,6 +35,8 @@ export async function listMedia(supabase: SupabaseClient, query: unknown) {
     .limit(PAGE_SIZE + 1);
   if (q.data.kind) req = req.eq('kind', q.data.kind);
   if (q.data.unused) req = req.eq('use_count', 0);
+  if (q.data.folder === 'none') req = req.is('folder_id', null);
+  else if (q.data.folder) req = req.eq('folder_id', q.data.folder);
   if (q.data.before) req = req.lt('created_at', q.data.before);
   const text = q.data.q?.trim();
   // LIKE wildcards in the search are literal characters.
@@ -100,4 +107,64 @@ export async function deleteMedia(supabase: SupabaseClient, store: MediaStore | 
   // Leftover objects are harmless (nothing links to them); a failure here isn't the owner's problem.
   if (store) await store.delete(keys).catch((e) => console.error('media delete: objects left in storage', keys, e));
   return { keys };
+}
+
+// ---------- folders (v1.1) ----------
+
+export type MediaFolder = { id: string; name: string; file_count: number };
+export type MediaFolders = { folders: MediaFolder[]; all: number; unsorted: number };
+
+/** The folders A–Z with their file counts, and the counts for "All media" and "Unsorted". */
+export async function listFolders(supabase: SupabaseClient): Promise<MediaFolders> {
+  const [folders, all, unsorted] = await Promise.all([
+    supabase.from('admin_media_folders').select('id, name, file_count').order('name'),
+    supabase.from('media').select('id', { count: 'exact', head: true }),
+    supabase.from('media').select('id', { count: 'exact', head: true }).is('folder_id', null),
+  ]);
+  for (const r of [folders, all, unsorted]) if (r.error) throw new Error(`media folders: ${r.error.message}`);
+  const list = (folders.data ?? []) as MediaFolder[];
+  list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base', numeric: true }));
+  return { folders: list, all: all.count ?? 0, unsorted: unsorted.count ?? 0 };
+}
+
+function folderError(error: { code?: string; message: string }, what: string): never {
+  const status = { PT404: 404, PT409: 409, PT422: 422 }[error.code ?? ''];
+  if (status) throw new PostError(status as PostError['status'], error.message);
+  throw new Error(`${what}: ${error.message}`);
+}
+
+export const folderInput = z.object({ name: z.string().trim().min(1, 'a folder needs a name').max(80) });
+
+/** A new folder (id null) or a new name for one; returns its id. Names are unique, whatever the case. */
+export async function saveFolder(supabase: SupabaseClient, id: string | null, input: unknown) {
+  const body = folderInput.safeParse(input);
+  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  const { data, error } = await supabase.rpc('admin_save_media_folder', {
+    p_id: id === null ? null : uuid.parse(id),
+    p_name: body.data.name,
+  });
+  if (error) folderError(error, 'admin_save_media_folder');
+  return { id: data as string };
+}
+
+/** Deletes a folder; its files go back to Unsorted (never deleted). Returns how many moved. */
+export async function deleteFolder(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase.rpc('admin_delete_media_folder', { p_id: uuid.parse(id) });
+  if (error) folderError(error, 'admin_delete_media_folder');
+  return { moved: data as number };
+}
+
+export const moveInput = z.object({
+  ids: z.array(z.uuid()).min(1).max(500),
+  /** null: back to Unsorted. */
+  folder: z.uuid().nullable(),
+});
+
+/** Moves files into a folder (or back to Unsorted). Returns how many moved. */
+export async function moveMedia(supabase: SupabaseClient, input: unknown) {
+  const body = moveInput.safeParse(input);
+  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  const { data, error } = await supabase.rpc('admin_move_media', { p_ids: body.data.ids, p_folder: body.data.folder });
+  if (error) folderError(error, 'admin_move_media');
+  return { moved: data as number };
 }
