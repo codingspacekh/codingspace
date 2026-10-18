@@ -10,6 +10,7 @@ import {
 } from '@/server/admin/syllabus';
 import { getPostPage, getSyllabusList, getSyllabusPage } from '@/server/data/public';
 import { ownerSession, serviceClient } from '../support/admin-users';
+import { ensureContent } from '../support/content';
 
 // v1.1 syllabus tags against a real database (needs content:import's lessons): the owner builds
 // a syllabus and tags lessons; visitors see the points with their published lessons only.
@@ -28,6 +29,7 @@ const lessonId = async (slug: string) => {
 beforeAll(async () => {
   owner = await ownerSession();
   service = serviceClient();
+  await ensureContent(service);
   await service.from('syllabuses').delete().like('title', 'IT syllabus%');
   await service.from('posts').delete().like('slug', 'it-syllabus-%');
 });
