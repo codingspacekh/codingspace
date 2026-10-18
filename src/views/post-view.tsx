@@ -5,7 +5,7 @@ import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { SUBJECTS } from '@/lib/subjects';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
-import { usePrefs } from '@/ui';
+import { savePost, unsavePost, usePrefs, useSaved } from '@/ui';
 
 /** Copy buttons in code blocks (rendered by the server as plain <button class="code-copy">). */
 function useCopyButtons(root: React.RefObject<HTMLElement | null>) {
@@ -47,8 +47,36 @@ function usePrintOpensDetails() {
   }, []);
 }
 
-/** 03 PUB-11: reading mode (no backdrop, glow or motion; remembered) and a print button. */
-function ReadingTools() {
+/** Save for later (kept in this browser only; listed on /saved). */
+function SaveButton({ post }: { post: PostPageData['post'] }) {
+  const saved = useSaved().some((p) => p.slug === post.slug);
+  return (
+    <>
+      <button
+        type="button"
+        className="ui-toggle"
+        aria-pressed={saved}
+        onClick={() =>
+          saved
+            ? unsavePost(post.slug)
+            : savePost({ slug: post.slug, title: post.title, subject: post.subject, lang: post.lang })
+        }
+      >
+        {saved ? '★ Saved' : '☆ Save'}
+      </button>
+      <span className="read-saved" role="status">
+        {saved && (
+          <>
+            Saved on this device. <Link href="/saved">Your saved lessons</Link>
+          </>
+        )}
+      </span>
+    </>
+  );
+}
+
+/** 03 PUB-11: reading mode (no backdrop, glow or motion; remembered), print, and save for later. */
+function ReadingTools({ post }: { post: PostPageData['post'] }) {
   const { reading, toggleReading } = usePrefs();
   return (
     <div className="read-tools">
@@ -58,6 +86,7 @@ function ReadingTools() {
       <button type="button" className="ui-toggle" onClick={() => window.print()}>
         Print
       </button>
+      <SaveButton post={post} />
     </div>
   );
 }
@@ -157,7 +186,7 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
               Part {s.position} of {s.total} in the series <Link href={`/series/${s.slug}`}>{s.title}</Link>
             </p>
           ))}
-          <ReadingTools />
+          <ReadingTools post={post} />
           {post.summary && <p className="lead">{post.summary}</p>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
 

@@ -28,6 +28,7 @@ describe('which pages are counted', () => {
     ['/search?q=cauchy', '/search'],
     ['/projects/', '/projects'],
     ['/author', '/author'],
+    ['/saved', '/saved'],
   ])('%s → %s', (asPath, path) => expect(trackedPath(asPath)).toBe(path));
 
   it.each(['/admin', '/admin/posts', '/api/visit', '/posts/', '/posts/Bad_Slug', '/rss.xml', '/study/math/x', '/404'])(
@@ -119,6 +120,8 @@ describe('dashboard numbers', () => {
   it('names pages, subjects and countries', () => {
     expect(pageLabel('/posts/am-gm', 'The AM-GM inequality')).toBe('The AM-GM inequality');
     expect(pageLabel('/', null)).toBe('Home');
+    expect(pageLabel('/saved', null)).toBe('Saved lessons');
+    expect(pageLabel('/series', null)).toBe('Series');
     expect(pageLabel('/study/physics', null)).toBe('Physics (subject page)');
     expect(pageLabel('/study/chemistry', null)).toBe('/study/chemistry');
     expect(pageLabel('/posts/gone', null)).toBe('/posts/gone');

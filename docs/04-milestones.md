@@ -325,6 +325,10 @@ Each milestone lists the **tests written first**. They start red and define "don
   > - **Backup:** `series` and `series_lessons` are in the export and the restore.
   > - Migration `20261031000000_series.sql` (additive): push it to staging **before** merging (Vercel builds `/series` against staging).
 - Offline reading (PWA).
+- Saved lessons on the device. **BUILT 2026-10-18** (owner: bookmarks without sign-in; emailing the list or moving it to another device later, if wanted):
+  > - **☆ Save** on every post (next to Reading mode and Print); **Saved** in the top bar opens `/saved`: the list, newest first, with Remove. `noindex`; counted by the analytics like other pages.
+  > - Kept in this browser's `localStorage` (`cs-saved`, `src/ui/saved-store.ts`): no account, no cookie, nothing sent to the server. Another device, a private window or cleared browsing data starts empty; Safari may clear it after 7 days without a visit, so the first save asks the browser to keep the site's storage (`navigator.storage.persist()`).
+  > - The top bar switches to the Menu button below 1000 px (was 900 px): with Saved, the links and toggles need the room.
 
 ---
 

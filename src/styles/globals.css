@@ -358,7 +358,8 @@ html[data-reading='on'] .ui-streak {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-@media (max-width: 900px) {
+/* The Menu button takes over below 1000px, where the links and toggles no longer fit in one row. */
+@media (max-width: 1000px) {
   .burger {
     display: block;
   }
@@ -1609,6 +1610,50 @@ html[data-motion='off'] *::after {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.read-tools {
+  align-items: center;
+}
+.read-saved {
+  color: var(--fg2);
+  font-size: 14px;
+}
+.read-saved a {
+  text-underline-offset: 3px;
+}
+/* Saved lessons (/saved): kept in the visitor's browser only. */
+.saved-list {
+  display: grid;
+  gap: 14px;
+  max-width: 820px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.saved-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 16px 20px;
+}
+.saved-list .tag,
+.saved-list .saved-title,
+.saved-list .meta {
+  grid-column: 1;
+}
+.saved-list .ui-toggle {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+.saved-title {
+  color: var(--fg);
+  font-size: 18px;
+  font-weight: 600;
+}
+.saved-empty {
+  max-width: 820px;
+  margin-top: 36px;
 }
 html[data-reading='on'] .ui-backdrop {
   display: none;
