@@ -29,7 +29,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 export default function Home({ counts, latest, problem, projects }: Props) {
   return (
     <Layout
-      title="CodingSpace · Competition maths, physics, coding and IT"
+      title="CodingSpaceKH · Competition maths, physics, coding and IT"
       description="Lessons in competition maths, physics, coding and Cambridge IT, written up so students can review them anytime."
       path="/"
       active="home"

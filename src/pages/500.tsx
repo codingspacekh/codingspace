@@ -4,7 +4,7 @@ import { Frame } from '@/ui';
 
 export default function ServerError() {
   return (
-    <Layout title="Something went wrong · CodingSpace">
+    <Layout title="Something went wrong · CodingSpaceKH">
       <Frame>
         <span className="eyebrow">Error 500</span>
         <h1>System fault</h1>

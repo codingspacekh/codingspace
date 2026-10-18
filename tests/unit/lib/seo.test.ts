@@ -100,7 +100,7 @@ describe('articleJsonLd', () => {
       dateModified: '2026-10-20T08:00:00Z',
       mainEntityOfPage: 'https://codingspacekh.dev/posts/am-gm',
       author: { '@type': 'Person', name: 'CodingSpace' },
-      publisher: { '@type': 'Organization', name: 'CodingSpace' },
+      publisher: { '@type': 'Organization', name: 'CodingSpaceKH' },
     });
   });
 

@@ -14,7 +14,7 @@ export default function AdminLogin() {
   return (
     <div className="adm adm-center">
       <Head>
-        <title>Sign in · CodingSpace admin</title>
+        <title>Sign in · CodingSpaceKH admin</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <main id="main" className="frame adm-card">
