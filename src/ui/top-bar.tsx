@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
-import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from './arwes/prefs';
 
 function Logo() {
@@ -20,6 +20,7 @@ function Logo() {
 /** Study ▾ disclosure: a button that shows a list of links (not an ARIA menu; plain Tab order works). */
 function StudyMenu({ active }: { active: boolean }) {
   const [open, setOpen] = useState(false);
+  const { subjects } = useSubjects();
   const menuId = useId();
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -59,15 +60,15 @@ function StudyMenu({ active }: { active: boolean }) {
         </svg>
       </button>
       <ul className="menu" id={menuId} hidden={!open}>
-        {SUBJECT_IDS.map((id) => (
-          <li key={id}>
-            <Link href={`/study/${id}`} className={`mi c-${SUBJECTS[id].color}`} onClick={() => setOpen(false)}>
+        {subjects.map((s) => (
+          <li key={s.id}>
+            <Link href={`/study/${s.id}`} className={`mi c-${s.color}`} onClick={() => setOpen(false)}>
               <span className="g" aria-hidden="true">
-                {SUBJECTS[id].glyph}
+                {s.glyph}
               </span>
               <span>
-                <strong>{SUBJECTS[id].name}</strong>
-                <span>{SUBJECTS[id].blurb}</span>
+                <strong>{s.name}</strong>
+                <span>{s.blurb}</span>
               </span>
             </Link>
           </li>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
-import { SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
 import { savePost, unsavePost, usePrefs, useSaved } from '@/ui';
 
@@ -93,7 +93,7 @@ function ReadingTools({ post }: { post: PostPageData['post'] }) {
 
 /** One step along a series: the lesson's subject is shown, since a series crosses subjects. */
 function SeriesStep({ lesson, dir }: { lesson: SeriesLink; dir: 'prev' | 'next' }) {
-  const subject = lesson.subject ? SUBJECTS[lesson.subject] : null;
+  const subject = useSubjects().subject(lesson.subject);
   return (
     <Link href={`/posts/${lesson.slug}`} className={`frame c-${subject?.color ?? 'pink'}`}>
       <span className="meta">
@@ -129,7 +129,7 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
   usePrintOpensDetails();
-  const subject = post.subject ? SUBJECTS[post.subject] : null;
+  const subject = useSubjects().subject(post.subject);
   const { prev, next } = neighbours(siblings, post.slug);
   const isLesson = post.kind === 'lesson' && subject;
 

@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react';
 import { levelLabel } from '@/lib/format';
-import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 
 export type Section = { id: string; subject_id: string; title: string; sort: number };
 
@@ -35,6 +35,7 @@ export function SettingsPanel({
   /** Adds a section to the current subject; resolves to an error message, or null. */
   onCreateSection?: (title: string) => Promise<string | null>;
 }) {
+  const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const id = useId();
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -71,9 +72,9 @@ export function SettingsPanel({
                 onChange({ subject_id: subject, section_id: keep ? value.section_id : null });
               }}
             >
-              {SUBJECT_IDS.map((s) => (
+              {allSubjects.map(({ id: s }) => (
                 <option key={s} value={s}>
-                  {SUBJECTS[s].name}
+                  {subjectOf(s)?.name}
                 </option>
               ))}
             </select>
@@ -122,9 +123,8 @@ export function SettingsPanel({
                   </p>
                 ) : (
                   <p id={`${id}-addhint`} className="adm-hint">
-                    Added at the end of{' '}
-                    {value.subject_id ? SUBJECTS[value.subject_id as keyof typeof SUBJECTS]?.name : 'the subject'}. It
-                    shows on the subject page as “coming soon” until it has a lesson.
+                    Added at the end of {subjectOf(value.subject_id)?.name ?? 'the subject'}. It shows on the subject
+                    page as “coming soon” until it has a lesson.
                   </p>
                 )}
                 <div className="adm-quick">

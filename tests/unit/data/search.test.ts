@@ -1,6 +1,7 @@
 // @vitest-environment node
 const rpc = vi.fn();
-vi.mock('@/server/data/public', () => ({ db: () => ({ rpc }) }));
+// The menus' subjects come from the database too: none here.
+vi.mock('@/server/data/public', () => ({ db: () => ({ rpc }), getSubjects: async () => [] }));
 import { allowSearch, clientIp, rateKey, searchPosts } from '@/server/data/search';
 import { getServerSideProps } from '@/pages/search';
 
@@ -9,7 +10,7 @@ const req = (headers: Record<string, string>) => ({ headers, socket: { remoteAdd
 beforeEach(() => rpc.mockReset());
 
 describe('search data (03 PUB-09)', () => {
-  it('maps rows to results, with an unknown subject as none', async () => {
+  it('maps rows to results', async () => {
     rpc.mockResolvedValue({
       data: [
         {
@@ -25,7 +26,7 @@ describe('search data (03 PUB-09)', () => {
         {
           slug: 'b',
           kind: 'life',
-          subject_id: 'nope',
+          subject_id: null,
           lang: 'km',
           title: 'B',
           summary: 'S',
@@ -91,7 +92,7 @@ describe('the /search page', () => {
 
   it('without a query: an empty page, cached for an hour, no database call', async () => {
     const { out, headers } = call(undefined);
-    expect(await out).toEqual({ props: { q: '', results: null, limited: false } });
+    expect(await out).toEqual({ props: { q: '', results: null, limited: false, subjects: [] } });
     expect(headers['Cache-Control']).toMatch(/s-maxage=3600/);
     expect(rpc).not.toHaveBeenCalled();
   });
@@ -99,7 +100,7 @@ describe('the /search page', () => {
   it('searches and caches the answer at the CDN for five minutes', async () => {
     rpc.mockResolvedValueOnce({ data: true, error: null }).mockResolvedValueOnce({ data: [], error: null });
     const { out, headers, res } = call('  cauchy ');
-    expect(await out).toEqual({ props: { q: 'cauchy', results: [], limited: false } });
+    expect(await out).toEqual({ props: { q: 'cauchy', results: [], limited: false, subjects: [] } });
     expect(res.statusCode).toBe(200);
     expect(headers['Cache-Control']).toBe('public, s-maxage=300, stale-while-revalidate=600');
   });
@@ -107,7 +108,7 @@ describe('the /search page', () => {
   it('answers 429, uncached, after too many searches', async () => {
     rpc.mockResolvedValueOnce({ data: false, error: null });
     const { out, headers, res } = call('cauchy');
-    expect(await out).toEqual({ props: { q: 'cauchy', results: null, limited: true } });
+    expect(await out).toEqual({ props: { q: 'cauchy', results: null, limited: true, subjects: [] } });
     expect(res.statusCode).toBe(429);
     expect(headers['Cache-Control']).toBe('no-store');
     expect(headers['Retry-After']).toBe('60');

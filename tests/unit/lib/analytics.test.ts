@@ -7,10 +7,10 @@ import {
   isBot,
   pageLabel,
   sourceOf,
-  subjectName,
   sumDays,
   trackedPath,
 } from '@/lib/analytics';
+import { subjectName } from '../../support/subjects';
 
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
 const ANDROID_PHONE = 'Mozilla/5.0 (Linux; Android 14; SM-A156E) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';
@@ -118,15 +118,13 @@ describe('dashboard numbers', () => {
   });
 
   it('names pages, subjects and countries', () => {
-    expect(pageLabel('/posts/am-gm', 'The AM-GM inequality')).toBe('The AM-GM inequality');
-    expect(pageLabel('/', null)).toBe('Home');
-    expect(pageLabel('/saved', null)).toBe('Saved lessons');
-    expect(pageLabel('/series', null)).toBe('Series');
-    expect(pageLabel('/study/physics', null)).toBe('Physics (subject page)');
-    expect(pageLabel('/study/chemistry', null)).toBe('/study/chemistry');
-    expect(pageLabel('/posts/gone', null)).toBe('/posts/gone');
-    expect(subjectName('it')).toBe('IT');
-    expect(subjectName('zz')).toBe('zz');
+    expect(pageLabel('/posts/am-gm', 'The AM-GM inequality', subjectName)).toBe('The AM-GM inequality');
+    expect(pageLabel('/', null, subjectName)).toBe('Home');
+    expect(pageLabel('/saved', null, subjectName)).toBe('Saved lessons');
+    expect(pageLabel('/series', null, subjectName)).toBe('Series');
+    expect(pageLabel('/study/physics', null, subjectName)).toBe('Physics (subject page)');
+    expect(pageLabel('/study/chemistry', null, subjectName)).toBe('/study/chemistry');
+    expect(pageLabel('/posts/gone', null, subjectName)).toBe('/posts/gone');
     expect(countryName('KH')).toBe('Cambodia');
     expect(countryName(null)).toBe('Unknown');
   });

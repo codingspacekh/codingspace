@@ -324,6 +324,13 @@ Each milestone lists the **tests written first**. They start red and define "don
   > - **Pages rebuilt** on a series change (the list, its page, its live lessons) and when a lesson in a series is published, unpublished or deleted.
   > - **Backup:** `series` and `series_lessons` are in the export and the restore.
   > - Migration `20261031000000_series.sql` (additive): push it to staging **before** merging (Vercel builds `/series` against staging).
+- Subjects from the admin. **BUILT 2026-10-18** (owner: "what if in the future I want to add another course"; chose the admin over a code change per subject):
+  > - **Admin** (`/admin/subjects`): add a subject (name; the address `/study/<id>` follows the name, letters only, fixed once made; symbol; one of 9 colours; menu line; introduction), edit, show or hide, reorder, and delete one with no sections, lessons or problems (its projects lose the label). Audited (`subject.*` in the activity log). The four first subjects are ordinary rows now: their copy moved from the code to the database.
+  > - **Hidden first:** a new subject starts hidden so its sections and lessons can be built before students see it. Hidden means nothing of it reaches visitors: RLS hides the subject, its sections, its lessons (pages, search, series) and its problem of the week from the anon key; its page is a 404.
+  > - **One source:** menus, footer, Home (cards and orbit, up to 8 subjects on the orbit), study pages (`fallback: 'blocking'`, so a new subject needs no deploy), sitemap and every admin list read the `subjects` table. Every public page gets them as the `subjects` prop (`getSubjects()`, shared by `SubjectsProvider` in `_app`); the admin gets every subject from `/api/admin/session`.
+  > - **Pages rebuilt** on a change visitors can see: every public page (they all list the subjects), 10 at a time. Editing a hidden subject rebuilds nothing.
+  > - **Backup:** the new columns go with `subjects` in the export and the restore.
+  > - Migration `20261101000000_subjects_admin.sql` (additive): push it to staging **before** merging (Vercel builds every page against staging, and they now read `subjects.blurb`).
 - Offline reading (PWA).
 - Saved lessons on the device. **BUILT 2026-10-18** (owner: bookmarks without sign-in; emailing the list or moving it to another device later, if wanted):
   > - **☆ Save** on every post (next to Reading mode and Print); **Saved** in the top bar opens `/saved`: the list, newest first, with Remove. `noindex`; counted by the analytics like other pages.

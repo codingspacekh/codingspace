@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
+import { serviceClient } from '../support/admin-users';
 import { collectProblems, enrolEditor, expectAccessible, openStudyMenu, signInEditor } from './helpers';
 
 // M5 site content (03 ADM-11, ADM-13, ADM-14), as the second test owner. Runs in its own
@@ -304,5 +305,73 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await student.context().close();
     expect(problems).toEqual([]);
     expect(studentProblems.filter((p) => !p.includes('404'))).toEqual([]);
+  });
+
+  test('subjects: add one hidden → visitors see nothing; show it → menus, Home and its page; then delete it', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    // Letters only, like the address the form makes from the name.
+    const tag = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+    const name = `Test subject ${tag}`;
+    const id = `testsubject${tag}`;
+    try {
+      await page.goto('/admin/subjects');
+      await expect(page.getByRole('heading', { level: 1, name: 'Subjects' })).toBeVisible();
+      const form = page.getByRole('form', { name: 'Add a subject' });
+      await form.getByRole('textbox', { name: 'Name' }).fill(name);
+      await expect(form.getByRole('textbox', { name: /Address/ })).toHaveValue(id);
+      await form.getByRole('textbox', { name: /Symbol/ }).fill('⚗');
+      await form.getByRole('combobox', { name: 'Colour' }).selectOption('orange');
+      await form.getByRole('textbox', { name: /One line/ }).fill('Atoms, bonds and reactions.');
+      await form.getByRole('button', { name: 'Add subject' }).click();
+      await expect(page.getByRole('status')).toHaveText(
+        `Added “${name}” at the end, hidden. Show it once it has lessons.`,
+      );
+      await expectAccessible(page);
+
+      const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+      const studentProblems = await collectProblems(student);
+      expect((await student.goto(`/study/${id}`))!.status()).toBe(404);
+      await student.goto('/');
+      await openStudyMenu(student);
+      await expect(student.getByRole('link', { name: new RegExp(name) })).toHaveCount(0);
+
+      await page.getByRole('button', { name: `Edit ${name}` }).click();
+      const edit = page.getByRole('form', { name: `Edit ${name}` });
+      await edit.getByRole('checkbox', { name: 'Show it on the site' }).check();
+      await edit.getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByRole('status')).toHaveText(`Saved “${name}”.`);
+
+      await student.goto('/');
+      await expect(student.getByRole('link', { name: new RegExp(`^${name} Atoms, bonds.* 0 lessons$`) })).toBeVisible();
+      await openStudyMenu(student);
+      await student
+        .getByRole('link', { name: new RegExp(`${name} Atoms, bonds and reactions\\.`) })
+        .first()
+        .click();
+      await expect(student.getByRole('heading', { level: 1, name })).toBeVisible();
+      await expect(student.getByText(`Lessons for ${name} are coming soon.`)).toBeVisible();
+      await expectAccessible(student);
+
+      // The admin's other pages offer it too.
+      await page.goto(`/admin/sections?subject=${id}`);
+      await expect(page.getByRole('button', { name, pressed: true })).toBeVisible();
+      await expect(page.getByText(`${name} has no sections yet.`)).toBeVisible();
+
+      await page.goto('/admin/subjects');
+      await page.getByRole('button', { name: `Delete ${name}` }).click();
+      await page.getByRole('button', { name: 'Delete subject' }).click();
+      await expect(page.getByRole('status')).toHaveText(`Deleted “${name}”.`);
+      expect((await student.goto(`/study/${id}`))!.status()).toBe(404);
+      await student.context().close();
+      expect(problems).toEqual([]);
+      expect(studentProblems.filter((p) => !p.includes('404'))).toEqual([]);
+    } finally {
+      // Even if a step fails: a leftover subject would change the menus and the sitemap for later tests.
+      await serviceClient().from('subjects').delete().eq('id', id);
+    }
   });
 });

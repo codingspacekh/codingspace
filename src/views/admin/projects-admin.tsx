@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
 import { landingUrlProblem } from '@/lib/site-rules';
-import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { AdminProject } from '@/server/admin/site';
 
 type Reply = { error?: string; failed?: string[] };
@@ -181,6 +181,7 @@ function ProjectCard({
   onSave: (f: Fields) => Promise<boolean>;
   onDelete: () => void;
 }) {
+  const { subject: subjectOf } = useSubjects();
   const id = useId();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -209,9 +210,7 @@ function ProjectCard({
         <>
           <p>{p.description}</p>
           <p className="meta">
-            {[p.subject_id ? SUBJECTS[p.subject_id].name : null, p.tag, p.platforms.join(', ')]
-              .filter(Boolean)
-              .join(' · ')}
+            {[subjectOf(p.subject_id)?.name, p.tag, p.platforms.join(', ')].filter(Boolean).join(' · ')}
           </p>
           <p className="meta">
             <a href={p.landing_url} target="_blank" rel="noopener noreferrer">
@@ -287,6 +286,7 @@ function ProjectForm({
   onSubmit: (f: Fields) => Promise<boolean>;
   onCancel?: () => void;
 }) {
+  const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const id = useId();
   const [f, setF] = useState(initial);
   const [touched, setTouched] = useState(false);
@@ -343,9 +343,9 @@ function ProjectForm({
           onChange={(e) => set('subject_id', (e.target.value || null) as SubjectId | null)}
         >
           <option value="">None</option>
-          {SUBJECT_IDS.map((s) => (
+          {allSubjects.map(({ id: s }) => (
             <option key={s} value={s}>
-              {SUBJECTS[s].name}
+              {subjectOf(s)?.name}
             </option>
           ))}
         </select>

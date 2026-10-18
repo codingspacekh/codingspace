@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { normalizeDoc } from '@/lib/content-json';
 import { postSlug, revalidationPaths, scheduleProblem, type PublishedRef } from '@/lib/post-rules';
+import { SUBJECT_ID } from '@/lib/subjects';
 import { renderContent } from '@/server/render';
 
 /**
@@ -23,7 +24,9 @@ export class PostError extends Error {
 type DbError = { code?: string; message: string };
 
 function fail(error: DbError, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23505': 409, '23514': 422, '22P02': 400 }[error.code ?? ''];
+  const status = { PT404: 404, PT409: 409, PT422: 422, '23503': 422, '23505': 409, '23514': 422, '22P02': 400 }[
+    error.code ?? ''
+  ];
   if (status) throw new PostError(status as PostError['status'], error.message);
   throw new Error(`${what}: ${error.message}`);
 }
@@ -35,7 +38,8 @@ async function call<T>(supabase: SupabaseClient, fn: string, args: Record<string
 }
 
 const uuid = z.uuid();
-const SUBJECTS = ['math', 'physics', 'coding', 'it'] as const;
+// Any subject's id; the database checks that it exists (foreign key → 422).
+const subjectId = z.string().regex(SUBJECT_ID);
 
 /** What the editor may save (03 ADM-04/05). The database checks the same limits again. */
 export const draftFields = z
@@ -47,7 +51,7 @@ export const draftFields = z
       .string()
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
       .max(80),
-    subject_id: z.enum(SUBJECTS).nullable(),
+    subject_id: subjectId.nullable(),
     section_id: uuid.nullable(),
     level: z.number().int().min(1).max(3),
     minutes: z.number().int().min(1).max(600),
@@ -61,7 +65,7 @@ export type DraftFields = z.infer<typeof draftFields>;
 export const newPost = z.object({
   kind: z.enum(['lesson', 'life']),
   title: z.string().max(200).default(''),
-  subject_id: z.enum(SUBJECTS).nullable().default(null),
+  subject_id: subjectId.nullable().default(null),
   section_id: uuid.nullable().default(null),
   lang: z.enum(['en', 'km']).default('en'),
 });

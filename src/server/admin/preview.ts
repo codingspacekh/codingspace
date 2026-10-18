@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isSubjectId } from '@/lib/subjects';
 import { renderContent } from '@/server/render';
 import type { PostPageData } from '@/server/data/types';
 import { getPostForEdit } from './posts';
@@ -19,7 +18,7 @@ export async function previewPost(supabase: SupabaseClient, id: string): Promise
     summary: draft.summary,
     html: out.html,
     toc: out.toc,
-    subject: draft.kind === 'lesson' && isSubjectId(draft.subject_id) ? draft.subject_id : null,
+    subject: draft.kind === 'lesson' ? draft.subject_id : null,
     level: draft.level,
     lang: draft.lang,
     minutes: draft.minutes,

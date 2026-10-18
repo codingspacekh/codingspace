@@ -1,5 +1,3 @@
-import { isSubjectId, SUBJECTS } from './subjects';
-
 /**
  * Owner analytics (v1.1): the rules shared by the visit beacon, /api/visit and the dashboard.
  * Plain functions only: this file is also bundled for the browser (no zod here).
@@ -131,16 +129,18 @@ const FIXED_PAGES: Record<string, string> = {
   '/series': 'Series',
 };
 
-/** A readable name for a counted page: the lesson's title, "Math (subject page)", "Home"… */
-export function pageLabel(path: string, title: string | null): string {
+/**
+ * A readable name for a counted page: the lesson's title, "Math (subject page)", "Home"…
+ * `subjectName` gives a subject's current name (the admin's subject list).
+ */
+export function pageLabel(path: string, title: string | null, subjectName: (id: string) => string | undefined): string {
   if (title) return title;
   if (FIXED_PAGES[path]) return FIXED_PAGES[path];
   const study = /^\/study\/([a-z]+)$/.exec(path)?.[1];
-  if (study && isSubjectId(study)) return `${SUBJECTS[study].name} (subject page)`;
+  const name = study && subjectName(study);
+  if (name) return `${name} (subject page)`;
   return path;
 }
-
-export const subjectName = (id: string) => (isSubjectId(id) ? SUBJECTS[id].name : id);
 
 export const DEVICE_LABELS: Record<Device, string> = { mobile: 'Phone', tablet: 'Tablet', desktop: 'Computer' };
 

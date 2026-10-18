@@ -3,7 +3,8 @@ import Head from 'next/head';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
 import { articleJsonLd, SITE_NAME } from '@/lib/seo';
-import { getAuthorName, getPostPage, getPostSlugs } from '@/server/data/public';
+import type { Subject } from '@/lib/subjects';
+import { getAuthorName, getPostPage, getPostSlugs, getSubjects } from '@/server/data/public';
 import type { PostPageData } from '@/server/data/types';
 import { PostView } from '@/views/post-view';
 
@@ -13,13 +14,13 @@ export const getStaticPaths: GetStaticPaths = async () => ({
   fallback: 'blocking',
 });
 
-type Props = PostPageData & { author: string };
+type Props = PostPageData & { author: string; subjects: Subject[] };
 
 export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
   const slug = typeof params?.slug === 'string' ? params.slug : '';
-  const [data, author] = await Promise.all([slug ? getPostPage(slug) : null, getAuthorName()]);
+  const [data, author, subjects] = await Promise.all([slug ? getPostPage(slug) : null, getAuthorName(), getSubjects()]);
   if (!data) return { notFound: true, revalidate: REVALIDATE };
-  return { props: { ...data, author: author ?? SITE_NAME }, revalidate: REVALIDATE };
+  return { props: { ...data, author: author ?? SITE_NAME, subjects }, revalidate: REVALIDATE };
 };
 
 export default function PostPage({ author, ...data }: Props) {

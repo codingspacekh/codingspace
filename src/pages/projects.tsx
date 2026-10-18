@@ -1,16 +1,17 @@
 import type { GetStaticProps } from 'next';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
-import { getProjects } from '@/server/data/public';
+import type { Subject } from '@/lib/subjects';
+import { getProjects, getSubjects } from '@/server/data/public';
 import type { Project } from '@/server/data/types';
 import { ProjectCard } from '@/views/cards';
 
-type Props = { projects: Project[] };
+type Props = { projects: Project[]; subjects: Subject[] };
 
-export const getStaticProps: GetStaticProps<Props> = async () => ({
-  props: { projects: await getProjects() },
-  revalidate: REVALIDATE,
-});
+export const getStaticProps: GetStaticProps<Props> = async () => {
+  const [projects, subjects] = await Promise.all([getProjects(), getSubjects()]);
+  return { props: { projects, subjects }, revalidate: REVALIDATE };
+};
 
 export default function Projects({ projects }: Props) {
   return (

@@ -8,6 +8,8 @@ import { markdownToDoc, type MarkdownResult } from './markdown';
  * and reported together, each prefixed with its file, so one run shows everything to fix.
  */
 
+// The content/ folder holds starter content for the four seeded subjects only; subjects added
+// in /admin/subjects get their lessons in the admin.
 export const SUBJECTS = ['math', 'physics', 'coding', 'it'] as const;
 export type Subject = (typeof SUBJECTS)[number];
 

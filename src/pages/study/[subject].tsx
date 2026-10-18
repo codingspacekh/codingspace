@@ -2,28 +2,33 @@ import type { GetStaticPaths, GetStaticProps } from 'next';
 import Link from 'next/link';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
-import { isSubjectId, SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
-import { getFeaturedProblem, getSubjectSections } from '@/server/data/public';
+import { SUBJECT_ID, type Subject } from '@/lib/subjects';
+import { getFeaturedProblem, getSubjects, getSubjectSections } from '@/server/data/public';
 import type { FeaturedProblem, SectionWithLessons } from '@/server/data/types';
 import { LessonRow } from '@/views/cards';
 import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 
-type Props = { subject: SubjectId; sections: SectionWithLessons[]; problem: FeaturedProblem | null };
+type Props = { subject: Subject; sections: SectionWithLessons[]; problem: FeaturedProblem | null; subjects: Subject[] };
 
 export const getStaticPaths: GetStaticPaths = async () => ({
-  paths: SUBJECT_IDS.map((subject) => ({ params: { subject } })),
-  fallback: false,
+  paths: (await getSubjects()).map((s) => ({ params: { subject: s.id } })),
+  // Subjects added (or shown) after the build are rendered on first request, then cached.
+  fallback: 'blocking',
 });
 
 export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
-  const subject = params?.subject;
-  if (!isSubjectId(subject)) return { notFound: true };
-  const [sections, problem] = await Promise.all([getSubjectSections(subject), getFeaturedProblem(subject)]);
-  return { props: { subject, sections, problem }, revalidate: REVALIDATE };
+  const id = params?.subject;
+  if (typeof id !== 'string' || !SUBJECT_ID.test(id)) return { notFound: true, revalidate: REVALIDATE };
+  // Hidden subjects aren't in the list (RLS), so their page is a 404 like a missing one.
+  const subjects = await getSubjects();
+  const subject = subjects.find((s) => s.id === id);
+  if (!subject) return { notFound: true, revalidate: REVALIDATE };
+  const [sections, problem] = await Promise.all([getSubjectSections(subject.id), getFeaturedProblem(subject.id)]);
+  return { props: { subject, sections, problem, subjects }, revalidate: REVALIDATE };
 };
 
-export default function StudySubject({ subject, sections, problem }: Props) {
-  const s = SUBJECTS[subject];
+export default function StudySubject({ subject: s, sections, problem }: Props) {
+  const subject = s.id;
   return (
     <Layout title={`${s.name} · CodingSpaceKH`} description={s.intro} path={`/study/${subject}`} active="study">
       <div className={`c-${s.color}`}>

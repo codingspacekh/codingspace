@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { UiRoot } from '@/ui';
 import { PostView } from '@/views/post-view';
 import type { PostPageData } from '@/server/data/types';
+import { render } from '../../support/subjects';
 
 const base: PostPageData = {
   post: {

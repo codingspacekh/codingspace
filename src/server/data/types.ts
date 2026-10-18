@@ -60,8 +60,8 @@ export type SeriesSummary = {
   title: string;
   description: string;
   lessonCount: number;
-  /** The subjects its lessons come from, in the site's subject order. */
-  subjects: SubjectId[];
+  /** The subjects its lessons come from, in the site's subject order (not `subjects`: _app reads that prop). */
+  subjectIds: SubjectId[];
 };
 
 export type SeriesPageData = Omit<SeriesSummary, 'lessonCount'> & { lessons: PostCard[] };

@@ -1,39 +1,46 @@
-/** The four fixed subjects (seeded in the init migration) and their copy. */
-export const SUBJECTS = {
-  math: {
-    name: 'Math',
-    glyph: '∑',
-    color: 'cyan',
-    blurb: 'Competition maths: inequalities, sequences, functional equations and more.',
-    intro:
-      'Olympiad-style mathematics. These problems reward clever ideas, not formula plugging. Each section moves from first tools to contest-level problems.',
-  },
-  physics: {
-    name: 'Physics',
-    glyph: 'Ψ',
-    color: 'violet',
-    blurb: 'Mechanics to modern physics, with diagrams and simulations.',
-    intro:
-      'Physics built from intuition first, then equations. Each lesson has worked problems and, where possible, a simulation to play with.',
-  },
-  coding: {
-    name: 'Coding',
-    glyph: '</>',
-    color: 'amber',
-    blurb: 'Python, algorithms, data structures and Cambridge CS 9618.',
-    intro:
-      'Programming from the first loop to Paper 4. Every lesson has code you can run, plus pseudocode in the Cambridge 9618 style.',
-  },
-  it: {
-    name: 'IT',
-    glyph: '⌘',
-    color: 'lime',
-    blurb: 'Cambridge IT 9626: spreadsheets, databases, networks and more.',
-    intro:
-      'Cambridge AS & A Level Information Technology (9626), with theory notes and step-by-step practical walkthroughs.',
-  },
-} as const;
+import { createContext, useContext, useMemo } from 'react';
 
-export type SubjectId = keyof typeof SUBJECTS;
-export const SUBJECT_IDS = Object.keys(SUBJECTS) as SubjectId[];
-export const isSubjectId = (v: unknown): v is SubjectId => typeof v === 'string' && Object.hasOwn(SUBJECTS, v);
+/**
+ * Subjects live in the database (public.subjects), edited in /admin/subjects. Pages get the
+ * visible ones as the `subjects` prop and _app shares them through SubjectsProvider; the admin
+ * shell shares all of them, hidden ones too.
+ */
+export type SubjectId = string;
+
+/** Colours a subject can have: the c-<colour> classes in globals.css (the database checks the same list). */
+export const SUBJECT_COLORS = ['cyan', 'violet', 'amber', 'lime', 'pink', 'orange', 'sky', 'rose', 'gold'] as const;
+export type SubjectColor = (typeof SUBJECT_COLORS)[number];
+
+export type Subject = {
+  id: SubjectId;
+  name: string;
+  glyph: string;
+  color: SubjectColor;
+  /** One line for the Study menu and the Home card. */
+  blurb: string;
+  /** The subject page's opening paragraph. */
+  intro: string;
+};
+
+/** The address in /study/<id>: lowercase letters only (also the analytics path pattern). */
+export const SUBJECT_ID = /^[a-z]{1,24}$/;
+
+/** The address a new subject's name gives: "Further Maths" → furthermaths, "Économie 2" → economie; "" for none. */
+export const subjectAddress = (name: string) =>
+  name
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .slice(0, 24);
+
+const SubjectsContext = createContext<Subject[]>([]);
+export const SubjectsProvider = SubjectsContext.Provider;
+
+/** The subjects in site order, and a lookup that is undefined for a hidden or deleted subject. */
+export function useSubjects() {
+  const subjects = useContext(SubjectsContext);
+  return useMemo(() => {
+    const byId = new Map(subjects.map((s) => [s.id, s]));
+    return { subjects, subject: (id: SubjectId | null | undefined) => (id ? byId.get(id) : undefined) };
+  }, [subjects]);
+}

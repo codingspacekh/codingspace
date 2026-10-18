@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { postSlug, revalidationPaths, type PublishedRef } from '@/lib/post-rules';
+import { SUBJECT_ID } from '@/lib/subjects';
 import { PostError } from './posts';
 
 export const newSection = z.object({
-  subject_id: z.enum(['math', 'physics', 'coding', 'it']),
+  subject_id: z.string().regex(SUBJECT_ID),
   title: z.string().trim().min(1).max(120),
   description: z.string().max(500).default(''),
 });
@@ -32,6 +33,7 @@ export async function createSection(supabase: SupabaseClient, input: unknown) {
     }
     if (error.code !== '23505') {
       if (error.code === '42501') throw new PostError(404, 'not allowed');
+      if (error.code === '23503') throw new PostError(422, 'that subject does not exist');
       throw new Error(`admin_create_section: ${error.message}`);
     }
   }
@@ -54,7 +56,7 @@ export type StructureSection = {
   lessons: StructureLesson[];
 };
 
-const subjectId = z.enum(['math', 'physics', 'coding', 'it']);
+const subjectId = z.string().regex(SUBJECT_ID);
 const uuid = z.uuid();
 
 /** A subject's sections in order, each with its lessons (drafts too) in order. */
@@ -92,7 +94,7 @@ export async function listStructure(supabase: SupabaseClient, subject: unknown):
 }
 
 function refused(error: { code?: string; message: string }, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23514': 422, '22P02': 400 }[error.code ?? ''];
+  const status = { PT404: 404, PT409: 409, PT422: 422, '23503': 422, '23514': 422, '22P02': 400 }[error.code ?? ''];
   if (status) throw new PostError(status as PostError['status'], error.message);
   throw new Error(`${what}: ${error.message}`);
 }

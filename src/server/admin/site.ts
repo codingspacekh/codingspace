@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { BUILT_IN, cleanItem, HEADER_PARTS, PHOTO_SHAPES, type AuthorItem, type AuthorSection } from '@/lib/author';
 import { postSlug } from '@/lib/post-rules';
 import { EMAIL, landingUrlProblem } from '@/lib/site-rules';
-import type { SubjectId } from '@/lib/subjects';
+import { SUBJECT_ID, type SubjectId } from '@/lib/subjects';
 import { renderSnippet } from '@/server/render/snippet';
 import { PostError } from './posts';
 
@@ -16,9 +16,16 @@ import { PostError } from './posts';
 type DbError = { code?: string; message: string };
 
 function refused(error: DbError, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23505': 409, '23514': 422, '22P02': 400, '22007': 422 }[
-    error.code ?? ''
-  ];
+  const status = {
+    PT404: 404,
+    PT409: 409,
+    PT422: 422,
+    '23503': 422,
+    '23505': 409,
+    '23514': 422,
+    '22P02': 400,
+    '22007': 422,
+  }[error.code ?? ''];
   if (status) throw new PostError(status as PostError['status'], error.message);
   if (error.code === '42501') throw new PostError(404, 'not allowed');
   throw new Error(`${what}: ${error.message}`);
@@ -37,7 +44,7 @@ function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
 }
 
 const uuid = z.uuid();
-const subject = z.enum(['math', 'physics', 'coding', 'it']);
+const subject = z.string().regex(SUBJECT_ID);
 
 // ── Projects (ADM-13) ───────────────────────────────────────────────────────
 

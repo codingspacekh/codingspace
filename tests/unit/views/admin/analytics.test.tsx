@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AnalyticsDashboard } from '@/views/admin/analytics';
 import type { Analytics } from '@/lib/analytics';
+import { render } from '../../../support/subjects';
 
 const day = (d: string, views: number, visitors: number, seconds = 0, timed = 0) => ({
   day: d,

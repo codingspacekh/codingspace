@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { formatDate, levelLabel } from '@/lib/format';
-import { SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { useSubjects, type Subject } from '@/lib/subjects';
 import type { PostCard, Project } from '@/server/data/types';
 
-const color = (subject: SubjectId | null) => (subject ? `c-${SUBJECTS[subject].color}` : 'c-pink');
+const color = (subject: Subject | undefined) => (subject ? `c-${subject.color}` : 'c-pink');
 
-export function SubjectTrack({ subject, lessons }: { subject: SubjectId; lessons: number }) {
-  const s = SUBJECTS[subject];
+export function SubjectTrack({ subject: s, lessons }: { subject: Subject; lessons: number }) {
   return (
-    <Link href={`/study/${subject}`} className={`frame track ${color(subject)}`}>
+    <Link href={`/study/${s.id}`} className={`frame track ${color(s)}`}>
       <span className="g" aria-hidden="true">
         {s.glyph}
       </span>
@@ -22,9 +21,9 @@ export function SubjectTrack({ subject, lessons }: { subject: SubjectId; lessons
 }
 
 export function PostTile({ post }: { post: PostCard }) {
-  const s = post.subject ? SUBJECTS[post.subject] : null;
+  const s = useSubjects().subject(post.subject);
   return (
-    <Link href={`/posts/${post.slug}`} className={`frame post ${color(post.subject)}`} lang={post.lang}>
+    <Link href={`/posts/${post.slug}`} className={`frame post ${color(s)}`} lang={post.lang}>
       <div className="cover" aria-hidden="true">
         <b>{s?.glyph ?? '✦'}</b>
       </div>
@@ -57,13 +56,9 @@ export function LessonRow({ lesson }: { lesson: PostCard }) {
 }
 
 export function ProjectCard({ project }: { project: Project }) {
+  const s = useSubjects().subject(project.subject);
   return (
-    <a
-      href={project.landingUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`frame proj ${color(project.subject)}`}
-    >
+    <a href={project.landingUrl} target="_blank" rel="noopener noreferrer" className={`frame proj ${color(s)}`}>
       <span className="ico" aria-hidden="true">
         {project.glyph || '◆'}
       </span>

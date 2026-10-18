@@ -2,19 +2,20 @@ import type { GetStaticProps } from 'next';
 import Link from 'next/link';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
-import { SUBJECTS } from '@/lib/subjects';
-import { getSeriesList } from '@/server/data/public';
+import { useSubjects, type Subject } from '@/lib/subjects';
+import { getSeriesList, getSubjects } from '@/server/data/public';
 import type { SeriesSummary } from '@/server/data/types';
 
-type Props = { series: SeriesSummary[] };
+type Props = { series: SeriesSummary[]; subjects: Subject[] };
 
-export const getStaticProps: GetStaticProps<Props> = async () => ({
-  props: { series: await getSeriesList() },
-  revalidate: REVALIDATE,
-});
+export const getStaticProps: GetStaticProps<Props> = async () => {
+  const [series, subjects] = await Promise.all([getSeriesList(), getSubjects()]);
+  return { props: { series, subjects }, revalidate: REVALIDATE };
+};
 
 /** v1.1: every lesson series, in the owner's order. A series can mix subjects. */
 export default function SeriesIndex({ series }: Props) {
+  const { subject } = useSubjects();
   return (
     <Layout
       title="Series · CodingSpaceKH"
@@ -48,9 +49,9 @@ export default function SeriesIndex({ series }: Props) {
                   <h2>{s.title}</h2>
                   {s.description && <p>{s.description}</p>}
                   <span className="stack">
-                    {s.subjects.map((id) => (
-                      <span key={id} className={`tag c-${SUBJECTS[id].color}`}>
-                        {SUBJECTS[id].name}
+                    {s.subjectIds.map((id) => (
+                      <span key={id} className={`tag c-${subject(id)?.color ?? 'pink'}`}>
+                        {subject(id)?.name ?? id}
                       </span>
                     ))}
                     <span className="meta">

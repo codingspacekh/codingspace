@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
-import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { StructureSection } from '@/server/admin/sections';
 import { Modal } from './modal';
 import { StatusBadge } from './posts-browser';
@@ -14,6 +14,7 @@ type Reply = { error?: string; failed?: string[] };
  * and the order of the lessons inside each one. Every change rebuilds the pages that show it.
  */
 export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onSubject: (s: SubjectId) => void }) {
+  const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const [sections, setSections] = useState<StructureSection[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
@@ -76,9 +77,9 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
         </button>
       </div>
       <div role="group" aria-label="Subject" className="ed-panels adm-subjects">
-        {SUBJECT_IDS.map((s) => (
+        {allSubjects.map(({ id: s }) => (
           <button key={s} type="button" className="btn" aria-pressed={s === subject} onClick={() => onSubject(s)}>
-            {SUBJECTS[s].name}
+            {subjectOf(s)?.name}
           </button>
         ))}
       </div>
@@ -94,7 +95,7 @@ export function StudyStructure({ subject, onSubject }: { subject: SubjectId; onS
       ) : (
         <>
           {sections.length === 0 ? (
-            <p className="empty">{SUBJECTS[subject].name} has no sections yet. Add the first one with New section.</p>
+            <p className="empty">{subjectOf(subject)?.name} has no sections yet. Add the first one with New section.</p>
           ) : (
             <ol className="adm-sections">
               {sections.map((s, i) => (
@@ -379,9 +380,10 @@ function AddSection({
   onAdd: (title: string, description: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { subject: subjectOf } = useSubjects();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const name = `Add a section to ${SUBJECTS[subject].name}`;
+  const name = `Add a section to ${subjectOf(subject)?.name ?? subject}`;
 
   async function submit(e: FormEvent) {
     e.preventDefault();

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { SettingsPanel, type Settings } from '@/views/admin/settings-panel';
+import { render } from '../../../support/subjects';
 
 const sections = [
   { id: 's-ineq', subject_id: 'math', title: 'Inequalities', sort: 1 },

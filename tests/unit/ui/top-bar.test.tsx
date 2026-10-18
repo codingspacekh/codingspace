@@ -1,12 +1,15 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TopBar, UiRoot } from '@/ui';
+import type { Subject } from '@/lib/subjects';
+import { render, SUBJECTS } from '../../support/subjects';
 
-const renderBar = () =>
+const renderBar = (subjects = SUBJECTS) =>
   render(
     <UiRoot motion={false}>
       <TopBar />
     </UiRoot>,
+    { subjects },
   );
 
 describe('<TopBar>', () => {
@@ -32,6 +35,27 @@ describe('<TopBar>', () => {
       '/study/coding',
       '/study/it',
       '/series',
+    ]);
+  });
+
+  it('lists the subjects the page was given, in their order (v1.1: subjects come from the admin)', async () => {
+    const chemistry: Subject = {
+      id: 'chemistry',
+      name: 'Chemistry',
+      glyph: '⚗',
+      color: 'orange',
+      blurb: 'Atoms up.',
+      intro: '',
+    };
+    renderBar([chemistry, SUBJECTS[0]!]);
+    await userEvent.click(screen.getByRole('button', { name: 'Study' }));
+    const chem = screen.getByRole('link', { name: /Chemistry/ });
+    expect(chem).toHaveAttribute('href', '/study/chemistry');
+    expect(chem).toHaveClass('c-orange');
+    expect(chem).toHaveTextContent('Atoms up.');
+    expect(screen.getAllByRole('link', { name: /Chemistry|Math/ }).map((l) => l.getAttribute('href'))).toEqual([
+      '/study/chemistry',
+      '/study/math',
     ]);
   });
 

@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { render } from '../../support/subjects';
 vi.mock('next/router', () => ({ useRouter: () => ({ events: { on() {}, off() {} }, pathname: '/saved' }) }));
 import SavedPage from '@/pages/saved';
 import { UiRoot } from '@/ui';

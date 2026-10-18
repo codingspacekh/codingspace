@@ -1,13 +1,13 @@
 import Head from 'next/head';
 import { formatDate } from '@/lib/format';
-import { SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import type { FeaturedProblem } from '@/server/data/types';
 
 /** 03 PUB-05: the problem of the week on Home and on its subject page; hint and solution on request. */
 export function ProblemOfTheWeek({ problem }: { problem: FeaturedProblem }) {
-  const s = SUBJECTS[problem.subject];
+  const s = useSubjects().subject(problem.subject);
   return (
-    <section className={`section c-${s.color}`} aria-labelledby="potw">
+    <section className={`section c-${s?.color ?? 'cyan'}`} aria-labelledby="potw">
       {problem.hasMath && (
         <Head>
           <link rel="stylesheet" href="/katex/katex.min.css" />
@@ -18,10 +18,7 @@ export function ProblemOfTheWeek({ problem }: { problem: FeaturedProblem }) {
           <span className="eyebrow">Week of {formatDate(problem.weekOf)}</span>
           <h2 id="potw">Problem of the week</h2>
         </div>
-        <span className="tag">
-          {s.name}
-          {problem.sectionTitle ? ` · ${problem.sectionTitle}` : ''}
-        </span>
+        <span className="tag">{[s?.name, problem.sectionTitle].filter(Boolean).join(' · ')}</span>
       </div>
       <div className="frame potw">
         <div className="q prose" dangerouslySetInnerHTML={{ __html: problem.statementHtml }} />
