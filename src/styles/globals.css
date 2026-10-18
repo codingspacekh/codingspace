@@ -1234,6 +1234,51 @@ html {
   margin-bottom: 12px;
 }
 
+/* Syllabus (v1.1): /syllabus/<slug> point by point, and the tags on a lesson. */
+.syl-points {
+  display: grid;
+  gap: 26px;
+  max-width: 900px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.syl-points li {
+  display: grid;
+  gap: 10px;
+  scroll-margin-top: calc(var(--bar-h) + 16px);
+}
+.syl-points h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.syl-code {
+  color: var(--c);
+  font-family: var(--font-mono), var(--font-khmer), monospace;
+  margin-right: 6px;
+}
+.syl-points li:target h2 {
+  text-decoration: underline;
+  text-decoration-color: var(--c);
+  text-underline-offset: 6px;
+}
+.syl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.syl-tags .tag {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  white-space: normal;
+  text-decoration: none;
+}
+.syl-tags .tag:hover {
+  border-color: var(--c);
+}
+
 /* Project pages (v1.1): /projects/<slug>, a landing page in one fixed layout. */
 .tag-soon {
   --c: var(--amber);
@@ -2986,6 +3031,20 @@ img.ProseMirror-separator {
 .adm-prefix input {
   flex: 1;
   min-width: 0;
+}
+/* Syllabus admin and the lesson editor's syllabus picker (v1.1). */
+.adm-point {
+  grid-template-columns: minmax(80px, 140px) minmax(0, 1fr);
+}
+.adm-syl-pick ul {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-syl-pick summary {
+  cursor: pointer;
 }
 /* Project page fields in the Projects admin (v1.1). */
 .adm-pj-page {

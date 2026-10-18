@@ -59,6 +59,7 @@ export function Layout({
               </Link>
             ))}
             <Link href="/series">Series</Link>
+            <Link href="/syllabus">Syllabus</Link>
             <Link href="/projects">Projects</Link>
             <Link href="/author">Author</Link>
             <a href="/rss.xml">RSS</a>

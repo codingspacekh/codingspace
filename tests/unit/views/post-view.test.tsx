@@ -189,6 +189,24 @@ describe('<PostView>', () => {
     expect(JSON.parse(localStorage.getItem('cs-done')!).items).toEqual({});
   });
 
+  it('links each syllabus point the lesson covers (v1.1)', () => {
+    renderPost({
+      ...base,
+      syllabus: [
+        { syllabus: '9618', syllabusCode: '9618', code: '1.1', title: 'Data representation' },
+        { syllabus: '9626', syllabusCode: '9626', code: '4.2(a)', title: 'Spreadsheets' },
+      ],
+    });
+    expect(screen.getByRole('link', { name: '9618 1.1 Data representation' })).toHaveAttribute(
+      'href',
+      '/syllabus/9618#p-1-1',
+    );
+    expect(screen.getByRole('link', { name: '9626 4.2(a) Spreadsheets' })).toHaveAttribute(
+      'href',
+      '/syllabus/9626#p-4-2-a',
+    );
+  });
+
   it('puts life posts under the Author page', () => {
     renderPost({ post: { ...base.post, kind: 'life', subject: null }, section: null, siblings: [], series: [] });
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });

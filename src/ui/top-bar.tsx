@@ -84,6 +84,17 @@ function StudyMenu({ active }: { active: boolean }) {
             </span>
           </Link>
         </li>
+        <li>
+          <Link href="/syllabus" className="mi c-sky" onClick={() => setOpen(false)}>
+            <span className="g" aria-hidden="true">
+              §
+            </span>
+            <span>
+              <strong>Syllabus</strong>
+              <span>Every point of your exam syllabus, with its lessons.</span>
+            </span>
+          </Link>
+        </li>
       </ul>
     </div>
   );

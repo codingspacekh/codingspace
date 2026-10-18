@@ -12,7 +12,7 @@ export type Range = (typeof RANGES)[number];
 const SLUG = '[a-z0-9]+(?:-[a-z0-9]+)*';
 /** The public pages we count. The admin, error pages and anything else are never recorded. */
 const TRACKED = new RegExp(
-  `^/(?:|study/[a-z]+|posts/${SLUG}|series|series/${SLUG}|projects|projects/${SLUG}|author|search|saved)$`,
+  `^/(?:|study/[a-z]+|posts/${SLUG}|series|series/${SLUG}|syllabus|syllabus/${SLUG}|projects|projects/${SLUG}|author|search|saved)$`,
 );
 
 /** The page's path without query or hash ("/search?q=x" → "/search"), or null if it isn't counted. */
@@ -129,6 +129,7 @@ const FIXED_PAGES: Record<string, string> = {
   '/search': 'Search',
   '/saved': 'Saved lessons',
   '/series': 'Series',
+  '/syllabus': 'Syllabus',
 };
 
 /**

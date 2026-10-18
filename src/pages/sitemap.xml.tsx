@@ -1,20 +1,23 @@
 import type { GetServerSideProps } from 'next';
 import { buildSitemap } from '@/lib/seo';
-import { getProjectSlugs, getSeriesSlugs, getSitemapPosts, getSubjects } from '@/server/data/public';
+import { getProjectSlugs, getSeriesSlugs, getSitemapPosts, getSubjects, getSyllabusSlugs } from '@/server/data/public';
 
 // Served as XML from the server; the CDN keeps it for 10 minutes.
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  const [posts, series, subjects, projects] = await Promise.all([
+  const [posts, series, subjects, projects, syllabuses] = await Promise.all([
     getSitemapPosts(),
     getSeriesSlugs(),
     getSubjects(),
     getProjectSlugs(),
+    getSyllabusSlugs(),
   ]);
   const xml = buildSitemap([
     { path: '/', lastmod: null },
     ...subjects.map((s) => ({ path: `/study/${s.id}`, lastmod: null })),
     { path: '/series', lastmod: null },
     ...series.map((slug) => ({ path: `/series/${slug}`, lastmod: null })),
+    { path: '/syllabus', lastmod: null },
+    ...syllabuses.map((slug) => ({ path: `/syllabus/${slug}`, lastmod: null })),
     { path: '/projects', lastmod: null },
     ...projects.map((slug) => ({ path: `/projects/${slug}`, lastmod: null })),
     { path: '/author', lastmod: null },

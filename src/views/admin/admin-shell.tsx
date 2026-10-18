@@ -14,6 +14,7 @@ const NAV = [
   { href: '/admin/subjects', label: 'Subjects' },
   { href: '/admin/sections', label: 'Study structure' },
   { href: '/admin/series', label: 'Series' },
+  { href: '/admin/syllabus', label: 'Syllabus' },
   { href: '/admin/problems', label: 'Problems' },
   { href: '/admin/media', label: 'Media' },
   { href: '/admin/projects', label: 'Projects' },

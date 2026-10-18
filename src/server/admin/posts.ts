@@ -134,24 +134,37 @@ export async function publishPost(supabase: SupabaseClient, id: string, revision
   return { ...result, paths: await pagesShowing(supabase, id, result) };
 }
 
-/** Every static page that shows the post: its own, its subject's, its section's and series' lessons… */
+/** Every static page that shows the post: its own, its subject's, its section's, series' and syllabuses'… */
 async function pagesShowing(supabase: SupabaseClient, id: string, ref: PublishedRef, series?: string[]) {
   const [lessons, seriesPaths] = await Promise.all([
     sectionLessons(supabase, ref),
-    series ?? seriesPages(supabase, id),
+    series ?? listingPages(supabase, id),
   ]);
   return [...new Set([...revalidationPaths(ref, lessons), ...seriesPaths])];
 }
 
 /**
- * The series the post is in (v1.1): their pages, the series list and their lessons' pages
- * ("Part n of N", previous/next) all change when it comes or goes.
+ * The series and syllabuses the post is in (v1.1): series pages, the series list and their
+ * lessons' pages ("Part n of N", previous/next), and the syllabus pages listing it, all change
+ * when it comes or goes.
  */
-async function seriesPages(supabase: SupabaseClient, id: string): Promise<string[]> {
-  const { data, error } = await supabase.from('series_lessons').select('series_id').eq('post_id', id);
-  if (error) fail(error, 'series_lessons');
-  const ids = (data ?? []).map((r) => r.series_id as string);
-  if (!ids.length) return [];
+async function listingPages(supabase: SupabaseClient, id: string): Promise<string[]> {
+  const [inSeries, inSyllabus] = await Promise.all([
+    supabase.from('series_lessons').select('series_id').eq('post_id', id),
+    supabase.from('post_syllabus').select('syllabus_points(syllabuses(slug))').eq('post_id', id),
+  ]);
+  if (inSeries.error) fail(inSeries.error, 'series_lessons');
+  if (inSyllabus.error) fail(inSyllabus.error, 'post_syllabus');
+  const syllabuses = [
+    ...new Set(
+      (inSyllabus.data as unknown as { syllabus_points: { syllabuses: { slug: string } | null } | null }[]).flatMap(
+        (r) => (r.syllabus_points?.syllabuses ? [`/syllabus/${r.syllabus_points.syllabuses.slug}`] : []),
+      ),
+    ),
+  ];
+  const syllabusPaths = syllabuses.length ? ['/syllabus', ...syllabuses] : [];
+  const ids = (inSeries.data ?? []).map((r) => r.series_id as string);
+  if (!ids.length) return syllabusPaths;
   const [series, lessons] = await Promise.all([
     supabase.from('series').select('slug').in('id', ids),
     supabase.from('public_series_lessons').select('slug').in('series_id', ids),
@@ -162,6 +175,7 @@ async function seriesPages(supabase: SupabaseClient, id: string): Promise<string
     '/series',
     ...series.data.map((r) => `/series/${r.slug as string}`),
     ...lessons.data.map((r) => `/posts/${r.slug as string}`),
+    ...syllabusPaths,
   ];
 }
 
@@ -198,8 +212,8 @@ export async function restoreRevision(supabase: SupabaseClient, id: string, revi
 }
 
 export async function deletePost(supabase: SupabaseClient, id: string) {
-  // Read before deleting: the lesson leaves its series with it.
-  const series = await seriesPages(supabase, uuid.parse(id));
+  // Read before deleting: the lesson leaves its series and syllabus points with it.
+  const series = await listingPages(supabase, uuid.parse(id));
   const result = await call<PublishedRef & { was_published: boolean }>(supabase, 'admin_delete_post', {
     p_id: id,
   });
