@@ -3548,6 +3548,130 @@ img.ProseMirror-separator {
   gap: 8px;
   min-height: 40px;
 }
+/* Media folders, views and moving (v1.1) */
+.adm-folders {
+  margin: 18px 0 0;
+}
+.adm-folders ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-folders .btn[aria-pressed='true'],
+.adm-view .btn[aria-pressed='true'] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.adm-folder-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.adm-folder-form input,
+.adm-move select,
+.adm-media-folder select {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px;
+}
+.adm-folder-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 18px 0 0;
+}
+.adm-folder-head h2 {
+  margin: 0 8px 0 0;
+  font-size: 22px;
+}
+.adm-media-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  margin: 0 0 14px;
+}
+.adm-view {
+  display: flex;
+  gap: 6px;
+}
+.adm-move {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--fg2);
+}
+.adm-media > li {
+  position: relative;
+}
+.adm-media-pick {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+}
+.adm-media-table td,
+.adm-media-table th {
+  vertical-align: middle;
+}
+.adm-media-table tr.is-open > * {
+  border-bottom: 0;
+}
+.adm-media-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.adm-media-row:focus-visible {
+  outline: 2px solid var(--cyan);
+}
+.adm-media-row img,
+.adm-media-row .adm-media-ext {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  font-size: 10px;
+}
+.adm-media-detail-row > td {
+  padding: 0;
+}
+.adm-media-table .adm-media-name {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+/* On a phone the list keeps the name and size; the rest is in each file's details. */
+@media (max-width: 640px) {
+  .adm-media-table .adm-col-opt {
+    display: none;
+  }
+}
+.adm-media-folder {
+  display: grid;
+  gap: 4px;
+  max-width: 320px;
+  color: var(--fg2);
+  font-size: 13px;
+}
 .ed-picker {
   display: grid;
   gap: 8px;

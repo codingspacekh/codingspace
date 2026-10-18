@@ -109,6 +109,20 @@ export function describeEvent(
 
   if (a in MEDIA) return { text: `${MEDIA[a]} the file ${q}`, href: '/admin/media' };
   if (a === 'media.delete') return { text: `Deleted the file ${q}`, href: '/admin/media' };
+  // Folders (v1.1): their names are only in the event (a folder isn't joined like a post).
+  if (a === 'media_folder.create') return { text: `Added the media folder ${q}`, href: '/admin/media' };
+  if (a === 'media_folder.update') return { text: `Renamed a media folder to ${q}`, href: '/admin/media' };
+  if (a === 'media_folder.delete') {
+    const n = Number(m.files) || 0;
+    return {
+      text: `Deleted the media folder ${q}${n ? ` (${n} file${n === 1 ? '' : 's'} moved to Unsorted)` : ''}`,
+      href: '/admin/media',
+    };
+  }
+  if (a === 'media.move') {
+    const n = Number(m.files) || 0;
+    return { text: `Moved ${n} file${n === 1 ? '' : 's'} to ${q}`, href: '/admin/media' };
+  }
 
   if (a === 'project.feature' && !e.entity_id) return { text: 'Featured no project', href: '/admin/projects' };
   if (a in PROJECT) return { text: `${PROJECT[a]} ${q}`, href: '/admin/projects' };

@@ -657,6 +657,77 @@ test.describe('site content', { tag: '@single-account' }, () => {
     }
   });
 
+  test('media folders: create one, move files in, see it as a list (remembered), delete it → files stay', async ({
+    page,
+  }) => {
+    const problems = await collectProblems(page);
+    const service = serviceClient();
+    const stamp = Date.now() % 100000;
+    const folder = `E2E folder ${stamp}`;
+    const names = [`e2e-folder-${stamp}-a.pdf`, `e2e-folder-${stamp}-b.pdf`];
+    try {
+      const { error } = await service.from('media').insert(
+        names.map((name, i) => ({
+          id: crypto.randomUUID(),
+          kind: 'file',
+          mime: 'application/pdf',
+          bytes: 1000 + i,
+          sha256: `${stamp}${i}`.padEnd(64, 'e'),
+          widths: [],
+          original_name: name,
+        })),
+      );
+      expect(error).toBeNull();
+
+      await page.goto('/admin/media');
+      const folders = page.getByRole('navigation', { name: 'Folders' });
+      await folders.getByRole('button', { name: '+ New folder' }).click();
+      await folders.getByRole('textbox', { name: 'New folder name' }).fill(folder);
+      await folders.getByRole('button', { name: 'Create' }).click();
+      await expect(page.getByRole('heading', { name: folder })).toBeVisible();
+      await expect(page.getByText('This folder is empty.')).toBeVisible();
+
+      await folders.getByRole('button', { name: /^Unsorted \(\d+\)$/ }).click();
+      await page.getByRole('searchbox', { name: 'Name' }).fill(`e2e-folder-${stamp}`);
+      await page.getByRole('button', { name: 'Search' }).click();
+      const grid = page.getByRole('list', { name: 'Media' });
+      await expect(grid.getByRole('listitem')).toHaveCount(2);
+      for (const name of names) await grid.getByRole('checkbox', { name: `Select ${name}` }).check();
+      const selected = page.getByRole('group', { name: 'Selected files' });
+      await selected.getByRole('combobox', { name: 'Move to' }).selectOption({ label: folder });
+      await selected.getByRole('button', { name: 'Move' }).click();
+      await expect(page.locator('.adm-main > .adm-live')).toHaveText(`Moved 2 files to ${folder}.`);
+      await expect(page.getByText('Nothing matches.')).toBeVisible();
+
+      await folders.getByRole('button', { name: `${folder} (2)` }).click();
+      await page.getByRole('button', { name: 'List' }).click();
+      const table = page.getByRole('table', { name: `Media in ${folder}` });
+      await expect(table.getByRole('row')).toHaveCount(3); // the header and two files
+      await expectAccessible(page);
+
+      // The list view is remembered for this folder on this device.
+      await page.reload();
+      await page
+        .getByRole('navigation', { name: 'Folders' })
+        .getByRole('button', { name: `${folder} (2)` })
+        .click();
+      await expect(page.getByRole('table', { name: `Media in ${folder}` })).toBeVisible();
+
+      await page.getByRole('button', { name: 'Delete folder…' }).click();
+      await expect(page.getByRole('group', { name: 'Confirm delete' })).toContainText('Its 2 files move to Unsorted.');
+      await page.getByRole('button', { name: 'Delete folder', exact: true }).click();
+      await expect(page.locator('.adm-main > .adm-live')).toHaveText(
+        `Deleted the folder “${folder}”; its 2 files moved to Unsorted.`,
+      );
+      const { data } = await service.from('media').select('folder_id').in('original_name', names);
+      expect(data).toEqual([{ folder_id: null }, { folder_id: null }]);
+      expect(problems).toEqual([]);
+    } finally {
+      await service.from('media').delete().in('original_name', names);
+      await service.from('media_folders').delete().eq('name', folder);
+    }
+  });
+
   test('admin layout: a grouped sidebar on wide screens; a Menu panel on phones that Escape closes', async ({
     page,
   }) => {

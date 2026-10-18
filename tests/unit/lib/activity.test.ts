@@ -99,6 +99,23 @@ describe('describeEvent', () => {
       'Reordered the sections',
     );
     expect(describeEvent(event('media.delete', { meta: { name: 'tri.png' } })).text).toBe('Deleted the file “tri.png”');
+    // Media folders (v1.1): the name and file count come from the event.
+    expect(describeEvent(event('media_folder.create', { meta: { name: 'Physics' } })).text).toBe(
+      'Added the media folder “Physics”',
+    );
+    expect(describeEvent(event('media_folder.update', { meta: { name: 'Maths' } })).text).toBe(
+      'Renamed a media folder to “Maths”',
+    );
+    expect(describeEvent(event('media_folder.delete', { meta: { name: 'Old', files: 3 } })).text).toBe(
+      'Deleted the media folder “Old” (3 files moved to Unsorted)',
+    );
+    expect(describeEvent(event('media_folder.delete', { meta: { name: 'Empty', files: 0 } })).text).toBe(
+      'Deleted the media folder “Empty”',
+    );
+    expect(describeEvent(event('media.move', { meta: { name: 'Unsorted', files: 1 } }))).toEqual({
+      text: 'Moved 1 file to “Unsorted”',
+      href: '/admin/media',
+    });
     expect(describeEvent(event('project.feature', { name: 'Orbit' })).text).toBe('Featured the project “Orbit”');
     expect(describeEvent(event('project.feature', { entity_id: '' })).text).toBe('Featured no project');
     expect(describeEvent(event('problem.show', { meta: { subject: 'physics' } }), subjectName)).toEqual({

@@ -4,6 +4,7 @@ import { MediaLibrary, MediaPicker } from '@/views/admin/media-library';
 
 const IMG = '3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f';
 const PDF = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+const FOLDER = '5a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 const items = [
   {
     id: IMG,
@@ -17,6 +18,7 @@ const items = [
     original_name: 'graph.png',
     created_at: '2026-10-16T10:00:00Z',
     use_count: 2,
+    folder_id: null as string | null,
   },
   {
     id: PDF,
@@ -30,8 +32,10 @@ const items = [
     original_name: 'worksheet.pdf',
     created_at: '2026-10-15T10:00:00Z',
     use_count: 0,
+    folder_id: FOLDER as string | null,
   },
 ];
+const FOLDERS = { folders: [{ id: FOLDER, name: 'Worksheets', file_count: 1 }], all: 2, unsorted: 1 };
 const details: Record<string, unknown> = {
   [IMG]: {
     ...items[0],
@@ -50,10 +54,14 @@ function mockApi(reply?: (c: Call) => [number, unknown] | undefined) {
       calls.push(call);
       const custom = reply?.(call);
       if (custom) return new Response(JSON.stringify(custom[1]), { status: custom[0] });
+      if (call.method === 'GET' && url === '/api/admin/media/folders') {
+        return new Response(JSON.stringify(FOLDERS), { status: 200 });
+      }
       if (call.method === 'GET' && url.startsWith('/api/admin/media?')) {
         const q = new URLSearchParams(url.split('?')[1]);
         const list = items.filter(
           (m) =>
+            (!q.get('folder') || (m.folder_id ?? 'none') === q.get('folder')) &&
             (!q.get('kind') || m.kind === q.get('kind')) &&
             (!q.get('unused') || m.use_count === 0) &&
             (!q.get('q') || m.original_name.includes(q.get('q')!)),
@@ -183,6 +191,159 @@ describe('media library (03 ADM-10)', () => {
   });
 });
 
+describe('media folders and views (v1.1)', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('shows each folder with its count, opens one, and creates, renames and deletes folders', async () => {
+    const calls = mockApi((c) =>
+      c.method === 'POST' && c.url === '/api/admin/media/folders'
+        ? [201, { id: 'f-new' }]
+        : c.method === 'DELETE' && c.url.endsWith(FOLDER)
+          ? [200, { moved: 1 }]
+          : undefined,
+    );
+    const user = userEvent.setup();
+    render(<MediaLibrary />);
+    const bar = await screen.findByRole('navigation', { name: 'Folders' });
+    expect(await within(bar).findByRole('button', { name: 'All media (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(bar).getByRole('button', { name: 'Unsorted (1)' })).toBeInTheDocument();
+
+    await user.click(within(bar).getByRole('button', { name: 'Worksheets (1)' }));
+    await waitFor(() => expect(calls.at(-1)!.url).toBe(`/api/admin/media?folder=${FOLDER}`));
+    expect(screen.getByRole('heading', { name: 'Worksheets' })).toBeInTheDocument();
+    const list = await screen.findByRole('list', { name: 'Media' });
+    await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(1));
+
+    await user.click(screen.getByRole('button', { name: 'Rename…' }));
+    const name = screen.getByRole('textbox', { name: 'Folder name' });
+    await user.clear(name);
+    await user.type(name, 'Papers');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: `/api/admin/media/folders/${FOLDER}`,
+        method: 'PATCH',
+        body: { name: 'Papers' },
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete folder…' }));
+    expect(screen.getByRole('group', { name: 'Confirm delete' })).toHaveTextContent(
+      'Delete the folder “Worksheets”? Its 1 file move to Unsorted.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete folder' }));
+    expect(
+      await screen.findByText('Deleted the folder “Worksheets”; its 1 file moved to Unsorted.'),
+    ).toBeInTheDocument();
+
+    await user.click(within(bar).getByRole('button', { name: '+ New folder' }));
+    await user.type(within(bar).getByRole('textbox', { name: 'New folder name' }), 'Diagrams');
+    await user.click(within(bar).getByRole('button', { name: 'Create' }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({ url: '/api/admin/media/folders', method: 'POST', body: { name: 'Diagrams' } }),
+    );
+    expect(await screen.findByText('Created the folder “Diagrams”.')).toBeInTheDocument();
+    expect(calls.at(-1)!.url).toBe('/api/admin/media?folder=f-new');
+  });
+
+  it('says why a folder was not created', async () => {
+    mockApi((c) =>
+      c.method === 'POST' && c.url === '/api/admin/media/folders'
+        ? [409, { error: 'there is already a folder called Worksheets' }]
+        : undefined,
+    );
+    const user = userEvent.setup();
+    render(<MediaLibrary />);
+    const bar = await screen.findByRole('navigation', { name: 'Folders' });
+    await user.click(within(bar).getByRole('button', { name: '+ New folder' }));
+    await user.type(within(bar).getByRole('textbox', { name: 'New folder name' }), 'worksheets');
+    await user.click(within(bar).getByRole('button', { name: 'Create' }));
+    expect(await within(bar).findByRole('alert')).toHaveTextContent(
+      'Not created: there is already a folder called Worksheets.',
+    );
+  });
+
+  it('shows a folder as a grid or a list, remembered per folder', async () => {
+    mockApi();
+    const user = userEvent.setup();
+    render(<MediaLibrary />);
+    await screen.findByRole('list', { name: 'Media' });
+    expect(screen.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'List' }));
+    const table = screen.getByRole('table', { name: 'Media in All media' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toEqual(['', 'Name', 'Type', 'Size', 'Used', 'Folder', 'Uploaded']);
+    const pdf = within(table).getByRole('row', { name: /worksheet\.pdf/ });
+    expect(pdf).toHaveTextContent('PDF');
+    expect(pdf).toHaveTextContent('Worksheets');
+    expect(JSON.parse(localStorage.getItem('cs-media-view')!)).toEqual({ all: 'list' });
+
+    // Opening a row shows its details under it.
+    await user.click(within(table).getByRole('button', { name: /graph\.png/ }));
+    expect(await screen.findByRole('region', { name: 'Details of graph.png' })).toBeInTheDocument();
+
+    // Another folder has its own view (grid until chosen); coming back keeps the list.
+    await user.click(screen.getByRole('button', { name: 'Unsorted (1)' }));
+    expect(await screen.findByRole('list', { name: 'Media' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'All media (2)' }));
+    expect(await screen.findByRole('table', { name: 'Media in All media' })).toBeInTheDocument();
+  });
+
+  it('selects files and moves them to a folder', async () => {
+    const calls = mockApi((c) => (c.url === '/api/admin/media/move' ? [200, { moved: 2 }] : undefined));
+    const user = userEvent.setup();
+    render(<MediaLibrary />);
+    const list = await screen.findByRole('list', { name: 'Media' });
+    await user.click(within(list).getByRole('checkbox', { name: 'Select graph.png' }));
+    await user.click(within(list).getByRole('checkbox', { name: 'Select worksheet.pdf' }));
+    const bar = screen.getByRole('group', { name: 'Selected files' });
+    expect(bar).toHaveTextContent('2 selected');
+    await user.selectOptions(within(bar).getByRole('combobox', { name: 'Move to' }), 'Worksheets');
+    await user.click(within(bar).getByRole('button', { name: 'Move' }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: '/api/admin/media/move',
+        method: 'POST',
+        body: { ids: [IMG, PDF], folder: FOLDER },
+      }),
+    );
+    expect(await screen.findByText('Moved 2 files to Worksheets.')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Selected files' })).toBeNull();
+  });
+
+  it('moves one file from its details, and uploads into the open folder', async () => {
+    const calls = mockApi((c) => (c.url === '/api/admin/media/move' ? [200, { moved: 1 }] : undefined));
+    const user = userEvent.setup();
+    const upload = vi.fn(async () => ({ ...items[1]!, id: 'new-id', kind: 'file' as const, original_name: 'new.pdf' }));
+    render(<MediaLibrary upload={upload} />);
+    await user.click(await screen.findByRole('button', { name: /graph\.png/ }));
+    const detail = await screen.findByRole('region', { name: 'Details of graph.png' });
+    await user.selectOptions(within(detail).getByRole('combobox', { name: 'Folder' }), 'Worksheets');
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: '/api/admin/media/move',
+        method: 'POST',
+        body: { ids: [IMG], folder: FOLDER },
+      }),
+    );
+    expect(await screen.findByText('Moved “graph.png” to Worksheets.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Worksheets (1)' }));
+    expect(await screen.findByRole('heading', { name: 'Worksheets' })).toBeInTheDocument();
+    await user.upload(screen.getByLabelText('Upload files'), new File(['%PDF-'], 'new.pdf'));
+    expect(await screen.findByText('Uploaded “new.pdf” to Worksheets.')).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      url: '/api/admin/media/move',
+      method: 'POST',
+      body: { ids: ['new-id'], folder: FOLDER },
+    });
+  });
+});
+
 describe('editor: insert from the media library', () => {
   it('lists the library and hands back the chosen item', async () => {
     mockApi();
@@ -194,5 +355,16 @@ describe('editor: insert from the media library', () => {
     expect(choice).toHaveAccessibleName(/^Insert graph\.png/);
     await userEvent.setup().click(choice);
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: IMG, alt: 'A graph' }));
+  });
+
+  it('narrows the picker to a folder', async () => {
+    const calls = mockApi();
+    render(<MediaPicker onPick={() => {}} onClose={() => {}} />);
+    const folder = await screen.findByRole('combobox', { name: 'Folder' });
+    await waitFor(() => expect(within(folder).getByRole('option', { name: 'Worksheets' })).toBeInTheDocument());
+    await userEvent.setup().selectOptions(folder, 'Worksheets');
+    await waitFor(() => expect(calls.at(-1)!.url).toBe(`/api/admin/media?folder=${FOLDER}`));
+    const list = await screen.findByRole('list', { name: 'Media to insert' });
+    await waitFor(() => expect(within(list).getAllByRole('button')).toHaveLength(1));
   });
 });
