@@ -117,7 +117,7 @@ describe('author (ADM-14)', () => {
     });
     expect(out.paths).toEqual(['/author']);
     const got = await getAuthor(owner);
-    expect(got.profile).toEqual({ ...profile, hidden: ['email'], photo_media_id: null });
+    expect(got.profile).toEqual({ ...profile, hidden: ['email'], photo_media_id: null, photo_shape: 'hexagon' });
     expect(got.photo).toBeNull();
     expect(got.sections.map((s) => [s.kind, s.title, s.visible])).toEqual([
       ['timeline', 'Timeline', true],
@@ -166,6 +166,16 @@ describe('author (ADM-14)', () => {
     ).rejects.toMatchObject({ status: 422 });
     await saveAuthor(owner, { profile: { ...withPhoto, photo_media_id: null }, sections: sections() });
     await service.from('media').delete().eq('id', image);
+  });
+
+  it('keeps the shape of the photo frame: hexagon, circle, octagon or rectangle', async () => {
+    await saveAuthor(owner, { profile: { name: 'IT Teacher', photo_shape: 'rectangle' }, sections: sections() });
+    expect((await getAuthor(owner)).profile.photo_shape).toBe('rectangle');
+    await expect(
+      saveAuthor(owner, { profile: { name: 'IT Teacher', photo_shape: 'star' }, sections: sections() }),
+    ).rejects.toMatchObject({ status: 422 });
+    await saveAuthor(owner, { profile: { name: 'IT Teacher' }, sections: sections() });
+    expect((await getAuthor(owner)).profile.photo_shape).toBe('hexagon');
   });
 
   it('refuses a bad email, an empty name, a missing section or an http link', async () => {

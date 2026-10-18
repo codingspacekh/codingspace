@@ -69,7 +69,7 @@ export default function Search({ q, results, limited }: Props) {
   }
 
   return (
-    <Layout title={q ? `“${q}” · Search · CodingSpace` : 'Search · CodingSpace'} path="/search" active="search">
+    <Layout title={q ? `“${q}” · Search · CodingSpaceKH` : 'Search · CodingSpaceKH'} path="/search" active="search">
       <Head>
         {/* Result pages are for visitors, not for search engines. */}
         <meta name="robots" content="noindex, follow" />

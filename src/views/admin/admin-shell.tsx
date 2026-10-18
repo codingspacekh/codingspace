@@ -48,12 +48,12 @@ export function AdminShell({ title, children }: { title: string; children: (sess
   return (
     <div className="adm">
       <Head>
-        <title>{`${title} · CodingSpace admin`}</title>
+        <title>{`${title} · CodingSpaceKH admin`}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <header className="adm-bar">
         <Link href="/admin" className="adm-brand">
-          CodingSpace <span>admin</span>
+          CodingSpaceKH <span>admin</span>
         </Link>
         {session && (
           <nav aria-label="Admin" className="adm-nav">

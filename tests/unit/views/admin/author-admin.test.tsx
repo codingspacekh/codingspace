@@ -103,6 +103,7 @@ describe('author page admin (03 ADM-14)', () => {
       students: 500,
       email: 'hello@codingspacekh.dev',
       photo_media_id: null,
+      photo_shape: 'hexagon',
       hidden: ['email'],
     });
     expect(body.sections.map((s) => [s.kind, s.title, s.visible])).toEqual([
@@ -257,6 +258,31 @@ describe('author page admin (03 ADM-14)', () => {
       await user.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>
         expect((calls[0]!.body as { profile: { photo_media_id: string } }).profile.photo_media_id).toBe(PHOTO),
+      );
+    });
+
+    it('the frame is a hexagon, circle, octagon or rectangle, saved with the profile', async () => {
+      const calls = mockApi(undefined, {
+        ...loaded,
+        profile: { ...loaded.profile, photo_shape: 'octagon' },
+        photo: { id: PHOTO, widths: [480] },
+      });
+      render(<AuthorAdmin previewDelay={0} />);
+      const user = userEvent.setup();
+      const shape = within(await screen.findByRole('radiogroup', { name: 'Shape' }));
+      expect(shape.getAllByRole('radio').map((r) => r.getAttribute('value'))).toEqual([
+        'hexagon',
+        'circle',
+        'octagon',
+        'rectangle',
+      ]);
+      expect(shape.getByRole('radio', { name: 'Octagon' })).toBeChecked();
+      await user.click(shape.getByRole('radio', { name: 'Circle' }));
+      expect(screen.getByRole('group', { name: 'Photo' }).querySelector('.avatar')).toHaveClass('avatar--circle');
+      expect(screen.getByText(/Shown in the circle on the Author page/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect((calls[0]!.body as { profile: { photo_shape: string } }).profile.photo_shape).toBe('circle'),
       );
     });
 

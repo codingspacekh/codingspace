@@ -28,7 +28,7 @@ const initials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-/** The author's photo in the hexagon (about 200 px wide), as AVIF or WebP. */
+/** The author's photo in its frame (about 200 px wide), as AVIF or WebP. */
 function Photo({ photo, name }: { photo: NonNullable<Profile['photo']>; name: string }) {
   const sizes = '(max-width: 760px) 140px, 200px';
   return (
@@ -48,7 +48,7 @@ function Photo({ photo, name }: { photo: NonNullable<Profile['photo']>; name: st
 }
 
 export default function Author({ profile, description, sections, lifePosts, hasMath }: Props) {
-  const name = profile?.name ?? 'CodingSpace';
+  const name = profile?.name ?? 'CodingSpaceKH';
   return (
     <Layout title={`Author · ${name}`} description={description || undefined} path="/author" active="author">
       {hasMath && (
@@ -58,11 +58,11 @@ export default function Author({ profile, description, sections, lifePosts, hasM
       )}
       <section className="frame profile c-cyan" aria-labelledby="who">
         {profile?.photo ? (
-          <div className="avatar avatar--photo">
+          <div className={`avatar avatar--photo avatar--${profile.photoShape}`}>
             <Photo photo={profile.photo} name={name} />
           </div>
         ) : (
-          <div className="avatar" aria-hidden="true">
+          <div className={`avatar avatar--${profile?.photoShape ?? 'hexagon'}`} aria-hidden="true">
             <span>{initials(name)}</span>
           </div>
         )}

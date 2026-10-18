@@ -15,7 +15,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => ({
 export default function Projects({ projects }: Props) {
   return (
     <Layout
-      title="Projects · CodingSpace"
+      title="Projects · CodingSpaceKH"
       description="Free tools for practising what we learn in class."
       path="/projects"
       active="projects"

@@ -89,10 +89,10 @@ export function TopBar({ active }: { active?: NavItem }) {
   return (
     <header className="ui-bar">
       <div className="bar-inner">
-        <Link href="/" className="ui-logo" aria-label="CodingSpace home">
+        <Link href="/" className="ui-logo" aria-label="CodingSpaceKH home">
           <Logo />
           <span>
-            Coding<b>Space</b>
+            Coding<b>Space</b>KH
           </span>
         </Link>
         <button

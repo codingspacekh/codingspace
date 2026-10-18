@@ -89,6 +89,7 @@ describe('public page data', () => {
   it('loads the author page', async () => {
     const author = await getAuthorPage();
     expect(author.profile?.name).toBe('CodingSpace');
+    expect(author.profile?.photoShape).toBe('hexagon');
     expect(author.profile?.bioHtml).toMatch(/^<p>I teach competition maths/);
     expect(author.description).toMatch(/^I teach competition maths/);
     // Sections with nothing to show are left out; life posts always show (or say "No posts yet").

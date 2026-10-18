@@ -1,4 +1,4 @@
-import type { SectionKind } from '@/lib/author';
+import type { PhotoShape, SectionKind } from '@/lib/author';
 import type { SubjectId } from '@/lib/subjects';
 
 // Shapes the pages receive (serialisable props). Read from the public_* views only.
@@ -79,6 +79,8 @@ export type Profile = {
   email: string | null;
   /** The author's photo (an uploaded image: its media id and variant widths), or null. */
   photo: { id: string; widths: number[]; width: number; height: number } | null;
+  /** The frame around the photo or the initials. */
+  photoShape: PhotoShape;
 };
 
 /** One entry of an Author page section; which fields are filled depends on the kind (src/lib/author.ts). */
