@@ -155,7 +155,7 @@ export function QuestionsAdmin() {
         </ol>
       )}
       {inbox && inbox.more > 0 && (
-        <p className="adm-more">
+        <p className="adm-loadmore">
           <button type="button" className="btn" disabled={loadingMore} onClick={() => void loadMore()}>
             {loadingMore ? 'Loading…' : `Load more (${inbox.more} older)`}
           </button>

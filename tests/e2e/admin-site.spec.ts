@@ -525,7 +525,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await expectAccessible(student);
 
       await page.goto('/admin');
-      await expect(page.getByRole('link', { name: /Questions & comments waiting/ })).toBeVisible();
+      await expect(page.getByRole('link', { name: /Q&C waiting/ })).toBeVisible();
       await page.goto('/admin/questions');
       const card = page.getByRole('listitem').filter({ hasText: name });
       await card.getByRole('textbox', { name: /Your answer/ }).fill('Exactly when $a = b$.');

@@ -63,6 +63,10 @@ describe('Dashboard (ADM-02)', () => {
     const published = await screen.findByRole('link', { name: '9 Published' });
     expect(published).toHaveAttribute('href', '/admin/posts?status=published');
     expect(screen.getByRole('link', { name: '2 Life posts' })).toHaveAttribute('href', '/admin/posts?kind=life');
+    // Short like the other tiles; the abbreviation is spelled out on hover.
+    const qc = screen.getByRole('link', { name: /Q&C waiting$/ });
+    expect(qc).toHaveAttribute('href', '/admin/questions');
+    expect(within(qc).getByTitle('Questions & comments')).toHaveTextContent('Q&C');
     const recent = screen.getByRole('heading', { name: 'Recently edited' }).nextElementSibling as HTMLElement;
     expect(within(recent).getByRole('link', { name: 'AM–GM' })).toHaveAttribute('href', '/admin/posts/p1');
     expect(recent).toHaveTextContent('Unpublished changes');
