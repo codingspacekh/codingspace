@@ -27,6 +27,8 @@ const NODE_ATTRS: Record<string, Record<string, unknown>> = {
   image: { media: undefined, widths: null, src: undefined, alt: undefined, caption: null, width: null, height: null },
   file: { media: undefined, href: undefined, name: undefined, size: null },
   embed: { provider: undefined, id: undefined, title: null },
+  // v1.1: attrs are checked by the renderer (src/server/render, renderPractice).
+  practice: { kind: undefined, prompt: undefined, options: null, answers: null, hint: null, explanation: null },
   table: {},
   tableRow: {},
   tableCell: { colspan: 1, rowspan: 1 },

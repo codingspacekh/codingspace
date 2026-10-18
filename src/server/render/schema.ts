@@ -4,6 +4,8 @@
  * so these types describe what is rendered, not what is trusted.
  */
 
+import type { PracticeAttrs } from '@/lib/practice';
+
 export type MarkType = 'bold' | 'italic' | 'underline' | 'strike' | 'code';
 
 export type Mark = { type: MarkType } | { type: 'link'; attrs: { href: string } };
@@ -40,7 +42,8 @@ export type BlockNode =
     }
   | { type: 'file'; attrs: { href: string; name: string; size?: number } }
   | { type: 'embed'; attrs: { provider: EmbedProvider; id: string; title?: string } }
-  | { type: 'table'; content: TableRowNode[] };
+  | { type: 'table'; content: TableRowNode[] }
+  | { type: 'practice'; attrs: PracticeAttrs };
 
 /** A first row made only of header cells becomes the table's header. */
 export type TableRowNode = { type: 'tableRow'; content: TableCellNode[] };

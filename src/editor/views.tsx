@@ -7,7 +7,15 @@ import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
 import { formatBytes } from '@/lib/media-rules';
 import { thumbnailUrl } from '@/lib/media-urls';
 import { CALLOUT_VARIANTS } from '@/server/render/schema';
-import { Callout, Embed, FileNode, Image, MathBlock, MathInline } from './nodes';
+import {
+  PRACTICE_KINDS,
+  PRACTICE_LIMITS,
+  practiceProblem,
+  type PracticeAttrs,
+  type PracticeKind,
+  type PracticeOption,
+} from '@/lib/practice';
+import { Callout, Embed, FileNode, Image, MathBlock, MathInline, Practice } from './nodes';
 
 /** KaTeX exactly as the renderer calls it (src/lib/katex-options.ts). */
 export function MathPreview({ latex, display }: { latex: string; display: boolean }) {
@@ -198,6 +206,148 @@ function FileView({ node, updateAttributes, selected }: ReactNodeViewProps) {
   );
 }
 
+/**
+ * A practice question (v1.1): the question, then by kind the options (tick the correct ones),
+ * the accepted answers, or the answer to reveal; an optional hint and explanation. Text is
+ * Markdown with $maths$; the lesson page renders and checks it.
+ */
+function PracticeView({ node, updateAttributes, selected }: ReactNodeViewProps) {
+  const id = useId();
+  const a = node.attrs as PracticeAttrs & { hint: string | null; explanation: string | null };
+  const kind = (Object.hasOwn(PRACTICE_KINDS, a.kind) ? a.kind : 'choice') as PracticeKind;
+  const options: PracticeOption[] = Array.isArray(a.options) ? a.options : [];
+  const answers: string[] = Array.isArray(a.answers) ? a.answers : [];
+  const L = PRACTICE_LIMITS;
+  const problem = practiceProblem({ ...a, kind, hint: a.hint ?? '', explanation: a.explanation ?? '' });
+  const setOptions = (next: PracticeOption[]) => updateAttributes({ options: next });
+  const multi = options.filter((o) => o.correct).length > 1;
+
+  return (
+    <NodeViewWrapper
+      className={`ed-block ed-card ed-practice${selected ? ' is-selected' : ''}`}
+      contentEditable={false}
+    >
+      <span className="ed-label">Practice question</span>
+      <label htmlFor={`${id}-kind`} className="ed-label">
+        Kind
+      </label>
+      <select
+        id={`${id}-kind`}
+        value={kind}
+        onChange={(e) => {
+          const next = e.target.value as PracticeKind;
+          updateAttributes({
+            kind: next,
+            options:
+              next === 'choice' && !options.length
+                ? [
+                    { text: '', correct: true },
+                    { text: '', correct: false },
+                  ]
+                : a.options,
+            answers: next === 'text' && !answers.length ? [''] : a.answers,
+          });
+        }}
+      >
+        {Object.entries(PRACTICE_KINDS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <label htmlFor={`${id}-q`} className="ed-label">
+        Question (Markdown, $maths$)
+      </label>
+      <textarea
+        id={`${id}-q`}
+        rows={3}
+        maxLength={L.prompt}
+        value={a.prompt ?? ''}
+        onChange={(e) => updateAttributes({ prompt: e.target.value })}
+      />
+
+      {kind === 'choice' && (
+        <fieldset className="ed-practice-options">
+          <legend className="ed-label">
+            Options: tick every correct one {multi ? '(students choose all that apply)' : ''}
+          </legend>
+          {options.map((o, i) => (
+            <div key={i} className="ed-practice-option">
+              <input
+                type="checkbox"
+                aria-label={`Option ${i + 1} is correct`}
+                checked={o.correct}
+                onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, correct: e.target.checked } : x)))}
+              />
+              <input
+                aria-label={`Option ${i + 1}`}
+                maxLength={L.option}
+                value={o.text}
+                onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+              />
+              <button
+                type="button"
+                className="btn"
+                aria-label={`Remove option ${i + 1}`}
+                disabled={options.length <= 2}
+                onClick={() => setOptions(options.filter((_, j) => j !== i))}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn"
+            disabled={options.length >= L.options}
+            onClick={() => setOptions([...options, { text: '', correct: false }])}
+          >
+            Add an option
+          </button>
+        </fieldset>
+      )}
+
+      {kind === 'text' && (
+        <>
+          <label htmlFor={`${id}-a`} className="ed-label">
+            Accepted answers, one per line (case, extra spaces and a final full stop don’t matter)
+          </label>
+          <textarea
+            id={`${id}-a`}
+            rows={3}
+            value={answers.join('\n')}
+            onChange={(e) => updateAttributes({ answers: e.target.value.split('\n').slice(0, L.answers) })}
+          />
+        </>
+      )}
+
+      <label htmlFor={`${id}-h`} className="ed-label">
+        Hint (optional)
+      </label>
+      <textarea
+        id={`${id}-h`}
+        rows={2}
+        maxLength={L.hint}
+        value={a.hint ?? ''}
+        onChange={(e) => updateAttributes({ hint: e.target.value || null })}
+      />
+      <label htmlFor={`${id}-x`} className="ed-label">
+        {kind === 'reveal'
+          ? 'The answer, shown when the student opens it'
+          : 'Explanation, shown with the answer (optional)'}
+      </label>
+      <textarea
+        id={`${id}-x`}
+        rows={3}
+        maxLength={L.explanation}
+        value={a.explanation ?? ''}
+        onChange={(e) => updateAttributes({ explanation: e.target.value || null })}
+      />
+      {problem && <p className="ed-warn">{problem} Until then the question isn’t shown on the page.</p>}
+    </NodeViewWrapper>
+  );
+}
+
 /** The schema from ./nodes with the admin's React views. */
 export const viewExtensions = () => [
   MathBlock.extend({ addNodeView: () => ReactNodeViewRenderer(MathBlockView) }),
@@ -207,4 +357,5 @@ export const viewExtensions = () => [
   Embed.extend({ addNodeView: () => ReactNodeViewRenderer(EmbedView) }),
   Image.extend({ addNodeView: () => ReactNodeViewRenderer(ImageView) }),
   FileNode.extend({ addNodeView: () => ReactNodeViewRenderer(FileView) }),
+  Practice.extend({ addNodeView: () => ReactNodeViewRenderer(PracticeView) }),
 ];

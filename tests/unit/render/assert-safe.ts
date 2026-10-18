@@ -24,6 +24,19 @@ const FORBIDDEN_TAGS = [
   'noscript',
 ];
 
+const INPUT_ATTRS = [
+  'type',
+  'name',
+  'value',
+  'id',
+  'class',
+  'autocomplete',
+  'autocapitalize',
+  'spellcheck',
+  'data-correct',
+  'data-accept',
+];
+
 const URL_ATTRS = ['href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'srcset'];
 
 /**
@@ -36,7 +49,13 @@ export function findUnsafe(html: string): string[] {
 
   for (const el of Array.from(doc.body.querySelectorAll('*'))) {
     const tag = el.tagName.toLowerCase();
-    if (FORBIDDEN_TAGS.includes(tag)) problems.push(`<${tag}> element`);
+    // v1.1 practice questions: answer fields only, inside a practice block, nothing that submits.
+    const practiceInput =
+      tag === 'input' &&
+      el.closest('section.practice') !== null &&
+      ['radio', 'checkbox', 'text'].includes(el.getAttribute('type') ?? '') &&
+      Array.from(el.attributes).every((a) => INPUT_ATTRS.includes(a.name.toLowerCase()));
+    if (FORBIDDEN_TAGS.includes(tag) && !practiceInput) problems.push(`<${tag}> element`);
 
     for (const attr of Array.from(el.attributes)) {
       const name = attr.name.toLowerCase();

@@ -143,6 +143,46 @@ describe('PostEditor', () => {
     expect(editor.isActive('link')).toBe(false);
   });
 
+  it('"/" → Practice inserts a question to fill in; the form saves into the document (v1.1)', async () => {
+    const { editor, body, last } = await setup();
+    await type(editor, '/practice: mult');
+    await screen.findByRole('listbox');
+    await key(body, 'Enter');
+    const user = userEvent.setup();
+    expect(
+      await screen.findByText('Write the question. Until then the question isn’t shown on the page.'),
+    ).toBeVisible();
+    await user.type(screen.getByRole('textbox', { name: /Question/ }), 'Pick 2');
+    await user.type(screen.getByRole('textbox', { name: 'Option 1' }), 'two');
+    await user.type(screen.getByRole('textbox', { name: 'Option 2' }), 'three');
+    await user.click(screen.getByRole('button', { name: 'Add an option' }));
+    await user.type(screen.getByRole('textbox', { name: 'Option 3' }), 'four');
+    await user.click(screen.getByRole('checkbox', { name: 'Option 3 is correct' }));
+    expect(screen.getByText(/students choose all that apply/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove option 2' }));
+    await waitFor(() =>
+      expect(last()!.content).toEqual([
+        {
+          type: 'practice',
+          attrs: {
+            kind: 'choice',
+            prompt: 'Pick 2',
+            options: [
+              { text: 'two', correct: true },
+              { text: 'four', correct: true },
+            ],
+          },
+        },
+      ]),
+    );
+    expect(screen.queryByText(/isn’t shown on the page/)).toBeNull();
+
+    // Another kind keeps what was typed and asks for what it needs.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Kind' }), 'text');
+    await user.type(screen.getByRole('textbox', { name: /Accepted answers/ }), '2{Enter}two');
+    await waitFor(() => expect(last()!.content[0]).toMatchObject({ attrs: { kind: 'text', answers: ['2', 'two'] } }));
+  });
+
   it('changing the callout type and the code language is saved', async () => {
     const { last } = await setup({
       type: 'doc',

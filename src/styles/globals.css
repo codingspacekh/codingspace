@@ -1498,6 +1498,94 @@ html {
 .prose .katex {
   color: var(--fg);
 }
+/* Practice questions in lessons (v1.1): checked in the browser (src/views/practice.ts). */
+.practice {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--c, var(--cyan)) 40%, transparent);
+  background: color-mix(in srgb, var(--c, var(--cyan)) 6%, transparent);
+}
+.practice > * {
+  margin: 0;
+}
+.practice-label {
+  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c, var(--cyan));
+}
+.practice-q > :first-child {
+  margin-top: 0;
+}
+.practice-q > :last-child {
+  margin-bottom: 0;
+}
+.practice-options {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.practice-option {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+.practice-option:hover,
+.practice-option:has(input:checked) {
+  border-color: var(--c, var(--cyan));
+}
+.practice-option input {
+  accent-color: var(--c, var(--cyan));
+  flex: none;
+}
+.practice-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.practice-input {
+  flex: 1 1 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface, rgba(7, 24, 32, 0.72));
+  color: var(--fg);
+  font: inherit;
+}
+.practice-input:focus-visible {
+  outline: 2px solid var(--c, var(--cyan));
+  outline-offset: 2px;
+}
+.practice-result:empty {
+  display: none;
+}
+.practice-result {
+  font-weight: 600;
+}
+.practice.is-right .practice-result {
+  color: var(--lime);
+}
+.practice.is-wrong .practice-result {
+  color: var(--amber);
+}
+.practice details summary {
+  cursor: pointer;
+  color: var(--fg2);
+}
+.practice details[open] summary {
+  margin-bottom: 8px;
+}
+.practice-self .btn {
+  margin-left: 8px;
+}
+
 .callout {
   padding: 16px 20px;
   border-left: 3px solid var(--cc, var(--cyan));
@@ -1953,6 +2041,8 @@ html[data-reading='on'] .prose li {
   .crumbs,
   .read-tools,
   .done-box,
+  .practice-check,
+  .practice-self,
   .code-copy,
   .embed {
     display: none !important;
@@ -2689,6 +2779,40 @@ img.ProseMirror-separator {
 .ed-card input {
   width: 100%;
   margin-bottom: 8px;
+}
+/* Practice question in the editor (v1.1). */
+.ed-practice {
+  display: grid;
+  gap: 4px;
+}
+.ed-practice textarea,
+.ed-practice select {
+  width: 100%;
+  margin-bottom: 8px;
+  font: inherit;
+}
+.ed-practice-options {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.ed-practice-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.ed-card .ed-practice-option input {
+  margin: 0;
+}
+.ed-card .ed-practice-option input[type='checkbox'] {
+  width: auto;
+}
+.ed-warn {
+  margin: 0;
+  color: var(--amber);
 }
 .ed-image {
   display: block;
