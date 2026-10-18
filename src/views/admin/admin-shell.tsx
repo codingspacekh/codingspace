@@ -1,27 +1,48 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/admin-api';
 import { SubjectsProvider, type Subject } from '@/lib/subjects';
 
 /** Every subject, hidden ones too: the admin's menus and labels use them. */
 type Session = { email: string; subjects: (Subject & { visible: boolean })[] };
 
-const NAV = [
-  { href: '/admin', label: 'Dashboard' },
-  { href: '/admin/posts', label: 'Posts' },
-  { href: '/admin/subjects', label: 'Subjects' },
-  { href: '/admin/sections', label: 'Study structure' },
-  { href: '/admin/series', label: 'Series' },
-  { href: '/admin/syllabus', label: 'Syllabus' },
-  { href: '/admin/questions', label: 'Questions' },
-  { href: '/admin/problems', label: 'Problems' },
-  { href: '/admin/media', label: 'Media' },
-  { href: '/admin/projects', label: 'Projects' },
-  { href: '/admin/author', label: 'Author' },
-  { href: '/admin/analytics', label: 'Analytics' },
-  { href: '/admin/activity', label: 'Activity' },
+/** The admin's pages, grouped as the sidebar shows them. */
+const NAV: { group: string; items: { href: string; label: string }[] }[] = [
+  {
+    group: 'Overview',
+    items: [
+      { href: '/admin', label: 'Dashboard' },
+      { href: '/admin/analytics', label: 'Analytics' },
+      { href: '/admin/activity', label: 'Activity' },
+    ],
+  },
+  {
+    group: 'Content',
+    items: [
+      { href: '/admin/posts', label: 'Posts' },
+      { href: '/admin/questions', label: 'Questions' },
+      { href: '/admin/problems', label: 'Problems' },
+      { href: '/admin/media', label: 'Media' },
+    ],
+  },
+  {
+    group: 'Study',
+    items: [
+      { href: '/admin/subjects', label: 'Subjects' },
+      { href: '/admin/sections', label: 'Study structure' },
+      { href: '/admin/series', label: 'Series' },
+      { href: '/admin/syllabus', label: 'Syllabus' },
+    ],
+  },
+  {
+    group: 'Site',
+    items: [
+      { href: '/admin/projects', label: 'Projects' },
+      { href: '/admin/author', label: 'Author' },
+    ],
+  },
 ];
 
 /** Sends the browser to the sign-in page, remembering where it was. */
@@ -38,6 +59,10 @@ export function toSignIn(router: ReturnType<typeof useRouter>, reason?: string) 
 export function AdminShell({ title, children }: { title: string; children: (session: Session) => ReactNode }) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
+  // Below 1000 px the sidebar is a panel opened from the top bar.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     api<Session & { error?: string }>('/api/admin/session').then(({ status, data }) => {
@@ -46,14 +71,27 @@ export function AdminShell({ title, children }: { title: string; children: (sess
     });
   }, [router]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      menuButton.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
   async function signOut(scope: 'local' | 'global') {
     if (scope === 'global' && !window.confirm('Sign out on every device, including this one?')) return;
     await api('/api/auth/sign-out', { method: 'POST', body: { scope } });
     await router.replace('/admin/login');
   }
 
+  const here = (href: string) => (href === '/admin' ? router.pathname === '/admin' : router.pathname.startsWith(href));
+
   return (
-    <div className="adm">
+    <div className={`adm adm--shell${menuOpen ? ' adm--menu-open' : ''}`}>
       <Head>
         <title>{`${title} · CodingSpaceKH admin`}</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -63,29 +101,63 @@ export function AdminShell({ title, children }: { title: string; children: (sess
           CodingSpaceKH <span>admin</span>
         </Link>
         {session && (
-          <nav aria-label="Admin" className="adm-nav">
-            {NAV.map((n) => {
-              const here = n.href === '/admin' ? router.pathname === '/admin' : router.pathname.startsWith(n.href);
-              return (
-                <Link key={n.href} href={n.href} aria-current={here ? 'page' : undefined}>
-                  {n.label}
-                </Link>
-              );
-            })}
-          </nav>
-        )}
-        {session && (
-          <div className="adm-user">
-            <span className="meta">{session.email}</span>
-            <button type="button" className="btn" onClick={() => signOut('local')}>
-              Sign out
-            </button>
-            <button type="button" className="btn" onClick={() => signOut('global')}>
-              Sign out everywhere
-            </button>
-          </div>
+          <button
+            ref={menuButton}
+            type="button"
+            className="btn adm-menu-button"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? 'Close' : 'Menu'}
+          </button>
         )}
       </header>
+      <div id={menuId} className="adm-side">
+        <Link href="/admin" className="adm-brand adm-side-brand">
+          CodingSpaceKH <span>admin</span>
+        </Link>
+        {session && (
+          <>
+            <nav aria-label="Admin" className="adm-nav">
+              {NAV.map((g) => (
+                <div key={g.group} className="adm-nav-group">
+                  <p className="adm-nav-head" id={`${menuId}-${g.group}`}>
+                    {g.group}
+                  </p>
+                  <ul aria-labelledby={`${menuId}-${g.group}`}>
+                    {g.items.map((n) => (
+                      <li key={n.href}>
+                        <Link
+                          href={n.href}
+                          aria-current={here(n.href) ? 'page' : undefined}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          {n.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </nav>
+            <div className="adm-user">
+              <a href="/" target="_blank" rel="noopener" className="adm-view-site">
+                View the site ↗<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+              <span className="meta adm-email" title={session.email}>
+                {session.email}
+              </span>
+              <button type="button" className="btn" onClick={() => signOut('local')}>
+                Sign out
+              </button>
+              <button type="button" className="btn" onClick={() => signOut('global')}>
+                Sign out everywhere
+              </button>
+            </div>
+          </>
+        )}
+      </div>
       <main id="main" className="adm-main">
         {session ? (
           <SubjectsProvider value={session.subjects}>{children(session)}</SubjectsProvider>

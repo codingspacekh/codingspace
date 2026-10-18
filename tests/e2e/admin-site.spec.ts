@@ -544,4 +544,38 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await serviceClient().from('questions').delete().eq('name', name);
     }
   });
+
+  test('admin layout: a grouped sidebar on wide screens; a Menu panel on phones that Escape closes', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/admin/series');
+    const nav = page.getByRole('navigation', { name: 'Admin' });
+    await expect(nav).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Menu' })).toBeHidden();
+    for (const group of ['Overview', 'Content', 'Study', 'Site']) {
+      await expect(nav.getByRole('list', { name: group })).toBeVisible();
+    }
+    await expect(nav.getByRole('list', { name: 'Study' }).getByRole('link', { name: 'Series' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeAttached();
+    await expectAccessible(page);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(nav).toBeHidden();
+    const menu = page.getByRole('button', { name: 'Menu' });
+    await menu.click();
+    await expect(page.getByRole('button', { name: 'Close' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(nav).toBeVisible();
+    await expectAccessible(page);
+    await page.keyboard.press('Escape');
+    await expect(nav).toBeHidden();
+    await expect(menu).toBeFocused();
+    await menu.click();
+    await nav.getByRole('link', { name: 'Projects' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
+    await expect(nav).toBeHidden(); // closed after choosing a page
+  });
 });

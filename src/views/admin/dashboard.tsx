@@ -96,44 +96,52 @@ export function Dashboard({ request }: { request?: Request }) {
               </Link>
             </li>
           </ul>
-          <h2>Recently edited</h2>
-          {data.recent.length === 0 ? (
-            <p className="empty">Nothing yet. Start with “New lesson”.</p>
-          ) : (
-            <ul className="adm-recent">
-              {data.recent.map((p) => (
-                <li key={p.id}>
-                  <Link href={`/admin/posts/${p.id}`}>{p.title || 'Untitled'}</Link>
-                  <span className="meta">
-                    {p.kind === 'lesson' ? subjectName(p.subject_id) : 'Life'} · {shortDate(p.updated_at)}
-                  </span>
-                  <StatusBadge post={p} />
-                </li>
-              ))}
-            </ul>
-          )}
-          <p>
-            <Link href="/admin/posts">All posts →</Link>
-          </p>
-          <h2>Recent activity</h2>
-          {data.activity.length === 0 ? (
-            <p className="empty">No changes yet.</p>
-          ) : (
-            <ActivityList events={data.activity} />
-          )}
-          <p>
-            <Link href="/admin/activity">All activity →</Link>
-          </p>
-          <h2>Backup</h2>
-          <p className="meta">
-            Every post (as Markdown and JSON), section, project, problem and the Author page, in one .zip file. Uploaded
-            images and files stay in storage.
-          </p>
-          <p>
-            <a className="btn" href="/api/admin/export" download>
-              Download all content
-            </a>
-          </p>
+          <div className="adm-dash">
+            <section className="frame adm-panel" aria-labelledby="dash-recent">
+              <h2 id="dash-recent">Recently edited</h2>
+              {data.recent.length === 0 ? (
+                <p className="empty">Nothing yet. Start with “New lesson”.</p>
+              ) : (
+                <ul className="adm-recent">
+                  {data.recent.map((p) => (
+                    <li key={p.id}>
+                      <Link href={`/admin/posts/${p.id}`}>{p.title || 'Untitled'}</Link>
+                      <span className="meta">
+                        {p.kind === 'lesson' ? subjectName(p.subject_id) : 'Life'} · {shortDate(p.updated_at)}
+                      </span>
+                      <StatusBadge post={p} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="adm-more">
+                <Link href="/admin/posts">All posts →</Link>
+              </p>
+            </section>
+            <section className="frame adm-panel" aria-labelledby="dash-activity">
+              <h2 id="dash-activity">Recent activity</h2>
+              {data.activity.length === 0 ? (
+                <p className="empty">No changes yet.</p>
+              ) : (
+                <ActivityList events={data.activity} />
+              )}
+              <p className="adm-more">
+                <Link href="/admin/activity">All activity →</Link>
+              </p>
+            </section>
+            <section className="frame adm-panel adm-panel--wide" aria-labelledby="dash-backup">
+              <h2 id="dash-backup">Backup</h2>
+              <p className="meta">
+                Every post (as Markdown and JSON), section, project, problem and the Author page, in one .zip file.
+                Uploaded images and files stay in storage.
+              </p>
+              <p>
+                <a className="btn" href="/api/admin/export" download>
+                  Download all content
+                </a>
+              </p>
+            </section>
+          </div>
         </>
       )}
     </>
