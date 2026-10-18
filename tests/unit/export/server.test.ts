@@ -53,6 +53,7 @@ function content() {
     post_revisions: [{ id: 1, post_id: 'p1', revision: 1, content_json: p('x'.repeat(5000)) }],
     post_media: [{ post_id: 'p1', media_id: 'm1' }],
     projects: [{ id: 'pr1', name: 'Orbit' }],
+    project_screenshots: [{ project_id: 'pr1', position: 1, media_id: 'm1', caption: '' }],
     profile: [{ id: true, name: 'Owner' }],
     author_sections: [{ id: 'timeline', kind: 'timeline', title: 'Timeline', sort: 1 }],
     author_items: [{ id: 'i1', section_id: 'timeline', title: 'Started', period: '2018', sort: 1 }],

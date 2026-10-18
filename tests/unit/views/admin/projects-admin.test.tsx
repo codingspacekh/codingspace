@@ -12,14 +12,30 @@ const project = (id: string, name: string, extra = {}) => ({
   tag: '',
   description: `${name} description`,
   platforms: [],
-  landing_url: `https://${id}.example`,
+  landing_url: null,
   is_featured: false,
   sort: 1,
+  tagline: '',
+  intro: '',
+  reasons: [],
+  features: [],
+  steps: [],
+  faq: [],
+  downloads: [],
+  version: '',
+  source_url: null,
+  screenshots: [],
   ...extra,
 });
 const projects = () => [
   project('quiz', 'Quiz', { is_featured: true, subject_id: 'coding', tag: 'Web app', platforms: ['Web'] }),
-  project('sim', 'Simulator'),
+  project('sim', 'Simulator', {
+    landing_url: 'https://sim.example',
+    features: [{ glyph: '⚡', title: 'Fast', text: '' }],
+    downloads: [{ label: 'Windows', url: 'https://github.com/x/sim/releases/download/v1/sim.exe' }],
+    version: '1.0',
+    screenshots: [{ media_id: '40000000-0000-4000-8000-000000000001', caption: 'Main', widths: [320, 960] }],
+  }),
 ];
 
 type Call = { url: string; method: string; body: unknown };
@@ -39,6 +55,10 @@ function mockApi(reply: (c: Call) => [number, unknown] = () => [200, { ok: true 
 }
 afterEach(() => vi.unstubAllGlobals());
 
+/** A closed part of the page fields, by its title. */
+const part = (form: HTMLElement, title: string) =>
+  [...form.querySelectorAll('summary')].find((s) => s.firstChild?.textContent?.trim() === title)!;
+
 describe('projects admin (03 ADM-13)', () => {
   it('lists projects in order with the featured one marked', async () => {
     mockApi();
@@ -49,17 +69,21 @@ describe('projects admin (03 ADM-13)', () => {
     expect(items[0]).toHaveTextContent('Coding · Web app · Web');
     expect(within(items[0]!).getByRole('button', { name: 'Feature Quiz' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(items[0]!).getByRole('button', { name: 'Move Quiz up' })).toBeDisabled();
+    // v1.1: each project has its own page here; a website of its own is optional.
+    expect(within(items[0]!).getByRole('link', { name: '/projects/quiz' })).toHaveAttribute('href', '/projects/quiz');
+    expect(items[0]).toHaveTextContent('Coming soon (no download links yet)');
+    expect(items[1]).toHaveTextContent('1 screenshot · 1 feature · 1 download (version 1.0)');
+    expect(within(items[1]!).getByRole('link', { name: 'https://sim.example' })).toBeInTheDocument();
   });
 
-  it('adds a project, refusing an http landing page with the reason', async () => {
+  it('adds a project, refusing an http website with the reason', async () => {
     const calls = mockApi(() => [201, { id: 'new' }]);
     render(<ProjectsAdmin />);
     const form = await screen.findByRole('form', { name: 'Add a project' });
     const user = userEvent.setup();
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'Graph lab');
-    await user.type(within(form).getByRole('textbox', { name: 'Short description' }), 'Plot functions.');
-    const url = within(form).getByRole('textbox', { name: 'Landing page' });
-    await user.clear(url);
+    await user.type(within(form).getByRole('textbox', { name: /Short description/ }), 'Plot functions.');
+    const url = within(form).getByRole('textbox', { name: /Website/ });
     await user.type(url, 'http://graph.example');
     await user.click(within(form).getByRole('button', { name: 'Add project' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('must start with https://');
@@ -82,6 +106,16 @@ describe('projects admin (03 ADM-13)', () => {
           tag: '',
           glyph: '',
           platforms: ['Web', 'Windows'],
+          tagline: '',
+          intro: '',
+          reasons: [],
+          features: [],
+          steps: [],
+          faq: [],
+          downloads: [],
+          version: '',
+          source_url: '',
+          screenshots: [],
         },
       }),
     );
@@ -125,7 +159,89 @@ describe('projects admin (03 ADM-13)', () => {
     mockApi(() => [422, { error: 'landing_url: The address must start with https://' }]);
     render(<ProjectsAdmin />);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Feature Simulator' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Not done: landing_url');
+    expect(await screen.findByText(/^Not done: landing_url/)).toHaveAttribute('role', 'status');
+  });
+
+  it('fills in the project’s page: reasons, a download link (https only) and an uploaded screenshot (v1.1)', async () => {
+    const calls = mockApi();
+    const upload = vi.fn(async () => ({
+      id: '40000000-0000-4000-8000-000000000009',
+      kind: 'image' as const,
+      mime: 'image/png',
+      bytes: 3,
+      width: 960,
+      height: 540,
+      widths: [320, 960],
+      alt: '',
+      original_name: 'quiz.png',
+    }));
+    render(<ProjectsAdmin upload={upload} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    const form = screen.getByRole('form', { name: 'Edit Quiz' });
+
+    await user.click(part(form, 'Hero'));
+    await user.type(within(form).getByRole('textbox', { name: /Tagline/ }), 'Quizzes in a minute.');
+
+    await user.click(part(form, 'Why use it'));
+    await user.click(within(form).getByRole('button', { name: 'Add a reason' }));
+    await user.click(within(form).getByRole('button', { name: 'Add a reason' }));
+    const reasons = within(form).getByRole('list', { name: 'Reasons' });
+    await user.type(within(reasons).getAllByRole('textbox', { name: 'Title' })[0]!, 'Free');
+    await user.type(within(reasons).getAllByRole('textbox', { name: 'Text' })[0]!, 'No ads.');
+    // The second reason stays blank: it is dropped, not refused.
+
+    await user.click(part(form, 'Download'));
+    await user.click(within(form).getByRole('button', { name: 'Add a download' }));
+    await user.type(within(form).getByRole('textbox', { name: /For \(e.g. Windows/ }), 'Windows');
+    const link = within(form).getByRole('textbox', { name: 'Link' });
+    await user.type(link, 'http://example.com/quiz.exe');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      'Download “Windows”: The address must start with https://',
+    );
+    expect(calls).toEqual([]);
+    await user.clear(link);
+    await user.type(link, 'https://github.com/x/quiz/releases/download/v1/quiz.exe');
+
+    await user.click(part(form, 'Screenshots'));
+    await user.upload(
+      within(form).getByLabelText('Upload screenshots'),
+      new File(['png'], 'quiz.png', { type: 'image/png' }),
+    );
+    expect(await within(form).findByText('“quiz.png” added. Save to show it on the page.')).toBeInTheDocument();
+    await user.type(within(form).getByRole('textbox', { name: 'Caption (optional)' }), 'A quiz');
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({
+      method: 'PUT',
+      url: '/api/admin/projects/quiz',
+      body: {
+        tagline: 'Quizzes in a minute.',
+        reasons: [
+          { title: 'Free', text: 'No ads.' },
+          { title: '', text: '' },
+        ],
+        downloads: [{ label: 'Windows', url: 'https://github.com/x/quiz/releases/download/v1/quiz.exe' }],
+        screenshots: [{ media_id: '40000000-0000-4000-8000-000000000009', caption: 'A quiz' }],
+      },
+    });
+    expect(upload).toHaveBeenCalledWith(expect.any(File), 'image');
+  });
+
+  it('asks for a title on a reason that has text', async () => {
+    const calls = mockApi();
+    render(<ProjectsAdmin />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    const form = screen.getByRole('form', { name: 'Edit Quiz' });
+    await user.click(part(form, 'Features'));
+    await user.click(within(form).getByRole('button', { name: 'Add a feature' }));
+    await user.type(within(form).getByRole('textbox', { name: 'Text' }), 'Works offline.');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent('Every feature needs a title');
+    expect(calls).toEqual([]);
   });
 
   it('shows an error when the list cannot load', async () => {

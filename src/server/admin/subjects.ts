@@ -60,18 +60,20 @@ export async function listSubjectsWithCounts(supabase: SupabaseClient): Promise<
 
 /** Every public page: they all list the subjects in the Study menu and the footer. */
 export async function everyPublicPage(supabase: SupabaseClient): Promise<string[]> {
-  const [subjects, series, posts] = await Promise.all([
+  const [subjects, series, posts, projects] = await Promise.all([
     supabase.from('subjects').select('id'),
     supabase.from('series').select('slug'),
     supabase.from('public_posts').select('slug'),
+    supabase.from('projects').select('slug'),
   ]);
-  for (const r of [subjects, series, posts]) if (r.error) refused(r.error, 'pages');
+  for (const r of [subjects, series, posts, projects]) if (r.error) refused(r.error, 'pages');
   return [
     '/',
     ...(subjects.data as { id: string }[]).map((s) => `/study/${s.id}`),
     '/series',
     ...(series.data as { slug: string }[]).map((s) => `/series/${s.slug}`),
     '/projects',
+    ...(projects.data as { slug: string }[]).map((p) => `/projects/${p.slug}`),
     '/author',
     '/saved',
     ...(posts.data as { slug: string }[]).map((p) => `/posts/${p.slug}`),

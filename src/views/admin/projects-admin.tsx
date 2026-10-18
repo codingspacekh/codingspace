@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
-import { landingUrlProblem } from '@/lib/site-rules';
+import { uploadMedia } from '@/lib/media-upload';
+import { optionalUrlProblem } from '@/lib/site-rules';
 import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { AdminProject } from '@/server/admin/site';
+import { EMPTY_PAGE, pageProblem, ProjectPageFields, type PageFields, type Upload } from './project-page-fields';
 
 type Reply = { error?: string; failed?: string[] };
-type Fields = {
+/** The card's fields (Projects and Home); the page's are in PageFields. */
+type CardFields = {
   name: string;
   description: string;
   landing_url: string;
@@ -15,40 +18,71 @@ type Fields = {
   glyph: string;
   platforms: string;
 };
+type Fields = CardFields & PageFields;
 
-const EMPTY: Fields = {
+const EMPTY: CardFields = {
   name: '',
   description: '',
-  landing_url: 'https://',
+  landing_url: '',
   subject_id: null,
   tag: '',
   glyph: '',
   platforms: '',
 };
 
-const toFields = (p: AdminProject): Fields => ({
+const toCard = (p: AdminProject): CardFields => ({
   name: p.name,
   description: p.description,
-  landing_url: p.landing_url,
+  landing_url: p.landing_url ?? '',
   subject_id: p.subject_id,
   tag: p.tag,
   glyph: p.glyph,
   platforms: p.platforms.join(', '),
 });
 
-const toBody = (f: Fields) => ({
+const toPage = (p: AdminProject): PageFields => ({
+  tagline: p.tagline,
+  intro: p.intro,
+  reasons: p.reasons,
+  features: p.features,
+  steps: p.steps,
+  faq: p.faq,
+  downloads: p.downloads,
+  version: p.version,
+  source_url: p.source_url ?? '',
+  screenshots: p.screenshots,
+});
+
+const toBody = ({ screenshots, ...f }: Fields) => ({
   ...f,
   platforms: f.platforms
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
+  screenshots: screenshots.map((s) => ({ media_id: s.media_id, caption: s.caption })),
 });
+
+/** One line about the page: what it has, and whether it can be downloaded yet. */
+function pageSummary(p: AdminProject): string {
+  const parts = [
+    p.screenshots.length && `${p.screenshots.length} screenshot${p.screenshots.length === 1 ? '' : 's'}`,
+    p.reasons.length && `${p.reasons.length} reason${p.reasons.length === 1 ? '' : 's'}`,
+    p.features.length && `${p.features.length} feature${p.features.length === 1 ? '' : 's'}`,
+    p.steps.length && `${p.steps.length} step${p.steps.length === 1 ? '' : 's'}`,
+    p.faq.length && `${p.faq.length} question${p.faq.length === 1 ? '' : 's'}`,
+  ].filter(Boolean);
+  const download = p.downloads.length
+    ? `${p.downloads.length} download${p.downloads.length === 1 ? '' : 's'}${p.version ? ` (version ${p.version})` : ''}`
+    : 'Coming soon (no download links yet)';
+  return [...parts, download].join(' · ');
+}
 
 /**
  * 03 ADM-13: the projects on the Projects page and Home — add, edit, order, delete, and
- * the one featured project (shown first, and on Home). Each links to its own landing page.
+ * the one featured project (shown first, and on Home). Since v1.1 each card opens the
+ * project's own landing page on this site, /projects/<slug>, filled in here.
  */
-export function ProjectsAdmin() {
+export function ProjectsAdmin({ upload = uploadMedia }: { upload?: Upload }) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
@@ -118,6 +152,7 @@ export function ProjectsAdmin() {
                 <ProjectCard
                   key={p.id}
                   project={p}
+                  upload={upload}
                   first={i === 0}
                   last={i === projects.length - 1}
                   busy={busy}
@@ -145,6 +180,8 @@ export function ProjectsAdmin() {
             <h2 id="add-project">Add a project</h2>
             <ProjectForm
               initial={EMPTY}
+              page={EMPTY_PAGE}
+              upload={upload}
               label="Add a project"
               submit="Add project"
               busy={busy}
@@ -164,6 +201,7 @@ export function ProjectsAdmin() {
 
 function ProjectCard({
   project: p,
+  upload,
   first,
   last,
   busy,
@@ -173,6 +211,7 @@ function ProjectCard({
   onDelete,
 }: {
   project: AdminProject;
+  upload: Upload;
   first: boolean;
   last: boolean;
   busy: boolean;
@@ -195,7 +234,9 @@ function ProjectCard({
       </h2>
       {editing ? (
         <ProjectForm
-          initial={toFields(p)}
+          initial={toCard(p)}
+          page={toPage(p)}
+          upload={upload}
           label={`Edit ${p.name}`}
           submit="Save"
           busy={busy}
@@ -213,10 +254,19 @@ function ProjectCard({
             {[subjectOf(p.subject_id)?.name, p.tag, p.platforms.join(', ')].filter(Boolean).join(' · ')}
           </p>
           <p className="meta">
-            <a href={p.landing_url} target="_blank" rel="noopener noreferrer">
-              {p.landing_url}
+            <a href={`/projects/${p.slug}`} target="_blank" rel="noopener">
+              /projects/{p.slug}
             </a>
+            {p.landing_url && (
+              <>
+                {' · Website: '}
+                <a href={p.landing_url} target="_blank" rel="noopener noreferrer">
+                  {p.landing_url}
+                </a>
+              </>
+            )}
           </p>
+          <p className="meta">{pageSummary(p)}</p>
           <div className="adm-quick">
             <button
               type="button"
@@ -273,13 +323,17 @@ function ProjectCard({
 
 function ProjectForm({
   initial,
+  page: initialPage,
+  upload,
   label,
   submit,
   busy,
   onSubmit,
   onCancel,
 }: {
-  initial: Fields;
+  initial: CardFields;
+  page: PageFields;
+  upload: Upload;
   label: string;
   submit: string;
   busy: boolean;
@@ -289,16 +343,27 @@ function ProjectForm({
   const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const id = useId();
   const [f, setF] = useState(initial);
+  const [page, setPage] = useState(initialPage);
   const [touched, setTouched] = useState(false);
-  const set = <K extends keyof Fields>(k: K, v: Fields[K]) => setF((prev) => ({ ...prev, [k]: v }));
-  const urlProblem = landingUrlProblem(f.landing_url);
-  const problem = !f.name.trim() ? 'Add a name.' : !f.description.trim() ? 'Add a short description.' : urlProblem;
+  const set = <K extends keyof CardFields>(k: K, v: CardFields[K]) => setF((prev) => ({ ...prev, [k]: v }));
+  const urlProblem = optionalUrlProblem(f.landing_url);
+  const problem = !f.name.trim()
+    ? 'Add a name.'
+    : !f.description.trim()
+      ? 'Add a short description.'
+      : urlProblem
+        ? `Website: ${urlProblem}`
+        : pageProblem(page);
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
     if (problem) return;
-    if ((await onSubmit(f)) && !onCancel) setF(EMPTY);
+    if ((await onSubmit({ ...f, ...page })) && !onCancel) {
+      setF(EMPTY);
+      setPage(EMPTY_PAGE);
+      setTouched(false);
+    }
   }
 
   return (
@@ -308,7 +373,7 @@ function ProjectForm({
         <input value={f.name} maxLength={80} required onChange={(e) => set('name', e.target.value)} />
       </label>
       <label>
-        Short description
+        Short description, for the card on Projects and Home
         <textarea
           rows={2}
           maxLength={500}
@@ -318,13 +383,12 @@ function ProjectForm({
         />
       </label>
       <label>
-        Landing page
+        Website (optional)
         <input
           type="url"
           inputMode="url"
           value={f.landing_url}
           maxLength={500}
-          required
           aria-invalid={touched && !!urlProblem}
           aria-describedby={`${id}-url`}
           onChange={(e) => set('landing_url', e.target.value)}
@@ -334,7 +398,7 @@ function ProjectForm({
       <p id={`${id}-url`} className={touched && urlProblem ? 'adm-error' : 'adm-hint'}>
         {touched && urlProblem
           ? urlProblem
-          : 'The project’s own page (https:// only). Students go there to use or download it.'}
+          : 'Only if the project also has a site of its own (https://). Its page here links to it.'}
       </p>
       <label>
         Subject
@@ -362,6 +426,7 @@ function ProjectForm({
         Icon: up to 4 characters or an emoji
         <input value={f.glyph} maxLength={4} onChange={(e) => set('glyph', e.target.value)} />
       </label>
+      <ProjectPageFields value={page} upload={upload} onChange={setPage} />
       {touched && problem && (
         <p role="alert" className="adm-error">
           {problem}

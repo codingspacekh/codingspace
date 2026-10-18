@@ -30,14 +30,15 @@ test('sitemap.xml lists the pages and every published post', async ({ request })
     '/study/math',
     '/series',
     '/projects',
+    '/projects/pseudocode-runner',
     '/author',
     '/posts/am-gm-inequality',
     '/posts/study-tips-km',
   ]) {
     expect(xml).toContain(`${path}</loc>`);
   }
-  // home, 4 subjects, series, projects, author + posts (the content has no series of its own)
-  expect(xml.match(/<url>/g)).toHaveLength(8 + 11);
+  // home, 4 subjects, series, projects, author + 3 project pages + posts (the content has no series of its own)
+  expect(xml.match(/<url>/g)).toHaveLength(8 + 3 + 11);
 });
 
 test('rss.xml is a feed of the newest posts', async ({ request }) => {

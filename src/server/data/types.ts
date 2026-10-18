@@ -1,4 +1,5 @@
 import type { PhotoShape, SectionKind } from '@/lib/author';
+import type { ProjectDownload, ProjectFeature, ProjectReason, ProjectStep } from '@/lib/project-page';
 import type { SubjectId } from '@/lib/subjects';
 
 // Shapes the pages receive (serialisable props). Read from the public_* views only.
@@ -79,10 +80,40 @@ export type Project = {
   glyph: string;
   subject: SubjectId | null;
   tag: string;
+  /** The card's text. */
   description: string;
   platforms: string[];
-  landingUrl: string;
+  /** The project's own website, if it has one. */
+  landingUrl: string | null;
   featured: boolean;
+  /** Has at least one download link (otherwise "Coming soon"). */
+  available: boolean;
+};
+
+/** An image on a project page, from the media library (widths copied when the project is saved). */
+export type ProjectScreenshot = {
+  media: string;
+  caption: string;
+  alt: string;
+  widths: number[];
+  width: number;
+  height: number;
+};
+
+/** /projects/<slug> (v1.1): a landing page in one fixed layout; empty sections don't show. */
+export type ProjectPageData = {
+  project: Project;
+  tagline: string;
+  introHtml: string;
+  reasons: ProjectReason[];
+  features: ProjectFeature[];
+  steps: ProjectStep[];
+  faq: { question: string; answerHtml: string }[];
+  downloads: ProjectDownload[];
+  version: string;
+  sourceUrl: string | null;
+  screenshots: ProjectScreenshot[];
+  hasMath: boolean;
 };
 
 export type FeaturedProblem = {

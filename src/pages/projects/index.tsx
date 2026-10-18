@@ -26,8 +26,8 @@ export default function Projects({ projects }: Props) {
           <span className="crumbs">Projects</span>
           <h1>Software I build for my classes</h1>
           <p className="lead">
-            Free tools for practising what we learn in class. Each one has its own site with downloads, guides and
-            updates.
+            Free tools for practising what we learn in class. Each one has its own page with what it does, screenshots
+            and downloads.
           </p>
         </div>
         <div className="big" aria-hidden="true">

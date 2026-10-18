@@ -54,9 +54,18 @@ export type ProjectRow = {
   tag: string;
   description: string;
   platforms: string[];
-  landing_url: string;
+  landing_url: string | null;
   is_featured: boolean;
   sort: number;
+  tagline: string;
+  intro: string;
+  reasons: unknown[];
+  features: unknown[];
+  steps: unknown[];
+  faq: unknown[];
+  downloads: unknown[];
+  version: string;
+  source_url: string | null;
 };
 
 export type ProfileRow = {
@@ -203,6 +212,15 @@ async function importSiteContent(
       landing_url: p.landingUrl,
       is_featured: p.featured,
       sort: p.sort,
+      tagline: p.page.tagline,
+      intro: p.page.intro,
+      reasons: p.page.reasons,
+      features: p.page.features,
+      steps: p.page.steps,
+      faq: p.page.faq,
+      downloads: p.page.downloads,
+      version: p.page.version,
+      source_url: p.page.sourceUrl,
     })),
   );
 

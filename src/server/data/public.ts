@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { renderSnippet } from '@/server/render/snippet';
+import type { ProjectDownload, ProjectFaq, ProjectFeature, ProjectReason, ProjectStep } from '@/lib/project-page';
 import type { Subject, SubjectId } from '@/lib/subjects';
 import { plainText, type PhotoShape, type SectionKind } from '@/lib/author';
 import type {
@@ -11,6 +12,8 @@ import type {
   PostPageData,
   Profile,
   Project,
+  ProjectPageData,
+  ProjectScreenshot,
   SectionWithLessons,
   SeriesNav,
   SeriesPageData,
@@ -330,38 +333,99 @@ export async function getSeriesPage(slug: string): Promise<SeriesPageData | null
 
 // ---------- projects and author ----------
 
+type ProjectRow = {
+  id: string;
+  slug: string;
+  name: string;
+  glyph: string;
+  subject_id: string | null;
+  tag: string;
+  description: string;
+  platforms: string[];
+  landing_url: string | null;
+  is_featured: boolean;
+  downloads: ProjectDownload[];
+};
+const PROJECT_CARD =
+  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, downloads';
+
+const toProject = (r: ProjectRow): Project => ({
+  slug: r.slug,
+  name: r.name,
+  glyph: r.glyph,
+  subject: r.subject_id,
+  tag: r.tag,
+  description: r.description,
+  platforms: r.platforms,
+  landingUrl: r.landing_url,
+  featured: r.is_featured,
+  available: r.downloads.length > 0,
+});
+
 export async function getProjects(): Promise<Project[]> {
-  const rows = must<
-    {
-      slug: string;
-      name: string;
-      glyph: string;
-      subject_id: string | null;
-      tag: string;
-      description: string;
-      platforms: string[];
-      landing_url: string;
-      is_featured: boolean;
-    }[]
+  const rows = must<ProjectRow[]>(
+    await db().from('public_projects').select(PROJECT_CARD).order('is_featured', { ascending: false }).order('sort'),
+    'projects',
+  );
+  return rows.map(toProject);
+}
+
+export async function getProjectSlugs(): Promise<string[]> {
+  return must<{ slug: string }[]>(await db().from('public_projects').select('slug'), 'project slugs').map(
+    (r) => r.slug,
+  );
+}
+
+/** A project's landing page (v1.1): the intro and FAQ answers are Markdown, rendered like lessons. */
+export async function getProjectPage(slug: string): Promise<ProjectPageData | null> {
+  if (!isPostSlug(slug)) return null;
+  const row = must<
+    | (ProjectRow & {
+        tagline: string;
+        intro: string;
+        reasons: ProjectReason[];
+        features: ProjectFeature[];
+        steps: ProjectStep[];
+        faq: ProjectFaq[];
+        version: string;
+        source_url: string | null;
+      })
+    | null
   >(
     await db()
       .from('public_projects')
-      .select('slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured')
-      .order('is_featured', { ascending: false })
-      .order('sort'),
-    'projects',
+      .select(`${PROJECT_CARD}, tagline, intro, reasons, features, steps, faq, version, source_url`)
+      .eq('slug', slug)
+      .maybeSingle(),
+    'project',
   );
-  return rows.map((r) => ({
-    slug: r.slug,
-    name: r.name,
-    glyph: r.glyph,
-    subject: r.subject_id,
-    tag: r.tag,
-    description: r.description,
-    platforms: r.platforms,
-    landingUrl: r.landing_url,
-    featured: r.is_featured,
-  }));
+  if (!row) return null;
+  const shots = must<ProjectScreenshot[]>(
+    await db()
+      .from('public_project_screenshots')
+      .select('media, caption, alt, widths, width, height')
+      .eq('project_id', row.id)
+      .order('position'),
+    'project screenshots',
+  );
+  const [intro, ...answers] = await Promise.all([
+    renderSnippet(row.intro),
+    ...row.faq.map((f) => renderSnippet(f.answer)),
+  ]);
+  return {
+    project: toProject(row),
+    tagline: row.tagline,
+    introHtml: intro!.html,
+    reasons: row.reasons,
+    features: row.features,
+    steps: row.steps,
+    faq: row.faq.map((f, i) => ({ question: f.question, answerHtml: answers[i]!.html })),
+    downloads: row.downloads,
+    version: row.version,
+    sourceUrl: row.source_url,
+    screenshots: shots,
+    hasMath: intro!.hasMath || answers.some((a) => a.hasMath),
+  };
 }
 
 type AuthorPageRow = {

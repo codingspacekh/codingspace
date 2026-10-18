@@ -8,10 +8,85 @@
       "subject": "coding",
       "tag": "Tool",
       "description": "Run Cambridge 9618 pseudocode in the browser and step through it line by line.",
-      "platforms": ["Web"],
-      "landingUrl": "https://example.com/pseudocode-runner",
+      "platforms": ["Windows", "macOS"],
       "featured": true,
-      "sort": 1
+      "sort": 1,
+      "page": {
+        "tagline": "Write Cambridge 9618 pseudocode and watch it run, one line at a time.",
+        "intro": "Pseudocode Runner checks your syntax as you type and runs your program **step by step**, showing every variable as it changes. It follows the [Cambridge 9618 pseudocode guide](https://example.com/9618-guide), so what you practise is what the exam expects.",
+        "reasons": [
+          {
+            "title": "Made for the exam",
+            "text": "Only the keywords and rules of the 9618 guide: no surprises on Paper 2 or Paper 4."
+          },
+          {
+            "title": "See what your code does",
+            "text": "Step through a program and watch each variable, array and file change."
+          },
+          {
+            "title": "Free, no account",
+            "text": "Download it and start. Nothing to sign up for, no ads."
+          }
+        ],
+        "features": [
+          {
+            "glyph": "▶",
+            "title": "Run and step",
+            "text": "Run the whole program, or one line at a time."
+          },
+          {
+            "glyph": "⚠",
+            "title": "Clear errors",
+            "text": "Mistakes are explained in plain words, with the line they are on."
+          },
+          {
+            "glyph": "⌗",
+            "title": "Arrays and records",
+            "text": "1D and 2D arrays, records and enumerated types, shown as tables."
+          },
+          {
+            "glyph": "⎘",
+            "title": "Text files",
+            "text": "OPENFILE, READFILE and WRITEFILE work on real files."
+          }
+        ],
+        "steps": [
+          {
+            "title": "Download",
+            "text": "Choose your computer below and download the installer."
+          },
+          {
+            "title": "Open an example",
+            "text": "File → Examples has a program for every topic."
+          },
+          {
+            "title": "Step through it",
+            "text": "Press Step and watch the variables panel."
+          }
+        ],
+        "faq": [
+          {
+            "question": "Does it work without the internet?",
+            "answer": "Yes. Once installed, it never needs a connection."
+          },
+          {
+            "question": "Can I use it for Paper 4?",
+            "answer": "Paper 4 is done in Python, Java or VB. Use the Runner to plan your algorithm in pseudocode first."
+          }
+        ],
+        "downloads": [
+          {
+            "label": "Windows",
+            "url": "https://example.com/downloads/pseudocode-runner-setup.exe"
+          },
+          {
+            "label": "macOS",
+            "url": "https://example.com/downloads/pseudocode-runner.dmg"
+          }
+        ],
+        "version": "0.9.0",
+        "sourceUrl": "https://example.com/source/pseudocode-runner"
+      }
     },
     {
       "slug": "inequality-drills",
@@ -23,7 +98,10 @@
       "platforms": ["Web", "Android"],
       "landingUrl": "https://example.com/inequality-drills",
       "featured": false,
-      "sort": 2
+      "sort": 2,
+      "page": {
+        "tagline": "A short inequality to solve every day, with a hint when you're stuck."
+      }
     },
     {
       "slug": "circuit-lab",

@@ -17,6 +17,7 @@ const CONFLICT: Record<TableName, string> = {
   post_revisions: 'id',
   post_media: 'post_id,media_id', // also rebuilt by a trigger as each post goes in
   projects: 'id',
+  project_screenshots: 'project_id,position',
   profile: 'id',
   author_sections: 'id', // the built-in ones are already there, like the subjects
   author_items: 'id',

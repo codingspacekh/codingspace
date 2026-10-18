@@ -69,7 +69,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | PUB-03 | Subject page: intro, section shortcuts, lessons **grouped by section** in the owner's order, each card showing level, minutes and problem count. | M |
 | PUB-04 | Lesson page: breadcrumb, tags, title, meta, rendered body (headings, lists, quotes, links, **maths**, **highlighted code with copy**, callouts, images with captions, file downloads, embeds), prev/next within section, section side-nav, table of contents. | M |
 | PUB-05 | Math page and Home show the **Problem of the week** with reveal-on-click hint and solution. | M |
-| PUB-06 | Projects page: cards linking to each project's **external landing page**; one featured project first. | M |
+| PUB-06 | Projects page: cards linking to each project's **own landing page on this site**, `/projects/<slug>` (v1.1; was an external site): hero (name, tagline, intro, download), screenshots, why use it, features, get started, FAQ, downloads (links the owner pastes, e.g. GitHub Releases; none yet = “Coming soon”). Empty sections don't show. One featured project first. | M |
 | PUB-07 | Author page: profile, stats, timeline, **life posts**, contact email as copyable text. | M |
 | PUB-08 | Khmer posts render with a Khmer font and `lang="km"`. | M |
 | PUB-09 | Full-text search across published posts. | S |
@@ -93,7 +93,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | ADM-11 | Problem of the week editor with live maths preview and week date. | M |
 | ADM-12a | Subjects (v1.1, owner request 2026-10-18): add, edit (name, symbol, colour, menu line, introduction), show or hide, reorder and delete subjects. A new subject starts hidden; a hidden subject and everything in it (sections, lessons, problem of the week) never reach visitors. Only an empty subject can be deleted. | S |
 | ADM-12 | Study structure: add, rename, describe, reorder and delete sections (deleting one deletes its lessons, after a confirmation that lists them; owner change 2026-10-17); reorder lessons inside a section. | M |
-| ADM-13 | Projects: create, edit, delete; one featured; landing URL validated (https only). | M |
+| ADM-13 | Projects: create, edit, delete; one featured; and each project's landing page (v1.1): tagline, intro (Markdown), up to 8 screenshots from the media library, reasons, features, steps, FAQ, version and download links; optional website and source-code links. Every link https only. | M |
 | ADM-14 | Author page: photo, name, bio (Markdown), stats, public email, and sections in the owner's order: timeline, experience, education, skills, awards & certificates, hobbies & interests, life posts and any number of custom sections. Every part except the name can be hidden, down to single items; hidden parts never reach visitors (owner request 2026-10-17). | M |
 | ADM-15 | Admin audit log (who did what, when) visible on the dashboard. | S |
 | ADM-16 | Export all content to Markdown + JSON (backup and portability). | S |
