@@ -50,6 +50,8 @@ describe('POST /api/questions (v1.1)', () => {
     expect(out).toMatchObject({ status: 303, redirect: '/posts/am-gm?asked=ok#questions' });
     const bad = await call({ origin: 'https://site.test', json: false, body: { post: '../x' } });
     expect(bad.redirect).toBe('/?asked=ok#questions');
+    const life = await call({ origin: 'https://site.test', json: false, body: { post: 'my-week', kind: 'life' } });
+    expect(life.redirect).toBe('/posts/my-week?asked=ok#comments');
   });
 
   it('refuses other sites and other methods', async () => {

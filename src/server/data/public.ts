@@ -231,14 +231,16 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
   };
-  if (!row.section_id) return { post, section: null, siblings: [], series: [], syllabus: [] };
+  // Life posts have no section: only their comments (v1.1).
+  if (!row.section_id)
+    return { post, section: null, siblings: [], series: [], syllabus: [], questions: await getLessonQuestions(row.id) };
 
   const [section, siblings, series, syllabus, questions] = await Promise.all([
     db().from('public_sections').select('slug, title').eq('id', row.section_id).maybeSingle(),
     db().from('public_posts').select('slug, title').eq('section_id', row.section_id).order('sort').order('slug'),
     getSeriesNav(row.slug),
     getSyllabusTags(row.slug),
-    row.kind === 'lesson' ? getLessonQuestions(row.id) : Promise.resolve([]),
+    getLessonQuestions(row.id),
   ]);
   return {
     post,
@@ -343,7 +345,7 @@ export async function getSyllabusPage(slug: string): Promise<SyllabusPageData | 
   };
 }
 
-/** Approved questions under a lesson, oldest first; questions and answers are Markdown (v1.1). */
+/** Approved questions under a lesson (comments under a life post), oldest first; both sides are Markdown (v1.1). */
 async function getLessonQuestions(postId: string): Promise<LessonQuestion[]> {
   const rows = must<{ id: string; name: string; body: string; answer: string; published_at: string }[]>(
     await db()

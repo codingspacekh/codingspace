@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { PostError } from './posts';
 
 /**
- * Questions on lessons for the admin (v1.1): the inbox, approving, answering, hiding and
- * deleting. Each change is an audited admin_* function and rebuilds the lesson's page.
+ * Questions on lessons and comments on life posts for the admin (v1.1): the inbox, approving,
+ * answering, hiding and deleting. Each change is an audited admin_* function and rebuilds the
+ * post's page.
  */
 
 export const QUESTION_STATUSES = ['pending', 'published', 'hidden'] as const;
@@ -17,7 +18,8 @@ export type AdminQuestion = {
   answer: string;
   status: QuestionStatus;
   created_at: string;
-  lesson: { slug: string; title: string; live: boolean } | null;
+  /** The post it was written under: a lesson (a question) or a life post (a comment). */
+  lesson: { slug: string; title: string; live: boolean; kind: 'lesson' | 'life' } | null;
 };
 
 function refused(error: { code?: string; message: string }, what: string): never {
@@ -34,18 +36,20 @@ export async function listQuestions(supabase: SupabaseClient, status: unknown): 
   const s = z.enum(QUESTION_STATUSES).catch('pending').parse(status);
   const { data, error } = await supabase
     .from('questions')
-    .select('id, name, body, answer, status, created_at, posts(slug, title, status)')
+    .select('id, name, body, answer, status, created_at, posts(slug, title, status, kind)')
     .eq('status', s)
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) refused(error, 'questions');
   return (
     data as unknown as (Omit<AdminQuestion, 'lesson'> & {
-      posts: { slug: string; title: string; status: string } | null;
+      posts: { slug: string; title: string; status: string; kind: 'lesson' | 'life' } | null;
     })[]
   ).map(({ posts, ...q }) => ({
     ...q,
-    lesson: posts ? { slug: posts.slug, title: posts.title, live: posts.status === 'published' } : null,
+    lesson: posts
+      ? { slug: posts.slug, title: posts.title, live: posts.status === 'published', kind: posts.kind }
+      : null,
   }));
 }
 

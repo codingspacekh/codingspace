@@ -10,7 +10,7 @@ const q = (id: string, status: string, extra = {}) => ({
   answer: '',
   status,
   created_at: '2026-10-18T03:00:00Z',
-  lesson: { slug: 'am-gm', title: 'The AM–GM inequality', live: true },
+  lesson: { slug: 'am-gm', title: 'The AM–GM inequality', live: true, kind: 'lesson' },
   ...extra,
 });
 
@@ -25,7 +25,14 @@ function mockApi() {
         const status = new URL(url, 'http://x').searchParams.get('status');
         const list =
           status === 'pending'
-            ? [q('q1', 'pending')]
+            ? [
+                q('q1', 'pending'),
+                q('c1', 'pending', {
+                  name: 'Sok',
+                  body: 'Nice post!',
+                  lesson: { slug: 'my-week', title: 'My week', live: true, kind: 'life' },
+                }),
+              ]
             : status === 'published'
               ? [q('q2', 'published', { answer: 'Old.' })]
               : [];
@@ -44,8 +51,9 @@ describe('QuestionsAdmin (v1.1)', () => {
     const calls = mockApi();
     const user = userEvent.setup();
     render(<QuestionsAdmin />);
-    const list = await screen.findByRole('list', { name: 'Waiting questions' });
-    const card = within(list).getByRole('listitem');
+    const list = await screen.findByRole('list', { name: 'Waiting questions and comments' });
+    const card = within(list).getAllByRole('listitem')[0]!;
+    expect(card).toHaveTextContent('Question on The AM–GM inequality');
     expect(within(card).getByText(/Why is \*\*it\*\* true\?/)).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'The AM–GM inequality' })).toHaveAttribute(
       'href',
@@ -63,12 +71,35 @@ describe('QuestionsAdmin (v1.1)', () => {
     expect(await screen.findByText('Published, with your answer.')).toBeInTheDocument();
   });
 
+  it('shows a comment on a life post with a reply instead of an answer', async () => {
+    const calls = mockApi();
+    const user = userEvent.setup();
+    render(<QuestionsAdmin />);
+    const list = await screen.findByRole('list', { name: 'Waiting questions and comments' });
+    const card = within(list).getAllByRole('listitem')[1]!;
+    expect(card).toHaveTextContent('Comment on My week');
+    expect(within(card).getByRole('link', { name: 'My week' })).toHaveAttribute('href', '/posts/my-week#comments');
+    await user.type(within(card).getByRole('textbox', { name: /Your reply/ }), 'Thanks!');
+    await user.click(within(card).getByRole('button', { name: 'Publish with reply' }));
+    await waitFor(() =>
+      expect(calls[0]).toEqual({
+        url: '/api/admin/questions/c1',
+        method: 'PUT',
+        body: { status: 'published', answer: 'Thanks!' },
+      }),
+    );
+    expect(await screen.findByText('Published, with your reply.')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Delete Sok’s comment' })).toBeInTheDocument();
+  });
+
   it('edits an answer, hides and deletes on the other tabs', async () => {
     const calls = mockApi();
     const user = userEvent.setup();
     render(<QuestionsAdmin />);
     await user.click(await screen.findByRole('button', { name: 'Published' }));
-    const card = within(await screen.findByRole('list', { name: 'Published questions' })).getByRole('listitem');
+    const card = within(await screen.findByRole('list', { name: 'Published questions and comments' })).getByRole(
+      'listitem',
+    );
     const save = within(card).getByRole('button', { name: 'Save answer' });
     expect(save).toBeDisabled();
     await user.type(within(card).getByRole('textbox', { name: /Your answer/ }), ' More.');

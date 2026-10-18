@@ -270,8 +270,10 @@ export function PostView({ post, section, siblings, series = [], syllabus = [], 
           {series.map((s) => (
             <SeriesBox key={s.slug} series={s} />
           ))}
-          {/* The admin preview has no questions (undefined): no form there. */}
-          {isLesson && questions && <LessonQuestions slug={post.slug} questions={questions} />}
+          {/* The admin preview has no questions (undefined): no form there. Life posts get comments. */}
+          {questions && (isLesson || post.kind === 'life') && (
+            <LessonQuestions slug={post.slug} kind={post.kind} questions={questions} />
+          )}
         </article>
 
         {section && siblings.length > 0 ? (

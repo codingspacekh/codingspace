@@ -2,12 +2,38 @@ import { useId, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { formatDate } from '@/lib/format';
 import type { LessonQuestion } from '@/server/data/types';
 
-const MESSAGES: Record<string, string> = {
-  ok: 'Thank you! Your question will appear here once the teacher has read it.',
-  limited: 'You’ve asked a lot of questions in the last hour. Please try again later.',
-  not_found: 'This lesson can’t take questions right now.',
-  invalid: 'Please write your name and your question.',
-  error: 'Something went wrong. Please try again in a minute.',
+/** What the section says: questions under a lesson, comments under a life post (same rules). */
+const WORDS = {
+  lesson: {
+    anchor: 'questions',
+    heading: 'Questions',
+    none: 'No questions yet. Ask the first one.',
+    form: 'Ask a question',
+    field: 'Your question',
+    send: 'Send question',
+    messages: {
+      ok: 'Thank you! Your question will appear here once the teacher has read it.',
+      limited: 'You’ve asked a lot of questions in the last hour. Please try again later.',
+      not_found: 'This lesson can’t take questions right now.',
+      invalid: 'Please write your name and your question.',
+      error: 'Something went wrong. Please try again in a minute.',
+    } as Record<string, string>,
+  },
+  life: {
+    anchor: 'comments',
+    heading: 'Comments',
+    none: 'No comments yet. Be the first.',
+    form: 'Leave a comment',
+    field: 'Your comment',
+    send: 'Send comment',
+    messages: {
+      ok: 'Thank you! Your comment will appear here once the teacher has read it.',
+      limited: 'You’ve sent a lot of comments in the last hour. Please try again later.',
+      not_found: 'This post can’t take comments right now.',
+      invalid: 'Please write your name and your comment.',
+      error: 'Something went wrong. Please try again in a minute.',
+    } as Record<string, string>,
+  },
 };
 
 const noop = () => () => {};
@@ -20,11 +46,22 @@ const useAsked = () =>
   );
 
 /**
- * Questions under a lesson (v1.1): the approved ones with the teacher's answers, and a form to
- * ask. No login; every question waits for the teacher. A plain form post without JavaScript.
+ * Questions under a lesson, or comments under a life post (v1.1): the approved ones with the
+ * teacher's answers, and a form. No login; every one waits for the teacher. A plain form post
+ * without JavaScript.
  */
-export function LessonQuestions({ slug, questions }: { slug: string; questions: LessonQuestion[] }) {
+export function LessonQuestions({
+  slug,
+  kind = 'lesson',
+  questions,
+}: {
+  slug: string;
+  kind?: 'lesson' | 'life';
+  questions: LessonQuestion[];
+}) {
   const id = useId();
+  const w = WORDS[kind];
+  const MESSAGES = w.messages;
   const asked = useAsked();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -50,8 +87,8 @@ export function LessonQuestions({ slug, questions }: { slug: string; questions: 
   }
 
   return (
-    <section id="questions" className="questions" aria-labelledby={`${id}-h`}>
-      <h2 id={`${id}-h`}>Questions</h2>
+    <section id={w.anchor} className="questions" aria-labelledby={`${id}-h`}>
+      <h2 id={`${id}-h`}>{w.heading}</h2>
       {questions.length > 0 ? (
         <ol className="q-list">
           {questions.map((q) => (
@@ -70,16 +107,18 @@ export function LessonQuestions({ slug, questions }: { slug: string; questions: 
           ))}
         </ol>
       ) : (
-        <p className="meta">No questions yet. Ask the first one.</p>
+        <p className="meta">{w.none}</p>
       )}
 
       <form className="q-form" method="post" action="/api/questions" onSubmit={ask} aria-labelledby={`${id}-ask`}>
-        <h3 id={`${id}-ask`}>Ask a question</h3>
+        <h3 id={`${id}-ask`}>{w.form}</h3>
         <p className="q-note">
-          Use your first name or a nickname, and don’t share personal details. Your question appears here after the
-          teacher has read it. You can use $maths$.
+          Use your first name or a nickname, and don’t share personal details. Your{' '}
+          {kind === 'life' ? 'comment' : 'question'} appears here after the teacher has read it. You can use $maths$.
         </p>
         <input type="hidden" name="post" value={slug} />
+        {/* Only for the way back after a plain form post (#questions or #comments). */}
+        <input type="hidden" name="kind" value={kind} />
         <label htmlFor={`${id}-name`}>Your name</label>
         <input
           id={`${id}-name`}
@@ -90,7 +129,7 @@ export function LessonQuestions({ slug, questions }: { slug: string; questions: 
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <label htmlFor={`${id}-q`}>Your question</label>
+        <label htmlFor={`${id}-q`}>{w.field}</label>
         <textarea
           id={`${id}-q`}
           name="question"
@@ -106,7 +145,7 @@ export function LessonQuestions({ slug, questions }: { slug: string; questions: 
           <input id={`${id}-w`} name="website" tabIndex={-1} autoComplete="off" />
         </div>
         <button type="submit" className="btn pri" disabled={sending}>
-          {sending ? 'Sending…' : 'Send question'}
+          {sending ? 'Sending…' : w.send}
         </button>
         <p className="q-result" role="status">
           {message || MESSAGES[asked] || ''}

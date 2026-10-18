@@ -84,6 +84,33 @@ describe('<LessonQuestions> (v1.1)', () => {
     expect(await within(form).findByRole('status')).toHaveTextContent('Please try again later.');
   });
 
+  it('is a comment section on a life post: same form and rules, other words', async () => {
+    const calls = mockFetch('ok');
+    const user = userEvent.setup();
+    const { rerender } = render(<LessonQuestions slug="my-week" kind="life" questions={[]} />);
+    expect(screen.getByText('No comments yet. Be the first.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Comments' })).toHaveAttribute('id', 'comments');
+    const form = screen.getByRole('form', { name: 'Leave a comment' });
+    expect(form).toHaveAttribute('action', '/api/questions');
+    expect(form.querySelector('input[name="kind"]')).toHaveValue('life');
+    await user.type(within(form).getByRole('textbox', { name: 'Your name' }), 'Dara');
+    await user.type(within(form).getByRole('textbox', { name: 'Your comment' }), 'Nice post!');
+    await user.click(within(form).getByRole('button', { name: 'Send comment' }));
+    await waitFor(() =>
+      expect(calls[0]).toEqual({
+        url: '/api/questions',
+        body: { post: 'my-week', name: 'Dara', question: 'Nice post!', website: '' },
+      }),
+    );
+    expect(await within(form).findByRole('status')).toHaveTextContent(
+      'Thank you! Your comment will appear here once the teacher has read it.',
+    );
+
+    rerender(<LessonQuestions slug="my-week" kind="life" questions={QUESTIONS} />);
+    const [first] = within(screen.getByRole('region', { name: 'Comments' })).getAllByRole('listitem');
+    expect(within(first!).getByText('Teacher')).toBeInTheDocument();
+  });
+
   it('keeps the honeypot away from people and assistive technology', () => {
     render(<LessonQuestions slug="am-gm" questions={[]} />);
     const trap = document.querySelector('input[name="website"]')!;

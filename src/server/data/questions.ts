@@ -3,8 +3,9 @@ import { db } from './public';
 import { clientIp, rateKey } from './search';
 
 /**
- * Questions on lessons (v1.1): a visitor asks under a lesson; it waits for the owner's approval.
- * Everything goes through public.ask_question (checks, 5 an hour per visitor, 300 a day).
+ * Questions on lessons and comments on life posts (v1.1): a visitor writes under a post; it waits
+ * for the owner's approval. Everything goes through public.ask_question (checks, 5 an hour per
+ * visitor, 300 a day, questions and comments together).
  */
 
 export type AskResult = 'ok' | 'limited' | 'not_found' | 'invalid';
@@ -20,6 +21,8 @@ export function askFields(body: unknown) {
     slug: str(b.post).trim(),
     name: str(b.name).trim(),
     question: str(b.question).trim(),
+    // Only for the way back after a plain form post: comments on life posts, questions otherwise.
+    anchor: str(b.kind) === 'life' ? 'comments' : 'questions',
     // The honeypot: hidden from people, filled in by bots.
     website: str(b.website),
   };

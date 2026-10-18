@@ -73,6 +73,11 @@ describe('describeEvent', () => {
       text: 'Published a question from Dara',
       href: '/admin/questions',
     });
+    expect(
+      describeEvent(
+        event('question.hide', { entity: 'question', meta: { name: 'Sok', lesson: 'my-week', kind: 'life' } }),
+      ).text,
+    ).toBe('Hid a comment from Sok');
   });
 
   it('shows when a post was scheduled for', () => {

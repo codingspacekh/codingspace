@@ -14,8 +14,8 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 /**
- * v1.1: questions students asked under lessons. Nothing is public until published here; the
- * answer (Markdown, $maths$) shows under the question, marked "Teacher".
+ * v1.1: questions students asked under lessons and comments on life posts. Nothing is public
+ * until published here; the answer or reply (Markdown, $maths$) shows under it, marked "Teacher".
  */
 export function QuestionsAdmin() {
   const [tab, setTab] = useState<QuestionStatus>('pending');
@@ -57,10 +57,10 @@ export function QuestionsAdmin() {
 
   return (
     <>
-      <h1>Questions</h1>
+      <h1>Questions &amp; comments</h1>
       <p className="adm-lead">
-        Questions students asked under lessons. Nothing shows on the site until you publish it; your answer appears
-        under the question, marked “Teacher”.
+        Questions students asked under lessons and comments on your life posts. Nothing shows on the site until you
+        publish it; your answer or reply appears under it, marked “Teacher”.
       </p>
       <div role="group" aria-label="Show" className="ed-panels adm-subjects">
         {TABS.map((t) => (
@@ -83,20 +83,16 @@ export function QuestionsAdmin() {
       </p>
       {failed ? (
         <p role="alert" className="adm-error">
-          The questions could not be loaded. Reload the page to try again.
+          The questions and comments could not be loaded. Reload the page to try again.
         </p>
       ) : !questions ? (
         <p aria-live="polite">Loading…</p>
       ) : questions.length === 0 ? (
         <p className="empty">
-          {tab === 'pending'
-            ? 'No questions waiting.'
-            : tab === 'published'
-              ? 'Nothing published yet.'
-              : 'Nothing hidden.'}
+          {tab === 'pending' ? 'Nothing waiting.' : tab === 'published' ? 'Nothing published yet.' : 'Nothing hidden.'}
         </p>
       ) : (
-        <ol className="adm-sections" aria-label={`${TABS.find((t) => t.status === tab)!.label} questions`}>
+        <ol className="adm-sections" aria-label={`${TABS.find((t) => t.status === tab)!.label} questions and comments`}>
           {questions.map((q) => (
             <QuestionCard
               key={q.id}
@@ -104,7 +100,10 @@ export function QuestionsAdmin() {
               busy={busy}
               onSave={save}
               onDelete={() =>
-                change(() => api(`/api/admin/questions/${q.id}`, { method: 'DELETE' }), `Deleted ${q.name}’s question.`)
+                change(
+                  () => api(`/api/admin/questions/${q.id}`, { method: 'DELETE' }),
+                  `Deleted ${q.name}’s ${noun(q)}.`,
+                )
               }
             />
           ))}
@@ -113,6 +112,9 @@ export function QuestionsAdmin() {
     </>
   );
 }
+
+/** A comment if it was written under a life post, a question otherwise. */
+const noun = (q: AdminQuestion) => (q.lesson?.kind === 'life' ? 'comment' : 'question');
 
 function QuestionCard({
   question: q,
@@ -128,29 +130,31 @@ function QuestionCard({
   const id = useId();
   const [answer, setAnswer] = useState(q.answer);
   const [confirming, setConfirming] = useState(false);
+  const comment = noun(q) === 'comment';
+  const reply = comment ? 'reply' : 'answer';
   return (
     <li className="frame adm-section adm-q" aria-labelledby={`${id}-t`}>
       <h2 id={`${id}-t`}>
         {q.name} <span className="meta">· {when(q.created_at)}</span>
       </h2>
       <p className="meta">
-        On{' '}
+        {comment ? 'Comment on' : 'Question on'}{' '}
         {q.lesson ? (
           q.lesson.live ? (
-            <a href={`/posts/${q.lesson.slug}#questions`} target="_blank" rel="noopener">
+            <a href={`/posts/${q.lesson.slug}#${comment ? 'comments' : 'questions'}`} target="_blank" rel="noopener">
               {q.lesson.title}
             </a>
           ) : (
             `${q.lesson.title} (not live now)`
           )
         ) : (
-          'a deleted lesson'
+          'a deleted post'
         )}
       </p>
       {/* The student's text exactly as typed: the site renders it (Markdown) once published. */}
       <p className="adm-q-body">{q.body}</p>
       <label htmlFor={`${id}-a`} className="adm-form-label">
-        Your answer (Markdown, $maths$; optional)
+        Your {reply} (Markdown, $maths$; optional)
       </label>
       <textarea id={`${id}-a`} rows={3} maxLength={4000} value={answer} onChange={(e) => setAnswer(e.target.value)} />
       <div className="adm-quick">
@@ -160,10 +164,10 @@ function QuestionCard({
             className="btn pri"
             disabled={busy}
             onClick={() =>
-              onSave(q, 'published', answer, answer.trim() ? 'Published, with your answer.' : 'Published.')
+              onSave(q, 'published', answer, answer.trim() ? `Published, with your ${reply}.` : 'Published.')
             }
           >
-            {answer.trim() ? 'Publish with answer' : 'Publish'}
+            {answer.trim() ? `Publish with ${reply}` : 'Publish'}
           </button>
         )}
         {q.status === 'published' && (
@@ -171,9 +175,9 @@ function QuestionCard({
             type="button"
             className="btn pri"
             disabled={busy || answer === q.answer}
-            onClick={() => onSave(q, 'published', answer, 'Answer saved.')}
+            onClick={() => onSave(q, 'published', answer, comment ? 'Reply saved.' : 'Answer saved.')}
           >
-            Save answer
+            Save {reply}
           </button>
         )}
         {q.status !== 'hidden' && (
@@ -181,18 +185,16 @@ function QuestionCard({
             type="button"
             className="btn"
             disabled={busy}
-            onClick={() =>
-              onSave(q, 'hidden', answer, q.status === 'published' ? 'Taken off the lesson page.' : 'Hidden.')
-            }
+            onClick={() => onSave(q, 'hidden', answer, q.status === 'published' ? 'Taken off the page.' : 'Hidden.')}
           >
             Hide
           </button>
         )}
         {confirming ? (
           <span className="adm-confirm" role="group" aria-label="Confirm delete">
-            Delete this question for good?
+            Delete this {noun(q)} for good?
             <button type="button" className="btn adm-danger" disabled={busy} onClick={onDelete}>
-              Delete question
+              Delete {noun(q)}
             </button>
             <button type="button" className="btn" onClick={() => setConfirming(false)}>
               Cancel
@@ -203,7 +205,7 @@ function QuestionCard({
             type="button"
             className="btn"
             onClick={() => setConfirming(true)}
-            aria-label={`Delete ${q.name}’s question`}
+            aria-label={`Delete ${q.name}’s ${noun(q)}`}
           >
             Delete…
           </button>
