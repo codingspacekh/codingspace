@@ -37,11 +37,11 @@ export default function Home({ counts, latest, problem, projects }: Props) {
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">Link established · student terminal</span>
-          <h1 className="headline" aria-label="Math is my love. Physics is my crush. Coding is my life.">
+          <h1 className="headline" aria-label="Love math. Crush physics. Live code.">
             <Stagger>
-              <Decipher className="w1">Math is my love.</Decipher>
-              <Decipher className="w2">Physics is my crush.</Decipher>
-              <Decipher className="w3">Coding is my life.</Decipher>
+              <Decipher className="w1">Love math.</Decipher>
+              <Decipher className="w2">Crush physics.</Decipher>
+              <Decipher className="w3">Live code.</Decipher>
             </Stagger>
           </h1>
           {/* Body copy is never wrapped in an animator: readable on first paint. */}

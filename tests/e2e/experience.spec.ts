@@ -50,7 +50,7 @@ test.describe('a visitor whose device asks for reduced motion', () => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
     // Arwes's decipher writes scrambled characters while it runs; with motion off it never does.
-    await expect(page.locator('.headline')).toContainText('Math is my love.');
+    await expect(page.locator('.headline')).toContainText('Love math.');
     const running = await page.evaluate(() =>
       document
         .getAnimations()
