@@ -21,7 +21,7 @@ describe('<TopBar>', () => {
     expect(within(nav).getByRole('link', { name: 'Author' })).toHaveAttribute('href', '/author');
   });
 
-  it('opens the Study menu with the four subjects and the series', async () => {
+  it('opens the Study menu with the four subjects, the series and the syllabus', async () => {
     renderBar();
     const study = screen.getByRole('button', { name: 'Study' });
     expect(study).toHaveAttribute('aria-expanded', 'false');
@@ -35,6 +35,7 @@ describe('<TopBar>', () => {
       '/study/coding',
       '/study/it',
       '/series',
+      '/syllabus',
     ]);
   });
 

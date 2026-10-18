@@ -18,6 +18,9 @@ import type {
   SeriesNav,
   SeriesPageData,
   SeriesSummary,
+  SyllabusPageData,
+  SyllabusSummary,
+  SyllabusTag,
 } from './types';
 
 /**
@@ -226,18 +229,113 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
   };
-  if (!row.section_id) return { post, section: null, siblings: [], series: [] };
+  if (!row.section_id) return { post, section: null, siblings: [], series: [], syllabus: [] };
 
-  const [section, siblings, series] = await Promise.all([
+  const [section, siblings, series, syllabus] = await Promise.all([
     db().from('public_sections').select('slug, title').eq('id', row.section_id).maybeSingle(),
     db().from('public_posts').select('slug, title').eq('section_id', row.section_id).order('sort').order('slug'),
     getSeriesNav(row.slug),
+    getSyllabusTags(row.slug),
   ]);
   return {
     post,
     section: must<{ slug: string; title: string } | null>(section, 'section'),
     siblings: must<{ slug: string; title: string }[]>(siblings, 'siblings'),
     series,
+    syllabus,
+  };
+}
+
+// ---------- syllabus tags (v1.1) ----------
+
+async function getSyllabusTags(slug: string): Promise<SyllabusTag[]> {
+  const rows = must<{ syllabus_slug: string; syllabus_code: string; point_code: string; point_title: string }[]>(
+    await db()
+      .from('public_syllabus_lessons')
+      .select('syllabus_slug, syllabus_code, point_code, point_title')
+      .eq('slug', slug)
+      .order('syllabus_code')
+      .order('point_sort'),
+    'syllabus tags',
+  );
+  return rows.map((r) => ({
+    syllabus: r.syllabus_slug,
+    syllabusCode: r.syllabus_code,
+    code: r.point_code,
+    title: r.point_title,
+  }));
+}
+
+type SyllabusRow = {
+  id: string;
+  slug: string;
+  code: string;
+  title: string;
+  description: string;
+  subject_id: string | null;
+};
+const SYLLABUS_COLUMNS = 'id, slug, code, title, description, subject_id';
+
+/** Every syllabus with at least one point, in the owner's order. */
+export async function getSyllabusList(): Promise<SyllabusSummary[]> {
+  const [syllabuses, points, lessons] = await Promise.all([
+    db().from('syllabuses').select(SYLLABUS_COLUMNS).order('sort'),
+    db().from('syllabus_points').select('id, syllabus_id'),
+    db().from('public_syllabus_lessons').select('point_id'),
+  ]);
+  const pointRows = must<{ id: string; syllabus_id: string }[]>(points, 'syllabus points');
+  const covered = new Set(must<{ point_id: string }[]>(lessons, 'syllabus lessons').map((l) => l.point_id));
+  return must<SyllabusRow[]>(syllabuses, 'syllabuses').flatMap((s) => {
+    const mine = pointRows.filter((p) => p.syllabus_id === s.id);
+    if (!mine.length) return [];
+    return [
+      {
+        slug: s.slug,
+        code: s.code,
+        title: s.title,
+        description: s.description,
+        subject: s.subject_id,
+        points: mine.length,
+        covered: mine.filter((p) => covered.has(p.id)).length,
+      },
+    ];
+  });
+}
+
+export async function getSyllabusSlugs(): Promise<string[]> {
+  return (await getSyllabusList()).map((s) => s.slug);
+}
+
+/** A syllabus: every point in order, each with the published lessons that cover it. */
+export async function getSyllabusPage(slug: string): Promise<SyllabusPageData | null> {
+  if (!isPostSlug(slug)) return null;
+  const s = must<SyllabusRow | null>(
+    await db().from('syllabuses').select(SYLLABUS_COLUMNS).eq('slug', slug).maybeSingle(),
+    'syllabus',
+  );
+  if (!s) return null;
+  const [points, lessons] = await Promise.all([
+    db().from('syllabus_points').select('id, code, title').eq('syllabus_id', s.id).order('sort'),
+    db()
+      .from('public_syllabus_lessons')
+      .select(`point_id, ${CARD_COLUMNS}`)
+      .eq('syllabus_id', s.id)
+      .order('published_at'),
+  ]);
+  const pointRows = must<{ id: string; code: string; title: string }[]>(points, 'syllabus points');
+  if (!pointRows.length) return null;
+  const lessonRows = must<(CardRow & { point_id: string })[]>(lessons, 'syllabus lessons');
+  return {
+    slug: s.slug,
+    code: s.code,
+    title: s.title,
+    description: s.description,
+    subject: s.subject_id,
+    points: pointRows.map((p) => ({
+      code: p.code,
+      title: p.title,
+      lessons: lessonRows.filter((l) => l.point_id === p.id).map(toCard),
+    })),
   };
 }
 

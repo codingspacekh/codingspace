@@ -60,6 +60,9 @@ function content() {
     featured_problems: [{ id: 'f1', subject_id: 'math' }],
     series: [{ id: 's1', slug: 'paper-1', title: 'Paper 1', description: '', sort: 1 }],
     series_lessons: [{ series_id: 's1', post_id: 'p1', position: 1 }],
+    syllabuses: [{ id: 'y1', slug: '9618', code: '9618', title: 'CS', sort: 1 }],
+    syllabus_points: [{ id: 'pt1', syllabus_id: 'y1', code: '1.1', title: 'Data', sort: 1 }],
+    post_syllabus: [{ post_id: 'p1', point_id: 'pt1' }],
   };
 }
 

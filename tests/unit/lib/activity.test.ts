@@ -55,6 +55,17 @@ describe('describeEvent', () => {
     expect(describeEvent(event('subject.reorder', { entity_id: '' })).text).toBe('Reordered the subjects');
   });
 
+  it('names syllabuses and a lesson’s syllabus points (v1.1)', () => {
+    expect(describeEvent(event('syllabus.points', { name: 'Computer Science 9618' }))).toEqual({
+      text: 'Edited the points of “Computer Science 9618”',
+      href: '/admin/syllabus',
+    });
+    expect(describeEvent(event('post.syllabus', { name: 'Binary' }))).toEqual({
+      text: 'Changed the syllabus points of “Binary”',
+      href: '/admin/posts/id-1',
+    });
+  });
+
   it('shows when a post was scheduled for', () => {
     expect(describeEvent(event('post.schedule', { name: 'Vectors', meta: { at: '2026-10-20T01:00:00Z' } })).text).toBe(
       'Scheduled “Vectors” for 20 Oct 2026',

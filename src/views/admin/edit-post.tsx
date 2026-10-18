@@ -9,6 +9,7 @@ import { publishChecklist } from '@/lib/post-rules';
 import { PublishPanel } from './publish-panel';
 import { RevisionHistory } from './revision-history';
 import { SettingsPanel, type Section, type Settings } from './settings-panel';
+import { SyllabusPicker } from './syllabus-picker';
 
 /** 03 ADM-06: save at most a second after the last edit. */
 export const AUTOSAVE_MS = 1000;
@@ -416,6 +417,7 @@ export function EditPost({ id }: { id: string }) {
               }}
             />
           )}
+          {panel === 'settings' && post.kind === 'lesson' && <SyllabusPicker postId={id} />}
         </div>
       </div>
     </div>

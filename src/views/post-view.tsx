@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { useSubjects } from '@/lib/subjects';
+import { pointAnchor } from '@/lib/syllabus';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
 import { markDone, savePost, unmarkDone, unsavePost, useDone, useHydrated, usePrefs, useSaved } from '@/ui';
 import { DoneTick, Progress } from './progress';
@@ -163,7 +164,7 @@ function SeriesBox({ series }: { series: SeriesNav }) {
   );
 }
 
-export function PostView({ post, section, siblings, series = [] }: PostPageData) {
+export function PostView({ post, section, siblings, series = [], syllabus = [] }: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
   usePrintOpensDetails();
@@ -227,6 +228,20 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
               Part {s.position} of {s.total} in the series <Link href={`/series/${s.slug}`}>{s.title}</Link>
             </p>
           ))}
+          {syllabus.length > 0 && (
+            <p className="syl-tags">
+              <span className="meta">Syllabus</span>
+              {syllabus.map((t) => (
+                <Link
+                  key={`${t.syllabus}-${t.code}`}
+                  href={`/syllabus/${t.syllabus}#${pointAnchor(t.code)}`}
+                  className="tag"
+                >
+                  {t.syllabusCode} {t.code} {t.title}
+                </Link>
+              ))}
+            </p>
+          )}
           <ReadingTools post={post} />
           {post.summary && <p className="lead">{post.summary}</p>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />

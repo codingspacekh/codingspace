@@ -390,4 +390,61 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await serviceClient().from('subjects').delete().eq('id', id);
     }
   });
+
+  test('syllabus: build one by pasting points, tag a lesson → the lesson and the syllabus page show it; then delete it', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const code = `E2E${Date.now() % 100000}`;
+    const title = `E2E syllabus ${code}`;
+    try {
+      await page.goto('/admin/syllabus');
+      await expect(page.getByRole('heading', { level: 1, name: 'Syllabus' })).toBeVisible();
+      const form = page.getByRole('form', { name: 'Add a syllabus' });
+      await form.getByRole('textbox', { name: /Code/ }).fill(code);
+      await form.getByRole('textbox', { name: /Title/ }).fill(title);
+      await form.getByRole('button', { name: 'Add syllabus' }).click();
+      const status = page.locator('.adm-main > .adm-live');
+      await expect(status).toHaveText(`Added “${title}”. Now add its points.`);
+
+      const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: new RegExp(title) }) });
+      await card.locator('summary', { hasText: 'Points' }).click();
+      const points = card.getByRole('form', { name: `Points of ${title}` });
+      await points.getByRole('textbox', { name: /Or paste a list/ }).fill('1.1 Inequalities\n1.2 Kinematics');
+      await points.getByRole('button', { name: 'Add the pasted points' }).click();
+      await points.getByRole('button', { name: 'Save points' }).click();
+      await expect(status).toHaveText(`Saved the 2 points of “${title}”.`);
+      await expectAccessible(page);
+
+      // Tag a live lesson from its editor.
+      const lessons = (await (await page.request.get('/api/admin/posts?q=AM')).json()).posts as {
+        id: string;
+        slug: string;
+      }[];
+      const amgm = lessons.find((l) => l.slug === 'am-gm-inequality')!;
+      await page.goto(`/admin/posts/${amgm.id}`);
+      const picker = page.getByRole('group', { name: 'Syllabus points' });
+      await picker.locator('summary', { hasText: title }).click();
+      await picker.getByRole('checkbox', { name: '1.1 Inequalities' }).check();
+      await expect(picker.getByText(`Tagged with ${code} 1.1.`)).toBeVisible();
+
+      const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+      await student.goto('/posts/am-gm-inequality');
+      await student.getByRole('link', { name: `${code} 1.1 Inequalities` }).click();
+      await expect(student.getByRole('heading', { level: 1, name: title })).toBeVisible();
+      await expect(student).toHaveURL(/#p-1-1$/);
+      const point = student.locator('#p-1-1');
+      await expect(point.getByRole('link', { name: /The AM–GM inequality/ })).toBeVisible();
+      await expect(student.locator('#p-1-2')).toContainText('No lesson yet');
+      await expect(student.getByText('1 of 2 points with lessons')).toBeVisible();
+      await expectAccessible(student);
+      await student.context().close();
+      expect(problems).toEqual([]);
+    } finally {
+      // Even if a step fails: a leftover syllabus would change the sitemap for later tests.
+      await serviceClient().from('syllabuses').delete().eq('code', code);
+    }
+  });
 });

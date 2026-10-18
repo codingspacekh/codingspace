@@ -24,6 +24,9 @@ const CONFLICT: Record<TableName, string> = {
   featured_problems: 'id',
   series: 'id',
   series_lessons: 'series_id,post_id',
+  syllabuses: 'id',
+  syllabus_points: 'id',
+  post_syllabus: 'post_id,point_id',
 };
 const BATCH = 200;
 

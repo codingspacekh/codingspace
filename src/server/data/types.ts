@@ -41,6 +41,26 @@ export type PostPageData = {
   siblings: { slug: string; title: string }[];
   /** The series this lesson is in (v1.1), each with its place and neighbours. */
   series: SeriesNav[];
+  /** The syllabus points it covers (v1.1). */
+  syllabus?: SyllabusTag[];
+};
+
+/** "9618 · 1.1 Data representation", linking to that point on /syllabus/<slug>. */
+export type SyllabusTag = { syllabus: string; syllabusCode: string; code: string; title: string };
+
+export type SyllabusSummary = {
+  slug: string;
+  code: string;
+  title: string;
+  description: string;
+  subject: SubjectId | null;
+  points: number;
+  /** Points with at least one published lesson. */
+  covered: number;
+};
+
+export type SyllabusPageData = Omit<SyllabusSummary, 'points' | 'covered'> & {
+  points: { code: string; title: string; lessons: PostCard[] }[];
 };
 
 /** A lesson in a series, as its neighbours' links show it. */

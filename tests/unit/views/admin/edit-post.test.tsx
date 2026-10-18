@@ -61,6 +61,8 @@ function mockApi({
         current = { ...current, status: 'published', published_at: '2026-10-16T08:00:00Z' };
         return json(200, { slug: 'am-gm', was_published: false, refreshed: ['/posts/am-gm', '/'], failed: [] });
       }
+      // The syllabus picker (v1.1) loads its own data.
+      if (url.endsWith('/syllabus')) return json(200, { syllabuses: [], point_ids: [] });
       if (url.endsWith('/revisions')) return json(200, { revisions });
       if (/\/revisions\/\d+$/.test(url) && init?.method === 'POST') {
         calls.restores.push(body);

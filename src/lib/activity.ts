@@ -55,6 +55,12 @@ const SUBJECT: Record<string, string> = {
   'subject.update': 'Edited the subject',
   'subject.delete': 'Deleted the subject',
 };
+const SYLLABUS: Record<string, string> = {
+  'syllabus.create': 'Added the syllabus',
+  'syllabus.update': 'Edited the syllabus',
+  'syllabus.points': 'Edited the points of',
+  'syllabus.delete': 'Deleted the syllabus',
+};
 const PROBLEM: Record<string, string> = {
   'problem.create': 'Added',
   'problem.update': 'Edited',
@@ -104,6 +110,11 @@ export function describeEvent(
 
   if (a in SUBJECT) return { text: `${SUBJECT[a]} ${q}`, href: '/admin/subjects' };
   if (a === 'subject.reorder') return { text: 'Reordered the subjects', href: '/admin/subjects' };
+
+  if (a in SYLLABUS) return { text: `${SYLLABUS[a]} ${q}`, href: '/admin/syllabus' };
+  if (a === 'syllabus.reorder') return { text: 'Reordered the syllabuses', href: '/admin/syllabus' };
+  if (a === 'post.syllabus')
+    return { text: `Changed the syllabus points of ${q}`, href: `/admin/posts/${e.entity_id}` };
 
   if (a in SERIES) return { text: `${SERIES[a]} ${q}`, href: '/admin/series' };
   if (a === 'series.reorder') return { text: 'Reordered the series', href: '/admin/series' };

@@ -26,6 +26,9 @@ export const EXPORT_TABLES = [
   { name: 'featured_problems', order: 'id' },
   { name: 'series', order: 'id' },
   { name: 'series_lessons', order: 'series_id' },
+  { name: 'syllabuses', order: 'id' },
+  { name: 'syllabus_points', order: 'id' },
+  { name: 'post_syllabus', order: 'post_id' },
 ] as const;
 
 export type TableName = (typeof EXPORT_TABLES)[number]['name'];
@@ -54,9 +57,11 @@ export async function readContent(supabase: SupabaseClient, now = new Date()): P
         .range(from, from + PAGE - 1);
       const { data, error } = await (name === 'post_media'
         ? query.order('media_id')
-        : name === 'series_lessons' || name === 'project_screenshots'
-          ? query.order('position')
-          : query);
+        : name === 'post_syllabus'
+          ? query.order('point_id')
+          : name === 'series_lessons' || name === 'project_screenshots'
+            ? query.order('position')
+            : query);
       if (error) throw new Error(`${name}: ${error.message}`);
       rows.push(...(data as Row[]));
       if (data.length < PAGE) break;
