@@ -38,7 +38,7 @@ select is((select use_count from public.admin_media where id = '30000000-0000-00
 reset role;
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
-select is((public.author_page() -> 'profile') - array['name', 'bio', 'years', 'students', 'email'],
+select is((public.author_page() -> 'profile') - array['name', 'bio', 'years', 'students', 'email', 'photo_shape'],
           '{"photo":"30000000-0000-0000-0000-000000000001","photo_widths":[480,960,1200],"photo_width":1200,"photo_height":1500}'::jsonb,
           'visitors see the photo (without the media catalogue)');
 reset role;

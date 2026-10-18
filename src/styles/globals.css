@@ -1305,6 +1305,18 @@ figure.code pre {
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background: linear-gradient(160deg, rgba(24, 228, 236, 0.35), rgba(155, 140, 255, 0.25));
 }
+/* The owner's choice of frame (hexagon above is the default). */
+.avatar--circle {
+  clip-path: circle(50%);
+}
+.avatar--octagon {
+  clip-path: polygon(29.3% 0, 70.7% 0, 100% 29.3%, 100% 70.7%, 70.7% 100%, 29.3% 100%, 0 70.7%, 0 29.3%);
+}
+.avatar.avatar--rectangle {
+  width: 160px;
+  justify-self: center;
+  clip-path: inset(0);
+}
 .avatar::before {
   content: '';
   position: absolute;
@@ -1373,6 +1385,10 @@ figure.code pre {
   .avatar {
     width: 140px;
     height: 140px;
+  }
+  .avatar.avatar--rectangle {
+    width: 112px;
+    justify-self: start;
   }
   .facts {
     grid-template-columns: 1fr;
@@ -2966,6 +2982,9 @@ html[data-motion='on'][data-transition='loading'] .page-skeleton {
 .adm-photo .avatar {
   width: 140px;
   height: 140px;
+}
+.adm-photo .avatar.avatar--rectangle {
+  width: 112px;
 }
 .adm-photo .ed-picker {
   grid-column: 1 / -1;

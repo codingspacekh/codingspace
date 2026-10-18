@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { renderSnippet } from '@/server/render/snippet';
 import { isSubjectId, SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
-import { plainText, type SectionKind } from '@/lib/author';
+import { plainText, type PhotoShape, type SectionKind } from '@/lib/author';
 import type {
   AuthorPageItem,
   AuthorPageSection,
@@ -261,8 +261,10 @@ export async function getProjects(): Promise<Project[]> {
 
 type AuthorPageRow = {
   profile:
-    | (Omit<Profile, 'photo' | 'bioHtml'> & {
+    | (Omit<Profile, 'photo' | 'photoShape' | 'bioHtml'> & {
         photo: string | null;
+        /** Missing until migration 20261029000000 is applied. */
+        photo_shape?: PhotoShape;
         photo_widths: number[];
         photo_width: number | null;
         photo_height: number | null;
@@ -312,6 +314,7 @@ export async function getAuthorPage(): Promise<{
         p.photo && p.photo_width && p.photo_height
           ? { id: p.photo, widths: p.photo_widths, width: p.photo_width, height: p.photo_height }
           : null,
+      photoShape: p.photo_shape ?? 'hexagon',
     },
     description: plainText(p?.bio ?? ''),
     sections: await Promise.all(

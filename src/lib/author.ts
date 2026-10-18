@@ -11,6 +11,10 @@ export type ItemField = 'title' | 'subtitle' | 'period' | 'note' | 'url' | 'tags
 export const HEADER_PARTS = ['photo', 'bio', 'years', 'students', 'email'] as const;
 export type HeaderPart = (typeof HEADER_PARTS)[number];
 
+/** The photo's frame on the Author page (owner request 2026-10-18); the initials use it too. */
+export const PHOTO_SHAPES = ['hexagon', 'circle', 'octagon', 'rectangle'] as const;
+export type PhotoShape = (typeof PHOTO_SHAPES)[number];
+
 export type AuthorItem = {
   title: string;
   subtitle: string;

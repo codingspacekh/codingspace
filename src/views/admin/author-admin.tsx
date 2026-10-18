@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '@/lib/admin-api';
-import type { AuthorSection, HeaderPart } from '@/lib/author';
+import { PHOTO_SHAPES, type AuthorSection, type HeaderPart, type PhotoShape } from '@/lib/author';
 import { IMAGE_ACCEPT, type MediaKind } from '@/lib/media-rules';
 import { uploadMedia, type UploadedMedia } from '@/lib/media-upload';
 import { thumbnailUrl } from '@/lib/media-urls';
@@ -20,6 +20,7 @@ type Profile = {
   years: number | null;
   students: number | null;
   email: string;
+  photo_shape: PhotoShape;
   hidden: HeaderPart[];
 };
 type Photo = { id: string; widths: number[] };
@@ -58,6 +59,7 @@ export function AuthorAdmin({ upload = uploadMedia, previewDelay = 400 }: { uplo
     years: null,
     students: null,
     email: '',
+    photo_shape: 'hexagon',
     hidden: [],
   });
   const [years, setYears] = useState('');
@@ -71,7 +73,11 @@ export function AuthorAdmin({ upload = uploadMedia, previewDelay = 400 }: { uplo
   useEffect(() => {
     void api<Loaded>('/api/admin/author').then(({ status, data }) => {
       if (status !== 200) return setLoaded('failed');
-      setProfile({ ...data.profile, hidden: data.profile.hidden ?? [] });
+      setProfile({
+        ...data.profile,
+        photo_shape: data.profile.photo_shape ?? 'hexagon',
+        hidden: data.profile.hidden ?? [],
+      });
       setPhoto(data.photo ?? null);
       setYears(data.profile.years == null ? '' : String(data.profile.years));
       setStudents(data.profile.students == null ? '' : String(data.profile.students));
@@ -134,7 +140,14 @@ export function AuthorAdmin({ upload = uploadMedia, previewDelay = 400 }: { uplo
   return (
     <form className="adm-form adm-author" onSubmit={save} aria-label="Author page" noValidate>
       <h1>Author page</h1>
-      <PhotoField photo={photo} name={profile.name} upload={upload} onChange={setPhoto}>
+      <PhotoField
+        photo={photo}
+        name={profile.name}
+        shape={profile.photo_shape}
+        upload={upload}
+        onChange={setPhoto}
+        onShape={(v) => set('photo_shape', v)}
+      >
         <ShowBox part="photo" label="Show the photo (otherwise your initials)" shown={shown} onShow={show} />
       </PhotoField>
       <label>
@@ -237,14 +250,18 @@ function ShowBox({
 function PhotoField({
   photo,
   name,
+  shape,
   upload,
   onChange,
+  onShape,
   children,
 }: {
   photo: Photo | null;
   name: string;
+  shape: PhotoShape;
   upload: Upload;
   onChange: (p: Photo | null) => void;
+  onShape: (shape: PhotoShape) => void;
   children?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -273,7 +290,7 @@ function PhotoField({
   return (
     <fieldset className="adm-photo">
       <legend>Photo</legend>
-      <div className={`avatar${preview ? ' avatar--photo' : ''}`}>
+      <div className={`avatar avatar--${shape}${preview ? ' avatar--photo' : ''}`}>
         {preview ? (
           <img src={preview} alt={`${name || 'You'}, as shown on the Author page`} />
         ) : (
@@ -283,7 +300,7 @@ function PhotoField({
       <div className="adm-photo-actions">
         <p className="adm-hint">
           {preview
-            ? 'Shown in the hexagon on the Author page. A square photo of your face works best.'
+            ? `Shown in the ${shape} on the Author page. A square photo of your face works best.`
             : 'No photo yet: the page shows your initials. A square photo of your face works best.'}
         </p>
         <div className="adm-quick">
@@ -317,6 +334,14 @@ function PhotoField({
             e.target.value = '';
           }}
         />
+        <div className="adm-quick" role="radiogroup" aria-label="Shape">
+          {PHOTO_SHAPES.map((s) => (
+            <label key={s} className="adm-inline">
+              <input type="radio" name="photo-shape" value={s} checked={shape === s} onChange={() => onShape(s)} />
+              {s[0]!.toUpperCase() + s.slice(1)}
+            </label>
+          ))}
+        </div>
         {children}
         <p className="adm-live" role="status">
           {note}
