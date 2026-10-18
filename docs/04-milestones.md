@@ -312,7 +312,12 @@ Each milestone lists the **tests written first**. They start red and define "don
 
 ### After launch — v1.1 candidates
 - Comments and questions with moderation (designed in `01` §3.3).
-- Owner analytics dashboard (cookie-less).
+- Owner analytics dashboard (cookie-less). **BUILT 2026-10-18** (owner chose our own, in Supabase, over Vercel Web Analytics):
+  > - **Counting:** every public page (Home, subjects, lessons, series, Projects, Author, Search; never the admin, error pages, robots or the signed-in owner) sends one small `POST /api/visit` (`src/ui/visit-tracker.tsx`), then the time it was on screen (tab visible only, at most 30 min) when it is left. No cookie, nothing in localStorage.
+  > - **Privacy (NFR-PRIV-1):** the server sends `sha256(ANALYTICS_SALT, IP, browser)`; `public.track_view` salts it again with a random salt of the day, deleted the next day, so visitors can't be linked across days and no address is stored. Only the referring site's name is kept (Google, Facebook, Telegram… or the host), never the page. Country from Vercel's `x-vercel-ip-country`.
+  > - **Limits:** 300 views a day per visitor, 50 000 a day in all. Page views are kept 90 days; each finished day keeps its totals for good (`private.analytics_days`).
+  > - **Dashboard** (`/admin/analytics`): visitors, page views, average time on a page and pages per visitor for 7/30/90 days, with the change on the period before; visitors per day; most read pages; subjects; sources; devices; countries; visitors per month. Days on Cambodian time.
+  > - Migration `20261030000000_analytics.sql` (additive): push it to staging **before** merging.
 - Lesson series navigation across subjects.
 - Offline reading (PWA).
 

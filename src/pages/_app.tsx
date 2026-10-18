@@ -1,6 +1,6 @@
 import type { AppProps } from 'next/app';
 import localFont from 'next/font/local';
-import { PageEffects, UiRoot } from '@/ui';
+import { PageEffects, UiRoot, VisitTracker } from '@/ui';
 import '@/styles/globals.css';
 
 // Fonts are self-hosted from the Fontsource packages (SIL OFL 1.1), not fetched from Google at
@@ -61,6 +61,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <UiRoot>
         <Component {...pageProps} />
         <PageEffects />
+        <VisitTracker />
       </UiRoot>
     </div>
   );
