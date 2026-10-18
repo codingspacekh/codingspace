@@ -3,10 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { classifyUpload, cleanFileName, type MediaKind } from '@/lib/media-rules';
 import { fileKey, imageKey, uploadKey } from '@/lib/media-urls';
-import { PostError } from '@/server/admin/posts';
 import { ImageError, processImage } from './image';
 import { checkContent, sniffImage } from './sniff';
 import { IMMUTABLE, type MediaStore } from './store';
+import { ApiError } from '@/server/admin/errors';
 
 /**
  * Uploads (03 ADM-10, §8.4), in two steps so the bytes never pass through a Vercel function
@@ -46,7 +46,7 @@ export const uploadRequest = z.object({
 });
 
 function refuse(status: 400 | 404 | 409 | 422, message: string): never {
-  throw new PostError(status, message);
+  throw new ApiError(status, message);
 }
 
 export async function startUpload(store: MediaStore, input: unknown) {

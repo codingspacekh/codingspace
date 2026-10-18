@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { postSlug, revalidationPaths, type PublishedRef } from '@/lib/post-rules';
 import { SUBJECT_ID } from '@/lib/subjects';
-import { PostError } from './posts';
+import { ApiError, dbError } from './errors';
 
 export const newSection = z.object({
   subject_id: z.string().regex(SUBJECT_ID),
@@ -16,7 +16,7 @@ export const newSection = z.object({
  */
 export async function createSection(supabase: SupabaseClient, input: unknown) {
   const parsed = newSection.safeParse(input);
-  if (!parsed.success) throw new PostError(422, z.prettifyError(parsed.error));
+  if (!parsed.success) throw new ApiError(422, z.prettifyError(parsed.error));
   const { subject_id, title, description } = parsed.data;
   const base = postSlug(title, 'section');
   for (let n = 1; n <= 20; n++) {
@@ -32,12 +32,12 @@ export async function createSection(supabase: SupabaseClient, input: unknown) {
       return { id: data as string, subject_id, slug, title, sort: (row?.sort as number) ?? 0 };
     }
     if (error.code !== '23505') {
-      if (error.code === '42501') throw new PostError(404, 'not allowed');
-      if (error.code === '23503') throw new PostError(422, 'that subject does not exist');
+      if (error.code === '42501') throw new ApiError(404, 'not allowed');
+      if (error.code === '23503') throw new ApiError(422, 'that subject does not exist');
       throw new Error(`admin_create_section: ${error.message}`);
     }
   }
-  throw new PostError(409, 'could not find a free address for this section');
+  throw new ApiError(409, 'could not find a free address for this section');
 }
 
 export type StructureLesson = {
@@ -93,12 +93,6 @@ export async function listStructure(supabase: SupabaseClient, subject: unknown):
   }));
 }
 
-function refused(error: { code?: string; message: string }, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23503': 422, '23514': 422, '22P02': 400 }[error.code ?? ''];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  throw new Error(`${what}: ${error.message}`);
-}
-
 /** Pages that show a subject's sections: the subject page and every live lesson in those sections. */
 async function pagesFor(supabase: SupabaseClient, subject: string, sectionIds: string[]): Promise<string[]> {
   const paths = [`/study/${subject}`];
@@ -114,13 +108,13 @@ export const sectionEdit = z.object({ title: z.string().max(120), description: z
 
 export async function updateSection(supabase: SupabaseClient, id: string, input: unknown) {
   const body = sectionEdit.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const { data, error } = await supabase.rpc('admin_update_section', {
     p_id: uuid.parse(id),
     p_title: body.data.title,
     p_description: body.data.description,
   });
-  if (error) refused(error, 'admin_update_section');
+  if (error) dbError(error, 'admin_update_section');
   const { subject } = data as { subject: string };
   return { paths: await pagesFor(supabase, subject, [id]) };
 }
@@ -134,7 +128,7 @@ type DeletedLesson = PublishedRef & { was_published: boolean };
  */
 export async function deleteSection(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.rpc('admin_delete_section', { p_id: uuid.parse(id) });
-  if (error) refused(error, 'admin_delete_section');
+  if (error) dbError(error, 'admin_delete_section');
   const { subject, lessons } = data as { subject: string; lessons: DeletedLesson[] };
   const live = lessons.filter((l) => l.was_published);
   const otherSections = [...new Set(live.map((l) => l.section).filter((s): s is string => !!s && s !== id))];
@@ -147,12 +141,12 @@ export const sectionOrder = z.object({ subject_id: subjectId, ids: z.array(uuid)
 
 export async function reorderSections(supabase: SupabaseClient, input: unknown) {
   const body = sectionOrder.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const { error } = await supabase.rpc('admin_reorder_sections', {
     p_subject_id: body.data.subject_id,
     p_ids: body.data.ids,
   });
-  if (error) refused(error, 'admin_reorder_sections');
+  if (error) dbError(error, 'admin_reorder_sections');
   // Lesson pages don't show section order; the subject page does.
   return { paths: [`/study/${body.data.subject_id}`] };
 }
@@ -161,12 +155,12 @@ export const lessonOrder = z.object({ ids: z.array(uuid).max(500) });
 
 export async function reorderLessons(supabase: SupabaseClient, sectionId: string, input: unknown) {
   const body = lessonOrder.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const { data, error } = await supabase.rpc('admin_reorder_lessons', {
     p_section_id: uuid.parse(sectionId),
     p_ids: body.data.ids,
   });
-  if (error) refused(error, 'admin_reorder_lessons');
+  if (error) dbError(error, 'admin_reorder_lessons');
   const { subject } = data as { subject: string };
   return { paths: await pagesFor(supabase, subject, [sectionId]) };
 }

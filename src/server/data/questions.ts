@@ -1,6 +1,7 @@
 import type { NextApiRequest } from 'next';
 import { db } from './public';
 import { clientIp, rateKey } from './search';
+import { isSlug } from '@/lib/slug';
 
 /**
  * Questions on lessons and comments on life posts (v1.1): a visitor writes under a post; it waits
@@ -30,7 +31,7 @@ export function askFields(body: unknown) {
 
 export async function askQuestion(req: NextApiRequest): Promise<AskResult> {
   const f = askFields(req.body);
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(f.slug)) return 'invalid';
+  if (!isSlug(f.slug)) return 'invalid';
   if (!f.name || f.name.length > QUESTION_MAX.name || !f.question || f.question.length > QUESTION_MAX.body)
     return 'invalid';
   // A bot filled the hidden field: say thanks, keep nothing.

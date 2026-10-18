@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createPost } from '@/server/admin/posts';
 import { deleteSeries, listLessonChoices, listSeries, reorderSeries, saveSeries } from '@/server/admin/series';
 import { getPostPage, getSeriesList, getSeriesPage } from '@/server/data/public';
-import { PostError } from '@/server/admin/posts';
+import { ApiError } from '@/server/admin/errors';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // v1.1 lesson series against a real database (needs content:import's lessons): the owner
@@ -92,7 +92,7 @@ describe('lesson series', () => {
     await reorderSeries(owner, { ids: [...all].reverse() });
     expect((await listSeries(owner)).map((s) => s.id)).toEqual([...all].reverse());
     await expect(reorderSeries(owner, { ids: all.slice(1) })).rejects.toMatchObject({ status: 422 });
-    await expect(saveSeries(owner, null, { title: '', post_ids: [] })).rejects.toBeInstanceOf(PostError);
+    await expect(saveSeries(owner, null, { title: '', post_ids: [] })).rejects.toBeInstanceOf(ApiError);
 
     const { error } = await anon.rpc('admin_save_series', { p_id: null, p: { slug: 'x', title: 'x', post_ids: [] } });
     expect(error).not.toBeNull();

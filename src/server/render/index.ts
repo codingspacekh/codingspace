@@ -33,6 +33,8 @@ type Context = {
   hasCode: boolean;
   /** Practice questions so far: each gets its own ids. */
   practice: number;
+  /** Visitors' text (questions, comments): see VISITOR_BLOCKS and renderMarks. */
+  ugc: boolean;
 };
 
 const isNode = (v: unknown): v is Node => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -67,7 +69,7 @@ const MARK_TAGS: Record<string, string> = {
   code: 'code',
 };
 
-function renderMarks(text: string, marks: unknown): string {
+function renderMarks(text: string, marks: unknown, ugc: boolean): string {
   const list = Array.isArray(marks) ? marks.filter(isNode) : [];
   let out = escapeHtml(text);
   // Innermost first, so the output order is stable whatever order the editor saved.
@@ -77,7 +79,14 @@ function renderMarks(text: string, marks: unknown): string {
     if (type === 'link') {
       const href = safeLinkHref(attrs(mark).href);
       if (!href) continue;
-      const rel = href.startsWith('https:') ? ' rel="noopener noreferrer"' : '';
+      // Visitors' links earn them nothing: search engines are told they are user content.
+      const https = href.startsWith('https:');
+      const rel =
+        ugc && (https || href.startsWith('mailto:'))
+          ? ' rel="nofollow ugc noopener noreferrer"'
+          : https
+            ? ' rel="noopener noreferrer"'
+            : '';
       out = `<a href="${escapeHtml(href)}"${rel}>${out}</a>`;
     } else {
       out = `<${MARK_TAGS[type]}>${out}</${MARK_TAGS[type]}>`;
@@ -99,7 +108,7 @@ function renderInline(nodes: Node[], ctx: Context): [string, string] {
   let text = '';
   for (const node of nodes) {
     if (node.type === 'text' && typeof node.text === 'string') {
-      html += renderMarks(node.text, node.marks);
+      html += renderMarks(node.text, node.marks, ctx.ugc);
       text += node.text;
     } else if (node.type === 'hardBreak') {
       html += '<br>';
@@ -213,8 +222,31 @@ async function renderCell(cell: Node, inHead: boolean, ctx: Context, depth: numb
   return `<${tag}${scope}${spans}>${inner}</${tag}>`;
 }
 
+/**
+ * What visitors' text may contain: words, lists, quotes, code and maths. Headings become bold
+ * paragraphs (they'd join the lesson's outline and could take its heading ids); tables, callouts,
+ * images, files, embeds and practice are left out.
+ */
+const VISITOR_BLOCKS = new Set([
+  'paragraph',
+  'bulletList',
+  'orderedList',
+  'blockquote',
+  'codeBlock',
+  'mathBlock',
+  'horizontalRule',
+]);
+
 async function renderBlock(node: Node, ctx: Context, depth: number): Promise<string> {
   const a = attrs(node);
+  if (ctx.ugc && !VISITOR_BLOCKS.has(String(node.type))) {
+    if (node.type !== 'heading') return '';
+    const [html, text] = renderInline(children(node), ctx);
+    if (!html) return '';
+    ctx.blocks.push(text);
+    ctx.prose.push(text);
+    return `<p><strong>${html}</strong></p>`;
+  }
   switch (node.type) {
     case 'paragraph': {
       const [html, text] = renderInline(children(node), ctx);
@@ -472,10 +504,23 @@ function countWords(text: string, lang: string): number {
   }
 }
 
-export type RenderOptions = { lang?: 'en' | 'km' };
+export type RenderOptions = {
+  lang?: 'en' | 'km';
+  /** Text written by visitors (questions, comments): fewer kinds of block, and links marked as theirs. */
+  ugc?: boolean;
+};
 
 export async function renderContent(input: unknown, options: RenderOptions = {}): Promise<RenderResult> {
-  const ctx: Context = { toc: [], ids: new Set(), blocks: [], prose: [], hasMath: false, hasCode: false, practice: 0 };
+  const ctx: Context = {
+    toc: [],
+    ids: new Set(),
+    blocks: [],
+    prose: [],
+    hasMath: false,
+    hasCode: false,
+    practice: 0,
+    ugc: options.ugc === true,
+  };
   const root = isNode(input) && input.type === 'doc' ? children(input) : [];
   const html = await renderBlocks(root, ctx, 0);
   const words = countWords(ctx.prose.join(' '), options.lang ?? 'en');

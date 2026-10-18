@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { postSlug } from '@/lib/post-rules';
 import type { SubjectId } from '@/lib/subjects';
-import { PostError } from './posts';
+import { ApiError, dbError, rpc } from './errors';
+import { allRows } from '@/server/db-rows';
 
 /**
  * Lesson series for the admin API (v1.1, FR-03): named, ordered lists of lessons from any
@@ -10,21 +11,6 @@ import { PostError } from './posts';
  * returns the public pages to rebuild: the series list, the series' page and every lesson
  * that was or is in it ("Part n of N", previous/next).
  */
-
-type DbError = { code?: string; message: string };
-
-function refused(error: DbError, what: string): never {
-  const status = { PT404: 404, PT422: 422, '23505': 409, '22P02': 400 }[error.code ?? ''];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  if (error.code === '42501') throw new PostError(404, 'not allowed');
-  throw new Error(`${what}: ${error.message}`);
-}
-
-async function call<T>(supabase: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(fn, args);
-  if (error) refused(error, fn);
-  return data as T;
-}
 
 const uuid = z.uuid();
 
@@ -55,10 +41,17 @@ export type SeriesLessonChoice = {
 export async function listSeries(supabase: SupabaseClient): Promise<AdminSeries[]> {
   const [series, items] = await Promise.all([
     supabase.from('series').select('id, slug, title, description, sort').order('sort').order('title'),
-    supabase.from('series_lessons').select('series_id, post_id, position').order('position'),
+    allRows((from, to) =>
+      supabase
+        .from('series_lessons')
+        .select('series_id, post_id, position')
+        .order('position')
+        .order('series_id')
+        .range(from, to),
+    ),
   ]);
-  if (series.error) refused(series.error, 'series');
-  if (items.error) refused(items.error, 'series_lessons');
+  if (series.error) dbError(series.error, 'series');
+  if (items.error) dbError(items.error, 'series_lessons');
   return (series.data as Omit<AdminSeries, 'post_ids'>[]).map((s) => ({
     ...s,
     post_ids: (items.data as { series_id: string; post_id: string }[])
@@ -68,13 +61,17 @@ export async function listSeries(supabase: SupabaseClient): Promise<AdminSeries[
 }
 
 export async function listLessonChoices(supabase: SupabaseClient): Promise<SeriesLessonChoice[]> {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('id, slug, title, subject_id, status')
-    .eq('kind', 'lesson')
-    .order('subject_id')
-    .order('title');
-  if (error) refused(error, 'posts');
+  const { data, error } = await allRows((from, to) =>
+    supabase
+      .from('posts')
+      .select('id, slug, title, subject_id, status')
+      .eq('kind', 'lesson')
+      .order('subject_id')
+      .order('title')
+      .order('id')
+      .range(from, to),
+  );
+  if (error) dbError(error, 'posts');
   return data as SeriesLessonChoice[];
 }
 
@@ -84,8 +81,8 @@ async function seriesPaths(supabase: SupabaseClient, id: string): Promise<string
     supabase.from('series').select('slug').eq('id', id).maybeSingle(),
     supabase.from('series_lessons').select('posts(slug, status)').eq('series_id', id),
   ]);
-  if (series.error) refused(series.error, 'series');
-  if (lessons.error) refused(lessons.error, 'series_lessons');
+  if (series.error) dbError(series.error, 'series');
+  if (lessons.error) dbError(lessons.error, 'series_lessons');
   // Drafts have no public page yet.
   const slugs = (lessons.data as unknown as { posts: { slug: string; status: string } | null }[]).flatMap((l) =>
     l.posts?.status === 'published' ? [`/posts/${l.posts.slug}`] : [],
@@ -98,11 +95,11 @@ const merge = (...lists: string[][]) => [...new Set(lists.flat())];
 /** Adds (id null) or edits a series. A new one gets a slug from its title: -2, -3… if taken. */
 export async function saveSeries(supabase: SupabaseClient, id: string | null, input: unknown) {
   const out = seriesInput.safeParse(input);
-  if (!out.success) throw new PostError(422, z.prettifyError(out.error));
+  if (!out.success) throw new ApiError(422, z.prettifyError(out.error));
   const p = out.data;
   if (id !== null) {
     const before = await seriesPaths(supabase, uuid.parse(id));
-    await call(supabase, 'admin_save_series', { p_id: id, p });
+    await rpc(supabase, 'admin_save_series', { p_id: id, p });
     return { id, paths: merge(before, await seriesPaths(supabase, id)) };
   }
   const base = postSlug(p.title, 'series');
@@ -110,20 +107,20 @@ export async function saveSeries(supabase: SupabaseClient, id: string | null, in
     const slug = n === 1 && base !== 'series' ? base : `${base}-${n}`;
     const { data, error } = await supabase.rpc('admin_save_series', { p_id: null, p: { ...p, slug } });
     if (!error) return { id: data as string, paths: await seriesPaths(supabase, data as string) };
-    if (error.code !== '23505') refused(error, 'admin_save_series');
+    if (error.code !== '23505') dbError(error, 'admin_save_series');
   }
-  throw new PostError(409, 'could not find a free address for this series');
+  throw new ApiError(409, 'could not find a free address for this series');
 }
 
 export async function deleteSeries(supabase: SupabaseClient, id: string) {
   const before = await seriesPaths(supabase, uuid.parse(id));
-  await call(supabase, 'admin_delete_series', { p_id: id });
+  await rpc(supabase, 'admin_delete_series', { p_id: id });
   return { paths: before };
 }
 
 export async function reorderSeries(supabase: SupabaseClient, input: unknown) {
   const out = z.object({ ids: z.array(uuid).max(200) }).safeParse(input);
-  if (!out.success) throw new PostError(422, z.prettifyError(out.error));
-  await call(supabase, 'admin_reorder_series', { p_ids: out.data.ids });
+  if (!out.success) throw new ApiError(422, z.prettifyError(out.error));
+  await rpc(supabase, 'admin_reorder_series', { p_ids: out.data.ids });
   return { paths: ['/series'] };
 }

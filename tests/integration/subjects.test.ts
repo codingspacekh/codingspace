@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { PostError } from '@/server/admin/posts';
+import { ApiError } from '@/server/admin/errors';
 import { createSection } from '@/server/admin/sections';
 import {
   deleteSubject,
@@ -94,7 +94,7 @@ describe('subjects', () => {
       'there is already a subject at /study/math',
     );
     await expect(saveSubject(owner, null, { ...FIELDS, color: 'plaid', visible: false })).rejects.toBeInstanceOf(
-      PostError,
+      ApiError,
     );
     await expect(saveSubject(owner, 'nope', { ...FIELDS, visible: true })).rejects.toMatchObject({ status: 404 });
     await expect(createSection(owner, { subject_id: 'nope', title: 'X' })).rejects.toMatchObject({ status: 422 });

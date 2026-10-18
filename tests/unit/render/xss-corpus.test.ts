@@ -156,6 +156,12 @@ describe('renderer XSS corpus', () => {
     expect(findUnsafe(html)).toEqual([]);
   });
 
+  // Visitors' questions and comments go through the same renderer with fewer blocks (v1.1).
+  it.each(CORPUS)('%s produces nothing executable as visitor text', async (_name, input) => {
+    const { html } = await renderContent(input, { ugc: true });
+    expect(findUnsafe(html)).toEqual([]);
+  });
+
   it('escapes markup typed as text instead of dropping it', async () => {
     const { html } = await renderContent(doc(p(text('<script>alert(1)</script>'))));
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');

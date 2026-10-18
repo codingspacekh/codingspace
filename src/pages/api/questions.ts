@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { isSameOrigin } from '@/server/auth/guard';
 import { getQuestionsPage, getQuestionsPost, isQuestionCursor } from '@/server/data/public';
 import { askFields, askQuestion } from '@/server/data/questions';
+import { isSlug } from '@/lib/slug';
 
 // A question is a few kilobytes at most.
 export const config = { api: { bodyParser: { sizeLimit: '16kb' } } };
@@ -33,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (form) {
     const { slug, anchor } = askFields(req.body);
-    const back = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) ? `/posts/${slug}` : '/';
+    const back = isSlug(slug) ? `/posts/${slug}` : '/';
     return res.redirect(303, `${back}?asked=${result}#${anchor}`);
   }
   const status = { ok: 200, limited: 429, not_found: 404, invalid: 400, error: 500 }[result];
@@ -43,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function older(req: NextApiRequest, res: NextApiResponse) {
   const slug = typeof req.query.post === 'string' ? req.query.post : '';
   const before = typeof req.query.before === 'string' ? req.query.before : '';
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || !isQuestionCursor(before)) {
+  if (!isSlug(slug) || !isQuestionCursor(before)) {
     res.setHeader('Cache-Control', 'public, s-maxage=3600');
     return res.status(400).json({ error: 'bad_request' });
   }
