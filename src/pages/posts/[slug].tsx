@@ -25,7 +25,7 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
 export default function PostPage({ author, ...data }: Props) {
   return (
     <Layout
-      title={`${data.post.title} · CodingSpace`}
+      title={`${data.post.title} · CodingSpaceKH`}
       description={data.post.summary || undefined}
       path={`/posts/${data.post.slug}`}
       ogType="article"

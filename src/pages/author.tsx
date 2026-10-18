@@ -48,7 +48,7 @@ function Photo({ photo, name }: { photo: NonNullable<Profile['photo']>; name: st
 }
 
 export default function Author({ profile, description, sections, lifePosts, hasMath }: Props) {
-  const name = profile?.name ?? 'CodingSpace';
+  const name = profile?.name ?? 'CodingSpaceKH';
   return (
     <Layout title={`Author · ${name}`} description={description || undefined} path="/author" active="author">
       {hasMath && (

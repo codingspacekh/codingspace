@@ -1,6 +1,6 @@
 /** SEO builders (04 M2): canonical URLs, sitemap.xml, rss.xml, robots.txt and Article JSON-LD. */
 
-export const SITE_NAME = 'CodingSpace';
+export const SITE_NAME = 'CodingSpaceKH';
 export const SITE_DESCRIPTION =
   'Lessons in competition maths, physics, coding and Cambridge IT, written up so students can review them anytime.';
 
