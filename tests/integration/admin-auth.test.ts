@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { checkOwner } from '@/server/auth/guard';
+import { MAX_FAILURES, recordFailure, tooManyFailures } from '@/server/auth/throttle';
 import { currentStep, signInWithPassword, signOut, startEnrolment, verifyCode } from '@/server/auth/flow';
 import { OTHER, OWNER, resetUser, serviceClient, totp } from '../support/admin-users';
 
@@ -87,5 +88,25 @@ describe('admin sign-in against Supabase Auth', () => {
 
     await signOut(second.supabase, 'global');
     expect(await checkOwner(first.supabase)).toMatchObject({ ok: false, status: 401 });
+  });
+});
+
+describe('sign-in throttling per visitor (code review)', () => {
+  // A fresh address each run: the counts live in the database for a while.
+  const ip = `198.18.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  const visitor = (address: string) => ({ headers: { 'x-forwarded-for': address }, socket: {} }) as never;
+
+  it('pauses a visitor after MAX_FAILURES wrong passwords or codes, and only that visitor', async () => {
+    expect(await tooManyFailures(visitor(ip))).toBe(false);
+    for (let i = 0; i < MAX_FAILURES - 1; i++) await recordFailure(visitor(ip));
+    expect(await tooManyFailures(visitor(ip))).toBe(false);
+    await recordFailure(visitor(ip));
+    expect(await tooManyFailures(visitor(ip))).toBe(true);
+    expect(await tooManyFailures(visitor(`${ip}1`))).toBe(false);
+  });
+
+  it('is out of reach of visitors and signed-in accounts', async () => {
+    const { error } = await browser().rpc('auth_record_failure', { p_key: 'a'.repeat(64) });
+    expect(error?.code).toBe('42501');
   });
 });
