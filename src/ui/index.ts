@@ -8,3 +8,4 @@ export { OrbitHero } from './orbit/orbit-hero';
 export { TopBar, type NavItem } from './top-bar';
 export { SkipLink } from './skip-link';
 export { PageEffects } from './page-effects';
+export { VisitTracker } from './visit-tracker';

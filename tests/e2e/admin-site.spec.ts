@@ -210,6 +210,42 @@ test.describe('site content', { tag: '@single-account' }, () => {
     expect(problems).toEqual([]);
   });
 
+  test('analytics: a student reads a lesson → the owner sees it among the most read', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    // A student's phone, without cookies: a fresh context, not the signed-in one.
+    const student = await (
+      await context.browser()!.newContext({
+        baseURL,
+        // A headless browser's own user agent counts as a robot.
+        userAgent:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
+      })
+    ).newPage();
+    const counted = student.waitForResponse((r) => r.url().endsWith('/api/visit') && r.request().method() === 'POST');
+    await student.goto('/posts/am-gm-inequality');
+    expect((await counted).status()).toBe(204);
+    const cookies = await student.context().cookies();
+    const stored = await student.evaluate(() => Object.keys(localStorage).filter((k) => k !== 'cs-prefs'));
+    expect({ cookies, stored }).toEqual({ cookies: [], stored: [] });
+    await student.context().close();
+
+    await page.goto('/admin/analytics');
+    await expect(page.getByRole('heading', { level: 1, name: 'Analytics' })).toBeVisible();
+    await page.getByRole('button', { name: 'Last 7 days' }).click();
+    await expect(page.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('link', { name: 'The AM–GM inequality' })).toHaveAttribute(
+      'href',
+      '/posts/am-gm-inequality',
+    );
+    await expect(page.getByRole('region', { name: 'Subjects' })).toContainText('Math');
+    await expectAccessible(page);
+    expect(problems).toEqual([]);
+  });
+
   test('series: build one across two subjects → its page, the Study menu and each lesson show it; then delete it', async ({
     page,
     context,
