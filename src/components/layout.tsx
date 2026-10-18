@@ -2,7 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from '@/lib/seo';
-import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import { Backdrop, SkipLink, TopBar, type NavItem } from '@/ui';
 
 export function Layout({
@@ -22,6 +22,7 @@ export function Layout({
   children: ReactNode;
 }) {
   const url = path ? absoluteUrl(path) : null;
+  const { subjects } = useSubjects();
   return (
     <>
       <Head>
@@ -52,9 +53,9 @@ export function Layout({
           <span>© 2026 codingspacekh.dev · Teach · Build · Live</span>
           {/* Plain links: the Study menu needs JavaScript, these don't. */}
           <nav aria-label="Subjects" className="footer-links">
-            {SUBJECT_IDS.map((id) => (
-              <Link key={id} href={`/study/${id}`}>
-                {SUBJECTS[id].name}
+            {subjects.map((s) => (
+              <Link key={s.id} href={`/study/${s.id}`}>
+                {s.name}
               </Link>
             ))}
             <Link href="/series">Series</Link>

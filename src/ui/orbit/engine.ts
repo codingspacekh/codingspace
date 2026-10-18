@@ -1,6 +1,6 @@
 /**
  * The orbit hero (04 M6), ported from the approved prototype: a wireframe icosahedron with
- * the four subjects circling it on tilted rings. Plain canvas, no React, no Arwes: this file
+ * the subjects circling it on tilted rings. Plain canvas, no React, no Arwes: this file
  * is downloaded only after the page is idle and the hero is on screen (./orbit-hero.tsx).
  *
  * It never runs when nobody can see it: the loop stops when the canvas leaves the viewport
@@ -23,12 +23,17 @@ export type Orbit = { setMotion: (on: boolean) => void; stop: () => void };
 
 type Vec = [number, number, number];
 
-// Ring radius, tilt, roll, speed and phase for each of up to four subjects (as in the prototype).
+// Ring radius, tilt, roll and speed for each subject: the first four as in the prototype, then
+// four more between them (MAX_NODES in ./orbit-hero.tsx). Later subjects stay off the orbit.
 const RINGS = [
   { r: 0.62, tilt: 0.35, roll: 0, speed: 0.42 },
   { r: 0.78, tilt: -0.55, roll: 0.6, speed: 0.3 },
   { r: 0.92, tilt: 0.75, roll: -0.4, speed: 0.22 },
   { r: 0.7, tilt: -0.2, roll: 1.2, speed: 0.36 },
+  { r: 0.85, tilt: 0.1, roll: -1.0, speed: 0.26 },
+  { r: 0.66, tilt: -0.85, roll: -0.2, speed: 0.39 },
+  { r: 0.96, tilt: -0.35, roll: 0.9, speed: 0.19 },
+  { r: 0.74, tilt: 0.6, roll: 1.6, speed: 0.33 },
 ];
 
 /** The 12 vertices and 30 edges of an icosahedron (edge length 2). */

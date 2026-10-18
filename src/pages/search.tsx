@@ -6,10 +6,11 @@ import type { FormEvent } from 'react';
 import { Layout } from '@/components/layout';
 import { formatDate } from '@/lib/format';
 import { cleanQuery, snippetParts } from '@/lib/search-text';
-import { SUBJECTS } from '@/lib/subjects';
+import { useSubjects, type Subject } from '@/lib/subjects';
+import { getSubjects } from '@/server/data/public';
 import { allowSearch, clientIp, searchPosts, type SearchResult } from '@/server/data/search';
 
-type Props = { q: string; results: SearchResult[] | null; limited: boolean };
+type Props = { q: string; results: SearchResult[] | null; limited: boolean; subjects: Subject[] };
 
 /**
  * 03 PUB-09: search across published lessons and posts. A plain GET form, so it works without
@@ -20,17 +21,17 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ query, req
   const q = cleanQuery(query.q);
   if (q.length < 2) {
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    return { props: { q, results: null, limited: false } };
+    return { props: { q, results: null, limited: false, subjects: await getSubjects() } };
   }
   if (!(await allowSearch(clientIp(req)))) {
     res.statusCode = 429;
     res.setHeader('Retry-After', '60');
     res.setHeader('Cache-Control', 'no-store');
-    return { props: { q, results: null, limited: true } };
+    return { props: { q, results: null, limited: true, subjects: await getSubjects() } };
   }
-  const results = await searchPosts(q);
+  const [results, subjects] = await Promise.all([searchPosts(q), getSubjects()]);
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-  return { props: { q, results, limited: false } };
+  return { props: { q, results, limited: false, subjects } };
 };
 
 function Snippet({ text }: { text: string }) {
@@ -42,7 +43,7 @@ function Snippet({ text }: { text: string }) {
 }
 
 function Result({ r }: { r: SearchResult }) {
-  const subject = r.subject ? SUBJECTS[r.subject] : null;
+  const subject = useSubjects().subject(r.subject);
   return (
     <li className={`frame search-hit c-${subject?.color ?? 'pink'}`}>
       <span className="tag">{subject ? subject.name : 'Life'}</span>

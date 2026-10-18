@@ -2,8 +2,8 @@ import type { GetStaticProps } from 'next';
 import Link from 'next/link';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
-import { SUBJECT_IDS, type SubjectId } from '@/lib/subjects';
-import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects } from '@/server/data/public';
+import type { Subject, SubjectId } from '@/lib/subjects';
+import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects, getSubjects } from '@/server/data/public';
 import type { FeaturedProblem, PostCard, Project } from '@/server/data/types';
 import { Decipher, OrbitHero, Stagger } from '@/ui';
 import { PostTile, ProjectCard, SubjectTrack } from '@/views/cards';
@@ -14,19 +14,21 @@ type Props = {
   latest: PostCard[];
   problem: FeaturedProblem | null;
   projects: Project[];
+  subjects: Subject[];
 };
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-  const [counts, latest, problem, projects] = await Promise.all([
+  const [counts, latest, problem, projects, subjects] = await Promise.all([
     getLessonCounts(),
     getLatestLessons(6),
     getFeaturedProblem(),
     getProjects(),
+    getSubjects(),
   ]);
-  return { props: { counts, latest, problem, projects: projects.slice(0, 2) }, revalidate: REVALIDATE };
+  return { props: { counts, latest, problem, projects: projects.slice(0, 2), subjects }, revalidate: REVALIDATE };
 };
 
-export default function Home({ counts, latest, problem, projects }: Props) {
+export default function Home({ counts, latest, problem, projects, subjects }: Props) {
   return (
     <Layout
       title="CodingSpaceKH · Competition maths, physics, coding and IT"
@@ -69,11 +71,13 @@ export default function Home({ counts, latest, problem, projects }: Props) {
             <span className="eyebrow">Choose a track</span>
             <h2 id="study">Study</h2>
           </div>
-          <span className="more">4 subjects</span>
+          <span className="more">
+            {subjects.length} subject{subjects.length === 1 ? '' : 's'}
+          </span>
         </div>
         <div className="tracks">
-          {SUBJECT_IDS.map((id) => (
-            <SubjectTrack key={id} subject={id} lessons={counts[id]} />
+          {subjects.map((s) => (
+            <SubjectTrack key={s.id} subject={s} lessons={counts[s.id] ?? 0} />
           ))}
         </div>
       </section>

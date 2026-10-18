@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SeriesAdmin } from '@/views/admin/series-admin';
+import { render } from '../../../support/subjects';
 
 const LESSONS = [
   { id: 'l1', slug: 'vectors', title: 'Vectors', subject_id: 'math', status: 'published' },

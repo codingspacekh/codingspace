@@ -1,4 +1,5 @@
 import { describeEvent, type ActivityEvent } from '@/lib/activity';
+import { subjectName } from '../../support/subjects';
 
 const event = (action: string, extra: Partial<ActivityEvent> = {}): ActivityEvent => ({
   id: 1,
@@ -43,6 +44,17 @@ describe('describeEvent', () => {
     });
   });
 
+  it('names subjects and links to the Subjects page (v1.1)', () => {
+    expect(describeEvent(event('subject.create', { entity_id: 'chemistry', name: 'Chemistry' }))).toEqual({
+      text: 'Added the subject “Chemistry”',
+      href: '/admin/subjects',
+    });
+    expect(describeEvent(event('subject.delete', { entity_id: 'chemistry', meta: { name: 'Chemistry' } })).text).toBe(
+      'Deleted the subject “Chemistry”',
+    );
+    expect(describeEvent(event('subject.reorder', { entity_id: '' })).text).toBe('Reordered the subjects');
+  });
+
   it('shows when a post was scheduled for', () => {
     expect(describeEvent(event('post.schedule', { name: 'Vectors', meta: { at: '2026-10-20T01:00:00Z' } })).text).toBe(
       'Scheduled “Vectors” for 20 Oct 2026',
@@ -54,13 +66,17 @@ describe('describeEvent', () => {
       text: 'Created the section “Inequalities”',
       href: '/admin/sections',
     });
-    expect(describeEvent(event('section.reorder', { entity: 'subject', entity_id: 'math' })).text).toBe(
+    expect(describeEvent(event('section.reorder', { entity: 'subject', entity_id: 'math' }), subjectName).text).toBe(
       'Reordered the Math sections',
+    );
+    // Without the subject list (or for a deleted subject), no name.
+    expect(describeEvent(event('section.reorder', { entity: 'subject', entity_id: 'math' })).text).toBe(
+      'Reordered the sections',
     );
     expect(describeEvent(event('media.delete', { meta: { name: 'tri.png' } })).text).toBe('Deleted the file “tri.png”');
     expect(describeEvent(event('project.feature', { name: 'Orbit' })).text).toBe('Featured the project “Orbit”');
     expect(describeEvent(event('project.feature', { entity_id: '' })).text).toBe('Featured no project');
-    expect(describeEvent(event('problem.show', { meta: { subject: 'physics' } }))).toEqual({
+    expect(describeEvent(event('problem.show', { meta: { subject: 'physics' } }), subjectName)).toEqual({
       text: 'Showed a Physics problem of the week',
       href: '/admin/problems',
     });

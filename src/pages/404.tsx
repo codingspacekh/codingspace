@@ -1,6 +1,16 @@
+import type { GetStaticProps } from 'next';
 import Link from 'next/link';
 import { Layout } from '@/components/layout';
+import { REVALIDATE } from '@/lib/isr';
+import type { Subject } from '@/lib/subjects';
+import { getSubjects } from '@/server/data/public';
 import { Frame } from '@/ui';
+
+// The menus list the subjects (refreshed like other pages).
+export const getStaticProps: GetStaticProps<{ subjects: Subject[] }> = async () => ({
+  props: { subjects: await getSubjects() },
+  revalidate: REVALIDATE,
+});
 
 export default function NotFound() {
   return (

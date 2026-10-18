@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api, type ApiResult } from '@/lib/admin-api';
 import type { Dashboard as Data, PostKind } from '@/lib/admin-posts';
 import { ActivityList } from './activity-log';
-import { shortDate, StatusBadge, subjectName } from './posts-browser';
+import { shortDate, StatusBadge, useSubjectName } from './posts-browser';
 
 const STATS = [
   { key: 'published', label: 'Published', href: '/admin/posts?status=published' },
@@ -35,6 +35,7 @@ export function useDashboardRequest(): Request | undefined {
  */
 export function Dashboard({ request }: { request?: Request }) {
   const router = useRouter();
+  const subjectName = useSubjectName();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);

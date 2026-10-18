@@ -3,7 +3,8 @@ import Head from 'next/head';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
 import { imageKey, mediaUrl, srcset } from '@/lib/media-urls';
-import { getAuthorPage } from '@/server/data/public';
+import type { Subject } from '@/lib/subjects';
+import { getAuthorPage, getSubjects } from '@/server/data/public';
 import type { AuthorPageSection, PostCard, Profile } from '@/server/data/types';
 import { AuthorSections } from '@/views/author-sections';
 
@@ -13,12 +14,13 @@ type Props = {
   sections: AuthorPageSection[];
   lifePosts: PostCard[];
   hasMath: boolean;
+  subjects: Subject[];
 };
 
-export const getStaticProps: GetStaticProps<Props> = async () => ({
-  props: await getAuthorPage(),
-  revalidate: REVALIDATE,
-});
+export const getStaticProps: GetStaticProps<Props> = async () => {
+  const [page, subjects] = await Promise.all([getAuthorPage(), getSubjects()]);
+  return { props: { ...page, subjects }, revalidate: REVALIDATE };
+};
 
 const initials = (name: string) =>
   name

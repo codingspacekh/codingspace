@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PostListItem } from '@/lib/admin-posts';
 import { PostsBrowser } from '@/views/admin/posts-browser';
+import { render } from '../../../support/subjects';
 
 const post = (over: Partial<PostListItem>): PostListItem => ({
   id: 'p1',

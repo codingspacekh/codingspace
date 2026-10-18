@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import { isSubjectId, type SubjectId } from '@/lib/subjects';
+import type { SubjectId } from '@/lib/subjects';
 import { db } from './public';
 
 /** Search across published posts (03 PUB-09); the ranking lives in public.search_posts. */
@@ -33,7 +33,7 @@ export async function searchPosts(q: string, limit = 20): Promise<SearchResult[]
   return ((data ?? []) as Row[]).map((r) => ({
     slug: r.slug,
     kind: r.kind,
-    subject: isSubjectId(r.subject_id) ? r.subject_id : null,
+    subject: r.subject_id,
     lang: r.lang,
     title: r.title,
     summary: r.summary ?? '',

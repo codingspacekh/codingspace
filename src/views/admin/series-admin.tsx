@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
-import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import type { AdminSeries, SeriesLessonChoice } from '@/server/admin/series';
 
 type Reply = { error?: string; failed?: string[] };
 type Fields = { title: string; description: string; post_ids: string[] };
 
 const EMPTY: Fields = { title: '', description: '', post_ids: [] };
-const subjectName = (s: SubjectId | null) => (s ? SUBJECTS[s].name : 'No subject');
 
 /**
  * v1.1 (FR-03): lesson series across subjects — add, edit, order and delete series, and pick
@@ -143,6 +142,8 @@ function SeriesCard({
   onSave: (f: Fields) => Promise<boolean>;
   onDelete: () => void;
 }) {
+  const { subject: subjectOf } = useSubjects();
+  const subjectName = (s: string | null) => (s ? (subjectOf(s)?.name ?? s) : 'No subject');
   const id = useId();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -260,6 +261,8 @@ function SeriesForm({
   onSubmit: (f: Fields) => Promise<boolean>;
   onCancel?: () => void;
 }) {
+  const { subjects: allSubjects, subject: subjectOf } = useSubjects();
+  const subjectName = (s: string | null) => (s ? (subjectOf(s)?.name ?? s) : 'No subject');
   const id = useId();
   const [f, setF] = useState(initial);
   const [adding, setAdding] = useState('');
@@ -355,7 +358,7 @@ function SeriesForm({
             Add a lesson
             <select id={`${id}-add`} value={adding} onChange={(e) => setAdding(e.target.value)}>
               <option value="">Choose a lesson…</option>
-              {[...SUBJECT_IDS, null].map((subject) => {
+              {[...allSubjects.map((s) => s.id), null].map((subject) => {
                 const group = free.filter((l) => l.subject_id === subject);
                 return (
                   group.length > 0 && (

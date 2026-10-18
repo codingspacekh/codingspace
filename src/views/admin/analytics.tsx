@@ -8,12 +8,12 @@ import {
   formatDuration,
   pageLabel,
   RANGES,
-  subjectName,
   sumDays,
   type Analytics,
   type AnalyticsDay,
   type Range,
 } from '@/lib/analytics';
+import { useSubjects } from '@/lib/subjects';
 
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -104,6 +104,8 @@ function Breakdown({ title, rows, empty }: { title: string; rows: { label: strin
  * devices and countries; and visitors per month for the past year. Cookie-less (NFR-PRIV-1).
  */
 export function AnalyticsDashboard() {
+  const { subject } = useSubjects();
+  const subjectName = (id: string) => subject(id)?.name ?? id;
   const [range, setRange] = useState<Range>(30);
   const [data, setData] = useState<Analytics | null>(null);
   const [error, setError] = useState('');
@@ -192,7 +194,7 @@ export function AnalyticsDashboard() {
                     <tr key={p.path}>
                       <th scope="row">
                         <a href={p.path} target="_blank" rel="noopener">
-                          {pageLabel(p.path, p.title)}
+                          {pageLabel(p.path, p.title, (id) => subject(id)?.name)}
                         </a>
                         <span className="adm-slug">
                           {p.path}

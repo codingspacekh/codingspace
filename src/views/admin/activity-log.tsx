@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/admin-api';
 import { describeEvent, type ActivityEvent, type ActivityPage } from '@/lib/activity';
+import { useSubjects } from '@/lib/subjects';
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', {
@@ -14,10 +15,11 @@ const when = (iso: string) =>
 
 /** Audit events as a list: when, then what happened, linking to the item if it still exists. */
 export function ActivityList({ events }: { events: ActivityEvent[] }) {
+  const { subject } = useSubjects();
   return (
     <ol className="adm-activity">
       {events.map((e) => {
-        const { text, href } = describeEvent(e);
+        const { text, href } = describeEvent(e, (id) => subject(id)?.name);
         return (
           <li key={e.id}>
             <time dateTime={e.at} className="meta">

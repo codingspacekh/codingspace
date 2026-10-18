@@ -3,12 +3,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '@/lib/admin-api';
+import { SubjectsProvider, type Subject } from '@/lib/subjects';
 
-type Session = { email: string };
+/** Every subject, hidden ones too: the admin's menus and labels use them. */
+type Session = { email: string; subjects: (Subject & { visible: boolean })[] };
 
 const NAV = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/posts', label: 'Posts' },
+  { href: '/admin/subjects', label: 'Subjects' },
   { href: '/admin/sections', label: 'Study structure' },
   { href: '/admin/series', label: 'Series' },
   { href: '/admin/problems', label: 'Problems' },
@@ -36,7 +39,7 @@ export function AdminShell({ title, children }: { title: string; children: (sess
 
   useEffect(() => {
     api<Session & { error?: string }>('/api/admin/session').then(({ status, data }) => {
-      if (status === 200) setSession({ email: data.email });
+      if (status === 200) setSession({ email: data.email, subjects: data.subjects ?? [] });
       else toSignIn(router, data.error === 'expired' ? 'expired' : undefined);
     });
   }, [router]);
@@ -82,7 +85,11 @@ export function AdminShell({ title, children }: { title: string; children: (sess
         )}
       </header>
       <main id="main" className="adm-main">
-        {session ? children(session) : <p aria-live="polite">Checking your session…</p>}
+        {session ? (
+          <SubjectsProvider value={session.subjects}>{children(session)}</SubjectsProvider>
+        ) : (
+          <p aria-live="polite">Checking your session…</p>
+        )}
       </main>
     </div>
   );

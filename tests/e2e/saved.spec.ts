@@ -7,7 +7,8 @@ test('save a lesson → it is on the Saved page after a reload → remove it', a
   const problems = await collectProblems(page);
   const posted: string[] = [];
   page.on('request', (r) => {
-    if (r.method() !== 'GET' && !r.url().endsWith('/api/visit')) posted.push(r.url());
+    // GET and HEAD carry no body (Next checks a page's data with HEAD before a client navigation).
+    if (!['GET', 'HEAD'].includes(r.method()) && !r.url().endsWith('/api/visit')) posted.push(r.url());
   });
 
   await page.goto('/posts/projectile-motion');

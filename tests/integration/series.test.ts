@@ -56,12 +56,12 @@ describe('lesson series', () => {
     expect(page).toMatchObject({
       title: 'IT Maths for Physics',
       description: 'Tools first.',
-      subjects: ['math', 'physics'],
+      subjectIds: ['math', 'physics'],
     });
     expect(page!.lessons.map((l) => l.slug)).toEqual(['am-gm-inequality', 'projectile-motion']);
     expect((await getSeriesList()).find((s) => s.slug === 'it-maths-for-physics')).toMatchObject({
       lessonCount: 2,
-      subjects: ['math', 'physics'],
+      subjectIds: ['math', 'physics'],
     });
 
     const lesson = await getPostPage('projectile-motion');

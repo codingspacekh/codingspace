@@ -10,7 +10,7 @@ import { unzip } from './unzip';
  */
 
 const CONFLICT: Record<TableName, string> = {
-  subjects: 'id', // already there: every database starts with the four subjects
+  subjects: 'id', // the first four are already there (seeded); added ones come with the export
   sections: 'id',
   media: 'id',
   posts: 'id',

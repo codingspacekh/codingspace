@@ -1,9 +1,12 @@
+import type { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { Layout } from '@/components/layout';
 import { formatDate } from '@/lib/format';
-import { isSubjectId, SUBJECTS } from '@/lib/subjects';
+import { REVALIDATE } from '@/lib/isr';
+import { useSubjects, type Subject } from '@/lib/subjects';
+import { getSubjects } from '@/server/data/public';
 import { unsavePost, useSaved } from '@/ui';
 
 const noop = () => () => {};
@@ -15,6 +18,11 @@ const useHydrated = () =>
     () => false,
   );
 
+export const getStaticProps: GetStaticProps<{ subjects: Subject[] }> = async () => ({
+  props: { subjects: await getSubjects() },
+  revalidate: REVALIDATE,
+});
+
 /**
  * The lessons and posts this visitor saved (☆ Save on a post). The list lives in this browser
  * only, so the page is the same empty shell for everyone until the browser fills it in.
@@ -22,6 +30,8 @@ const useHydrated = () =>
 export default function SavedPage() {
   const saved = useSaved();
   const ready = useHydrated();
+  const { subjects, subject: subjectOf } = useSubjects();
+  const first = subjects[0];
 
   return (
     <Layout title="Saved lessons · CodingSpaceKH" active="saved">
@@ -48,12 +58,16 @@ export default function SavedPage() {
         ) : saved.length === 0 ? (
           <p className="empty saved-empty">
             Nothing saved yet. Open a lesson and press ☆ Save to keep it here.{' '}
-            <Link href="/study/math">Start with Math</Link>
+            {first ? (
+              <Link href={`/study/${first.id}`}>Start with {first.name}</Link>
+            ) : (
+              <Link href="/">Back to home</Link>
+            )}
           </p>
         ) : (
           <ul className="saved-list" aria-label="Your saved lessons">
             {saved.map((p) => {
-              const subject = isSubjectId(p.subject) ? SUBJECTS[p.subject] : null;
+              const subject = subjectOf(p.subject);
               return (
                 <li key={p.slug} className={`frame c-${subject?.color ?? 'pink'}`}>
                   <span className="tag">{subject?.name ?? 'Life'}</span>

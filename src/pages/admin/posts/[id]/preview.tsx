@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout';
 import { api, safeNext } from '@/lib/admin-api';
+import { SubjectsProvider, type Subject } from '@/lib/subjects';
 import type { PostPageData } from '@/server/data/types';
 import { toSignIn } from '@/views/admin/admin-shell';
 import { PostView } from '@/views/post-view';
@@ -11,16 +12,18 @@ import { PostView } from '@/views/post-view';
 export default function PreviewPage() {
   const router = useRouter();
   const id = typeof router.query.id === 'string' ? router.query.id : null;
-  const [data, setData] = useState<PostPageData | null>(null);
+  const [data, setData] = useState<(PostPageData & { subjects: Subject[] }) | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!id) return;
-    api<PostPageData & { error?: string }>(`/api/admin/posts/${id}/preview`).then(({ status, data: d }) => {
-      if (status === 200) setData(d);
-      else if (status === 401) void toSignIn(router, d.error === 'expired' ? 'expired' : undefined);
-      else setError(status === 404 ? 'This post does not exist.' : 'The preview could not be loaded.');
-    });
+    api<PostPageData & { subjects: Subject[]; error?: string }>(`/api/admin/posts/${id}/preview`).then(
+      ({ status, data: d }) => {
+        if (status === 200) setData(d);
+        else if (status === 401) void toSignIn(router, d.error === 'expired' ? 'expired' : undefined);
+        else setError(status === 404 ? 'This post does not exist.' : 'The preview could not be loaded.');
+      },
+    );
   }, [id, router]);
 
   const banner = (
@@ -44,13 +47,16 @@ export default function PreviewPage() {
       </Layout>
     );
 
+  const { subjects, ...page } = data;
   return (
-    <Layout
-      title={`Preview: ${data.post.title} · CodingSpaceKH admin`}
-      active={data.post.kind === 'life' ? 'author' : 'study'}
-    >
-      {banner}
-      <PostView {...data} />
-    </Layout>
+    <SubjectsProvider value={subjects}>
+      <Layout
+        title={`Preview: ${data.post.title} · CodingSpaceKH admin`}
+        active={data.post.kind === 'life' ? 'author' : 'study'}
+      >
+        {banner}
+        <PostView {...page} />
+      </Layout>
+    </SubjectsProvider>
   );
 }

@@ -14,6 +14,11 @@
   --amber: #ffb84a;
   --lime: #7dff9b;
   --pink: #ff6fcf;
+  /* More subject colours (v1.1, chosen in /admin/subjects): as bright as the four above. */
+  --orange: #ff9a5c;
+  --sky: #6cc4ff;
+  --rose: #ff7d99;
+  --gold: #f2d64b;
   --glow: 0 0 18px rgba(24, 228, 236, 0.35);
   --gutter: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
@@ -33,6 +38,18 @@
 }
 .c-pink {
   --c: var(--pink);
+}
+.c-orange {
+  --c: var(--orange);
+}
+.c-sky {
+  --c: var(--sky);
+}
+.c-rose {
+  --c: var(--rose);
+}
+.c-gold {
+  --c: var(--gold);
 }
 
 * {
@@ -2743,6 +2760,30 @@ img.ProseMirror-separator {
 }
 .adm-series-pick .btn {
   padding: 6px 10px;
+}
+/* Subjects admin (v1.1): each subject's symbol in its colour, and the address field. */
+.adm-glyph,
+.adm-swatch {
+  color: var(--c);
+}
+.adm-swatch {
+  display: grid;
+  place-items: center;
+  align-self: end;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--c);
+  font-size: 22px;
+}
+.adm-prefix {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg2);
+}
+.adm-prefix input {
+  flex: 1;
+  min-width: 0;
 }
 .adm-lessons {
   display: grid;

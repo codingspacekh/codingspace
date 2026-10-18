@@ -4,6 +4,7 @@
  */
 
 import type { ActivityEvent } from './activity';
+import { SUBJECT_ID } from './subjects';
 
 export type PostKind = 'lesson' | 'life';
 export type PostStatus = 'draft' | 'scheduled' | 'published';
@@ -30,13 +31,12 @@ export type Dashboard = {
 export type PostFilters = {
   q?: string;
   kind?: PostKind;
-  subject?: 'math' | 'physics' | 'coding' | 'it';
+  subject?: string;
   status?: PostStatus | 'changes';
 };
 
 const ALLOWED = {
   kind: ['lesson', 'life'],
-  subject: ['math', 'physics', 'coding', 'it'],
   status: ['draft', 'scheduled', 'published', 'changes'],
 } as const;
 
@@ -45,11 +45,13 @@ export function postFilters(query: Record<string, unknown>): PostFilters {
   const f: PostFilters = {};
   const q = typeof query.q === 'string' ? query.q.trim().slice(0, 100) : '';
   if (q) f.q = q;
-  for (const key of ['kind', 'subject', 'status'] as const) {
+  for (const key of ['kind', 'status'] as const) {
     const v = query[key];
     if (typeof v === 'string' && (ALLOWED[key] as readonly string[]).includes(v))
       (f as Record<string, string>)[key] = v;
   }
+  // Any subject's id; one that doesn't exist just matches nothing.
+  if (typeof query.subject === 'string' && SUBJECT_ID.test(query.subject)) f.subject = query.subject;
   return f;
 }
 

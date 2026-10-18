@@ -1,5 +1,3 @@
-import { isSubjectId, SUBJECTS } from '@/lib/subjects';
-
 /**
  * The audit log in plain words (03 ADM-15). Events come from audit_events, written in the same
  * transaction as each change; `name` is the item's current title, or null when it is gone.
@@ -24,7 +22,6 @@ const day = (iso: unknown) =>
   typeof iso === 'string'
     ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : '';
-const subject = (id: unknown) => (typeof id === 'string' && isSubjectId(id) ? `${SUBJECTS[id].name} ` : '');
 
 const POST: Record<string, string> = {
   'post.create': 'Created',
@@ -53,6 +50,11 @@ const SERIES: Record<string, string> = {
   'series.update': 'Edited the series',
   'series.delete': 'Deleted the series',
 };
+const SUBJECT: Record<string, string> = {
+  'subject.create': 'Added the subject',
+  'subject.update': 'Edited the subject',
+  'subject.delete': 'Deleted the subject',
+};
 const PROBLEM: Record<string, string> = {
   'problem.create': 'Added',
   'problem.update': 'Edited',
@@ -70,8 +72,16 @@ const FIXED: Record<string, string> = {
   'content.export': 'Downloaded an export of all content',
 };
 
-export function describeEvent(e: ActivityEvent): { text: string; href: string | null } {
+/** `subjectName` gives a subject's current name (the admin's subject list). */
+export function describeEvent(
+  e: ActivityEvent,
+  subjectName: (id: string) => string | undefined = () => undefined,
+): { text: string; href: string | null } {
   const m = e.meta ?? {};
+  const subject = (id: unknown) => {
+    const name = typeof id === 'string' ? subjectName(id) : undefined;
+    return name ? `${name} ` : '';
+  };
   const name = e.name ?? str(m.title) ?? str(m.name) ?? str(m.slug) ?? e.entity_id;
   const q = `“${name}”`;
   const a = e.action;
@@ -91,6 +101,9 @@ export function describeEvent(e: ActivityEvent): { text: string; href: string | 
   if (a === 'project.feature' && !e.entity_id) return { text: 'Featured no project', href: '/admin/projects' };
   if (a in PROJECT) return { text: `${PROJECT[a]} ${q}`, href: '/admin/projects' };
   if (a === 'project.delete') return { text: `Deleted the project ${q}`, href: '/admin/projects' };
+
+  if (a in SUBJECT) return { text: `${SUBJECT[a]} ${q}`, href: '/admin/subjects' };
+  if (a === 'subject.reorder') return { text: 'Reordered the subjects', href: '/admin/subjects' };
 
   if (a in SERIES) return { text: `${SERIES[a]} ${q}`, href: '/admin/series' };
   if (a === 'series.reorder') return { text: 'Reordered the series', href: '/admin/series' };

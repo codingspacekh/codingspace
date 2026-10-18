@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StudyStructure } from '@/views/admin/study-structure';
+import { render } from '../../../support/subjects';
 
 const lesson = (id: string, title: string) => ({
   id,

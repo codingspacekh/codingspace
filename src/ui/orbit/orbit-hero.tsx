@@ -1,17 +1,11 @@
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
-import { SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from '../arwes/prefs';
 import type { Orbit } from './engine';
 
-const COLORS: Record<string, string> = { cyan: '#18e4ec', violet: '#9b8cff', amber: '#ffb84a', lime: '#7dff9b' };
-
-const NODES = SUBJECT_IDS.map((id) => ({
-  id,
-  name: SUBJECTS[id].name,
-  glyph: SUBJECTS[id].glyph,
-  color: COLORS[SUBJECTS[id].color] ?? COLORS.cyan!,
-}));
+/** The engine has eight rings; later subjects are only in Study below. */
+const MAX_NODES = 8;
 
 const clock = (s: number) =>
   'T+' + [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
@@ -46,7 +40,7 @@ function whenIdleAndVisible(el: Element, run: () => void): () => void {
 }
 
 /**
- * The orbit hero (04 M6): the four subjects circling a wireframe core; click one to open it.
+ * The orbit hero (04 M6): the subjects (up to eight) circling a wireframe core; click one to open it.
  * Decoration with a pointer shortcut: the same subjects are ordinary links in Study below,
  * so the whole thing is hidden from assistive technology and keyboard focus.
  * The engine (./engine.ts) is downloaded only after the page is idle and the hero is on
@@ -56,10 +50,13 @@ export function OrbitHero() {
   const { animate } = usePrefs();
   const play = useSound();
   const router = useRouter();
+  const { subjects, subject } = useSubjects();
+  const shown = subjects.slice(0, MAX_NODES);
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const orbit = useRef<Orbit | null>(null);
   const animateRef = useRef(animate);
+  const shownRef = useRef(shown);
   const [target, setTarget] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [ready, setReady] = useState(false);
@@ -71,6 +68,7 @@ export function OrbitHero() {
     playRef.current = play;
     routerRef.current = router;
     animateRef.current = animate;
+    shownRef.current = shown;
   });
 
   useEffect(() => {
@@ -81,9 +79,16 @@ export function OrbitHero() {
     const cancel = whenIdleAndVisible(el, () => {
       void import('./engine').then(({ startOrbit }) => {
         if (!alive) return;
-        const font = getComputedStyle(cv).getPropertyValue('--font-mono').trim() || 'monospace';
+        const style = getComputedStyle(cv);
+        const font = style.getPropertyValue('--font-mono').trim() || 'monospace';
         orbit.current = startOrbit(cv, {
-          nodes: NODES,
+          // Colours come from the same CSS variables as the c-<colour> classes.
+          nodes: shownRef.current.map((s) => ({
+            id: s.id,
+            name: s.name,
+            glyph: s.glyph,
+            color: style.getPropertyValue(`--${s.color}`).trim() || '#18e4ec',
+          })),
           motion: animateRef.current,
           font: `${font}, ui-monospace, monospace`,
           onHover: (id) => {
@@ -118,9 +123,9 @@ export function OrbitHero() {
         <b>{animate ? clock(seconds) : 'T+PAUSED'}</b>
       </div>
       <div className="hud hud-br">
-        TARGET <b>{target ? SUBJECTS[target as keyof typeof SUBJECTS].name.toUpperCase() : '—'}</b>
+        TARGET <b>{subject(target)?.name.toUpperCase() ?? '—'}</b>
         <br />
-        {NODES.length} TRACKS
+        {shown.length} TRACKS
       </div>
     </div>
   );

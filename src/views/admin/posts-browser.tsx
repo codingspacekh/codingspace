@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { postStatus, type PostFilters, type PostListItem } from '@/lib/admin-posts';
-import { isSubjectId, SUBJECT_IDS, SUBJECTS } from '@/lib/subjects';
+import { useSubjects } from '@/lib/subjects';
 
 export const shortDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -12,7 +12,11 @@ export function StatusBadge({ post }: { post: Pick<PostListItem, 'status' | 'has
   return <span className={`adm-status adm-status--${label.toLowerCase().replace(/\s+/g, '-')}`}>{label}</span>;
 }
 
-export const subjectName = (id: string | null) => (isSubjectId(id) ? SUBJECTS[id].name : '—');
+/** A subject's name for lists ("—" for none). */
+export function useSubjectName() {
+  const { subject } = useSubjects();
+  return (id: string | null) => subject(id)?.name ?? '—';
+}
 
 function query(f: PostFilters) {
   const params = new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][]);
@@ -21,6 +25,8 @@ function query(f: PostFilters) {
 
 /** 03 ADM-03: search, filter by type / subject / status; edit, view, delete with confirmation. */
 export function PostsBrowser({ filters, onFilters }: { filters: PostFilters; onFilters: (f: PostFilters) => void }) {
+  const { subjects } = useSubjects();
+  const subjectName = useSubjectName();
   const [posts, setPosts] = useState<PostListItem[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -82,9 +88,9 @@ export function PostsBrowser({ filters, onFilters }: { filters: PostFilters; onF
           Subject
           <select name="subject" defaultValue={filters.subject ?? ''}>
             <option value="">All</option>
-            {SUBJECT_IDS.map((s) => (
-              <option key={s} value={s}>
-                {SUBJECTS[s].name}
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>

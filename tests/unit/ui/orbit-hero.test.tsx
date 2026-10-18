@@ -1,4 +1,5 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
+import { render } from '../../support/subjects';
 
 type Options = { motion: boolean; nodes: { id: string }[] };
 const startOrbit = vi.fn<(canvas: HTMLCanvasElement, options: Options) => { setMotion: () => void; stop: () => void }>(

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 
 import { api } from '@/lib/admin-api';
 import { formatDate } from '@/lib/format';
 import { mondayOf } from '@/lib/site-rules';
-import { SUBJECT_IDS, SUBJECTS, type SubjectId } from '@/lib/subjects';
+import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { AdminProblem } from '@/server/admin/site';
 
 type Reply = { error?: string; failed?: string[]; id?: string };
@@ -38,6 +38,7 @@ const firstLine = (md: string) =>
  * subject page); older ones stay here, hidden, and can be shown again.
  */
 export function ProblemsAdmin({ previewDelay = 400 }: { previewDelay?: number }) {
+  const { subject: subjectOf } = useSubjects();
   const [problems, setProblems] = useState<AdminProblem[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
@@ -113,7 +114,7 @@ export function ProblemsAdmin({ previewDelay = 400 }: { previewDelay?: number })
             if (ok && isNew && show && data.id) {
               await change(
                 () => api(`/api/admin/problems/${data.id}`, { method: 'PATCH', body: { current: true } }),
-                `Added, and showing it as the ${SUBJECTS[f.subject_id].name} problem of the week.`,
+                `Added, and showing it as the ${subjectOf(f.subject_id)?.name ?? f.subject_id} problem of the week.`,
               );
             }
             if (ok) setEditing(null);
@@ -141,7 +142,7 @@ export function ProblemsAdmin({ previewDelay = 400 }: { previewDelay?: number })
                 change(
                   () => api(`/api/admin/problems/${p.id}`, { method: 'PATCH', body: { current: on } }),
                   on
-                    ? `Showing it as the ${SUBJECTS[p.subject_id].name} problem of the week.`
+                    ? `Showing it as the ${subjectOf(p.subject_id)?.name ?? p.subject_id} problem of the week.`
                     : 'It is no longer shown on the site.',
                 )
               }
@@ -167,9 +168,10 @@ function ProblemCard({
   onShow: (on: boolean) => void;
   onDelete: () => void;
 }) {
+  const { subject: subjectOf } = useSubjects();
   const id = useId();
   const [confirming, setConfirming] = useState(false);
-  const title = `${SUBJECTS[p.subject_id].name}, week of ${formatDate(p.week_of)}`;
+  const title = `${subjectOf(p.subject_id)?.name ?? p.subject_id}, week of ${formatDate(p.week_of)}`;
   return (
     <li className="frame adm-section" aria-labelledby={`${id}-t`}>
       <h2 id={`${id}-t`}>
@@ -229,6 +231,7 @@ function ProblemForm({
   onSubmit: (f: Fields, show: boolean) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const [f, setF] = useState<Fields>({
     subject_id: initial.subject_id,
     section_id: initial.section_id,
@@ -288,9 +291,9 @@ function ProblemForm({
               value={f.subject_id}
               onChange={(e) => setF((prev) => ({ ...prev, subject_id: e.target.value as SubjectId, section_id: null }))}
             >
-              {SUBJECT_IDS.map((s) => (
+              {allSubjects.map(({ id: s }) => (
                 <option key={s} value={s}>
-                  {SUBJECTS[s].name}
+                  {subjectOf(s)?.name}
                 </option>
               ))}
             </select>
@@ -334,7 +337,7 @@ function ProblemForm({
         {isNew && (
           <label className="adm-inline">
             <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} />
-            Show it on the site now (instead of the current {SUBJECTS[f.subject_id].name} problem)
+            Show it on the site now (instead of the current {subjectOf(f.subject_id)?.name} problem)
           </label>
         )}
         {touched && problem && (

@@ -65,7 +65,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | ID | Requirement | P |
 |---|---|---|
 | PUB-01 | Home: hero ("Prove it. Model it. Code it."), the four Study tracks, Problem of the week, latest 3 lessons, featured projects, author teaser. | M |
-| PUB-02 | Top menu Home · Study ▾ · Projects · Author. Study opens a menu of the 4 subjects (keyboard and touch accessible). | M |
+| PUB-02 | Top menu Home · Study ▾ · Projects · Author. Study opens a menu of the subjects (4 at launch; the owner can add more, v1.1) (keyboard and touch accessible). | M |
 | PUB-03 | Subject page: intro, section shortcuts, lessons **grouped by section** in the owner's order, each card showing level, minutes and problem count. | M |
 | PUB-04 | Lesson page: breadcrumb, tags, title, meta, rendered body (headings, lists, quotes, links, **maths**, **highlighted code with copy**, callouts, images with captions, file downloads, embeds), prev/next within section, section side-nav, table of contents. | M |
 | PUB-05 | Math page and Home show the **Problem of the week** with reveal-on-click hint and solution. | M |
@@ -91,6 +91,7 @@ Priority: **M** must (v1), **S** should (v1 if time allows), **C** could (later)
 | ADM-09 | **Publish / Update / Unpublish / Schedule.** A published post keeps a live snapshot; edits show "Unpublished changes" until Update. Publishing regenerates the affected pages within 10 s. | M |
 | ADM-10 | Media library: browse, search, reuse, delete unused files; images auto-resized to WebP/AVIF; metadata (EXIF/GPS) stripped. | M |
 | ADM-11 | Problem of the week editor with live maths preview and week date. | M |
+| ADM-12a | Subjects (v1.1, owner request 2026-10-18): add, edit (name, symbol, colour, menu line, introduction), show or hide, reorder and delete subjects. A new subject starts hidden; a hidden subject and everything in it (sections, lessons, problem of the week) never reach visitors. Only an empty subject can be deleted. | S |
 | ADM-12 | Study structure: add, rename, describe, reorder and delete sections (deleting one deletes its lessons, after a confirmation that lists them; owner change 2026-10-17); reorder lessons inside a section. | M |
 | ADM-13 | Projects: create, edit, delete; one featured; landing URL validated (https only). | M |
 | ADM-14 | Author page: photo, name, bio (Markdown), stats, public email, and sections in the owner's order: timeline, experience, education, skills, awards & certificates, hobbies & interests, life posts and any number of custom sections. Every part except the name can be hidden, down to single items; hidden parts never reach visitors (owner request 2026-10-17). | M |
@@ -230,7 +231,7 @@ erDiagram
 
 | Table | Key columns |
 |---|---|
-| `subjects` | `id` (`math`/`physics`/`coding`/`it`), `name`, `glyph`, `color`, `intro`, `sort` — seeded, fixed |
+| `subjects` | `id` (the address in `/study/<id>`, letters only, fixed once made), `name`, `glyph`, `color` (palette in `src/lib/subjects.ts`), `blurb`, `intro`, `visible`, `sort` — four seeded (`math`/`physics`/`coding`/`it`), more added in `/admin/subjects` (v1.1) |
 | `sections` | `id`, `subject_id`, `slug`, `title`, `description`, `sort` · unique (`subject_id`, `slug`) |
 | `posts` | `id`, `kind` (`lesson`/`life`), `slug` (unique), `subject_id?`, `section_id?`, `sort`, `level` (1–3), `minutes`, `problem_count`, `lang` (`en`/`km`), **draft fields**: `title`, `summary`, `content_json`; **live fields**: `live_title`, `live_summary`, `live_html`, `live_toc`, `live_search_text`, `live_search` (generated tsvector, `simple` config, GIN index), `live_has_math`, `live_has_code`, `live_updated_at`, `status` (`draft`/`scheduled`/`published`), `scheduled_at`, `published_at`, `updated_at`, `revision` |
 | `post_revisions` | `id`, `post_id`, `content_json`, `title`, `created_at` (kept: last 50 per post) |

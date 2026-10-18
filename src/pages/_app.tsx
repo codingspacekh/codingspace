@@ -1,5 +1,6 @@
 import type { AppProps } from 'next/app';
 import localFont from 'next/font/local';
+import { SubjectsProvider, type Subject } from '@/lib/subjects';
 import { PageEffects, UiRoot, VisitTracker } from '@/ui';
 import '@/styles/globals.css';
 
@@ -55,14 +56,20 @@ const khmer = localFont({
   adjustFontFallback: false,
 });
 
-export default function App({ Component, pageProps }: AppProps) {
+const NO_SUBJECTS: Subject[] = [];
+
+// Every public page returns `subjects` from getStaticProps (the menus and footer list them);
+// admin pages get theirs from the admin shell instead.
+export default function App({ Component, pageProps }: AppProps<{ subjects?: Subject[] }>) {
   return (
     <div className={`app ${body.variable} ${mono.variable} ${display.variable} ${khmer.variable}`}>
-      <UiRoot>
-        <Component {...pageProps} />
-        <PageEffects />
-        <VisitTracker />
-      </UiRoot>
+      <SubjectsProvider value={pageProps.subjects ?? NO_SUBJECTS}>
+        <UiRoot>
+          <Component {...pageProps} />
+          <PageEffects />
+          <VisitTracker />
+        </UiRoot>
+      </SubjectsProvider>
     </div>
   );
 }

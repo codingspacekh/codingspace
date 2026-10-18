@@ -1,6 +1,7 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProblemsAdmin } from '@/views/admin/problems-admin';
+import { render } from '../../../support/subjects';
 
 const problems = () => [
   {
