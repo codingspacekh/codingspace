@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { formatDate, levelLabel } from '@/lib/format';
 import { useSubjects, type Subject } from '@/lib/subjects';
 import type { PostCard, Project } from '@/server/data/types';
+import { DoneTick } from './progress';
 
 const color = (subject: Subject | undefined) => (subject ? `c-${subject.color}` : 'c-pink');
 
@@ -43,7 +44,10 @@ export function LessonRow({ lesson }: { lesson: PostCard }) {
   return (
     <Link href={`/posts/${lesson.slug}`} className="frame lesson" lang={lesson.lang}>
       <span className="row">
-        <strong>{lesson.title}</strong>
+        <strong>
+          {lesson.title}
+          <DoneTick slug={lesson.slug} />
+        </strong>
         <span className="lvl">
           <i>{'▮'.repeat(lesson.level)}</i>
           {'▯'.repeat(3 - lesson.level)} {levelLabel(lesson.level)}

@@ -54,6 +54,8 @@ export type SeriesNav = {
   total: number;
   prev: SeriesLink | null;
   next: SeriesLink | null;
+  /** Every lesson's slug, in order: the visitor's progress through the series. */
+  lessons: string[];
 };
 
 export type SeriesSummary = {
@@ -61,11 +63,13 @@ export type SeriesSummary = {
   title: string;
   description: string;
   lessonCount: number;
+  /** The lessons' slugs, in order: the visitor's progress through the series. */
+  lessonSlugs: string[];
   /** The subjects its lessons come from, in the site's subject order (not `subjects`: _app reads that prop). */
   subjectIds: SubjectId[];
 };
 
-export type SeriesPageData = Omit<SeriesSummary, 'lessonCount'> & { lessons: PostCard[] };
+export type SeriesPageData = Omit<SeriesSummary, 'lessonCount' | 'lessonSlugs'> & { lessons: PostCard[] };
 
 export type SectionWithLessons = {
   slug: string;
