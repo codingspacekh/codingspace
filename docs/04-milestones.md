@@ -359,6 +359,10 @@ Each milestone lists the **tests written first**. They start red and define "don
   > - **Backup:** `questions` is in the export and the restore.
   > - **Later:** Turnstile if spam appears; email (new question to the owner, answer to the student) once the domain is verified.
   > - Migration `20261104000000_lesson_questions.sql` (additive): push it to staging **before** merging (lesson pages read `questions` when they build).
+- Admin layout redesign. **BUILT 2026-10-18** (owner: the top bar was too congested; a left sidebar like most dashboards):
+  > - From 1000 px: a fixed left sidebar (`src/views/admin/admin-shell.tsx`) with the pages in four labelled groups (Overview: Dashboard, Analytics, Activity · Content: Posts, Questions, Problems, Media · Study: Subjects, Study structure, Series, Syllabus · Site: Projects, Author), the current page highlighted, and the account at the bottom (View the site, email, Sign out, Sign out everywhere).
+  > - Below 1000 px: a slim top bar with **Menu**, opening the same sidebar as a panel; it closes on Escape (focus back to Menu) and when a page is chosen.
+  > - The dashboard's Recently edited and Recent activity are side-by-side panels, Backup below. The editor's two columns depend on the content area's width (container query), not the window's.
 - Offline reading (PWA).
 - Saved lessons on the device. **BUILT 2026-10-18** (owner: bookmarks without sign-in; emailing the list or moving it to another device later, if wanted):
   > - **☆ Save** on every post (next to Reading mode and Print); **Saved** in the top bar opens `/saved`: the list, newest first, with Remove. `noindex`; counted by the analytics like other pages.
