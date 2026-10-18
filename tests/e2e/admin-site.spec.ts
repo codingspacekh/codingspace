@@ -582,6 +582,81 @@ test.describe('site content', { tag: '@single-account' }, () => {
     }
   });
 
+  test('many comments: 20 on the post, older ones in place (or on their own page without JavaScript); the inbox filters', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const service = serviceClient();
+    const prefix = `E2E many ${Date.now() % 100000}`;
+    try {
+      const { data: post } = await service.from('posts').select('id').eq('slug', 'why-i-started-codingspace').single();
+      const start = Date.parse('2026-01-01T00:00:00Z');
+      const at = (i: number) => new Date(start + i * 1000).toISOString();
+      const { error } = await service.from('questions').insert(
+        Array.from({ length: 25 }, (_, i) => ({
+          post_id: post!.id,
+          name: `${prefix} ${String(i).padStart(2, '0')}`,
+          body: `Old comment ${i}`,
+          status: 'published',
+          created_at: at(i),
+          published_at: at(i),
+        })),
+      );
+      expect(error).toBeNull();
+      // Inserted alone so it keeps the table's defaults (waiting, written now).
+      const waiting = await service
+        .from('questions')
+        .insert({ post_id: post!.id, name: `${prefix} new`, body: 'The newest one.' });
+      expect(waiting.error).toBeNull();
+
+      // The owner narrows the inbox to the post and publishes the waiting one (which rebuilds the page).
+      await page.goto('/admin/questions');
+      const card = page.getByRole('listitem').filter({ hasText: `${prefix} new` });
+      await expect(page.getByRole('button', { name: /^Waiting \(\d+\)$/ })).toBeVisible();
+      await card.getByRole('button', { name: /^Only this post/ }).click();
+      await expect(page.locator('.adm-filter')).toContainText('Why I started');
+      await page
+        .getByRole('listitem')
+        .filter({ hasText: `${prefix} new` })
+        .getByRole('button', { name: 'Publish' })
+        .click();
+      await expect(page.locator('.adm-main > .adm-live')).toHaveText('Published.');
+      await page.getByRole('button', { name: /^Published \(\d+\)$/ }).click();
+      await expect(
+        page.getByRole('list', { name: 'Published questions and comments' }).getByRole('listitem'),
+      ).toHaveCount(26);
+
+      const reader = await (await context.browser()!.newContext({ baseURL })).newPage();
+      const problems = await collectProblems(reader);
+      await reader.goto('/posts/why-i-started-codingspace');
+      const section = reader.getByRole('region', { name: 'Comments' });
+      const items = section.getByRole('listitem');
+      await expect(items).toHaveCount(20);
+      await expect(items.first()).toContainText(`${prefix} new`);
+      await section.getByRole('link', { name: /^Show older comments \(6 more\)$/ }).click();
+      await expect(items).toHaveCount(26);
+      await expect(items.nth(20)).toBeFocused();
+      await expect(items.last()).toContainText(`${prefix} 00`);
+      await expect(section.getByRole('link', { name: /Show older/ })).toHaveCount(0);
+      await expectAccessible(reader);
+      await reader.context().close();
+      expect(problems).toEqual([]);
+
+      // Without JavaScript the same link opens a plain page of the older ones.
+      const plain = await (await context.browser()!.newContext({ baseURL, javaScriptEnabled: false })).newPage();
+      await plain.goto('/posts/why-i-started-codingspace');
+      await plain.getByRole('link', { name: /^Show older comments \(6 more\)$/ }).click();
+      await expect(plain).toHaveURL(/\/posts\/why-i-started-codingspace\/older\?before=/);
+      await expect(plain.getByRole('heading', { level: 1 })).toHaveText(/^Older comments on /);
+      await expect(plain.getByRole('listitem').filter({ hasText: prefix })).toHaveCount(6);
+      await expect(plain.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+      await plain.context().close();
+    } finally {
+      await service.from('questions').delete().like('name', `${prefix}%`);
+    }
+  });
+
   test('admin layout: a grouped sidebar on wide screens; a Menu panel on phones that Escape closes', async ({
     page,
   }) => {

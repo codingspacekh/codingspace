@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { api } from '@/lib/admin-api';
-import type { AdminQuestion, QuestionStatus } from '@/server/admin/questions';
+import type { AdminQuestion, QuestionInbox, QuestionStatus } from '@/server/admin/questions';
 
 type Reply = { error?: string; failed?: string[] };
 
@@ -13,28 +13,64 @@ const TABS: { status: QuestionStatus; label: string }[] = [
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+type PostFilter = { slug: string; title: string };
+
+const inboxUrl = (status: QuestionStatus, post: PostFilter | null, extra: Record<string, string> = {}) =>
+  `/api/admin/questions?${new URLSearchParams({ status, ...(post ? { post: post.slug } : {}), ...extra })}`;
+
 /**
  * v1.1: questions students asked under lessons and comments on life posts. Nothing is public
  * until published here; the answer or reply (Markdown, $maths$) shows under it, marked "Teacher".
+ * Each tab shows its count and loads 50 at a time ("Load more"); "Only this post" narrows it all
+ * to one lesson or life post.
  */
 export function QuestionsAdmin() {
   const [tab, setTab] = useState<QuestionStatus>('pending');
-  const [questions, setQuestions] = useState<AdminQuestion[] | null>(null);
+  const [post, setPost] = useState<PostFilter | null>(null);
+  const [inbox, setInbox] = useState<QuestionInbox | null>(null);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Kept while another tab loads, so the numbers don't flicker.
+  const [counts, setCounts] = useState<QuestionInbox['counts'] | null>(null);
+  const questions = inbox?.questions ?? null;
 
-  const load = useCallback(async (status: QuestionStatus) => {
-    const { status: code, data } = await api<{ questions?: AdminQuestion[] }>(`/api/admin/questions?status=${status}`);
+  /** The tab from the top; `shown` keeps that many loaded (after a change, the list stays as long). */
+  const load = useCallback(async (status: QuestionStatus, filter: PostFilter | null, shown = 0) => {
+    const { status: code, data } = await api<QuestionInbox>(
+      inboxUrl(status, filter, shown > 50 ? { limit: String(Math.min(shown, 500)) } : {}),
+    );
     setFailed(code !== 200);
-    if (code === 200) setQuestions(data.questions ?? []);
+    if (code !== 200) return;
+    setInbox(data);
+    setCounts(data.counts);
   }, []);
 
   useEffect(() => {
     // Loading the tab's questions is the point of this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load(tab);
-  }, [load, tab]);
+    void load(tab, post);
+  }, [load, tab, post]);
+
+  async function loadMore() {
+    if (!inbox?.questions.length) return;
+    setLoadingMore(true);
+    const { status: code, data } = await api<QuestionInbox>(
+      inboxUrl(tab, post, { before: inbox.questions[inbox.questions.length - 1]!.created_at }),
+    );
+    setLoadingMore(false);
+    if (code !== 200) return setMessage('Not loaded: try again.');
+    setInbox({ ...data, questions: [...inbox.questions, ...data.questions] });
+    setCounts(data.counts);
+  }
+
+  function only(filter: PostFilter | null) {
+    setInbox(null);
+    setCounts(null);
+    setMessage('');
+    setPost(filter);
+  }
 
   async function change(request: () => Promise<{ status: number; data: Reply }>, done: string) {
     setBusy(true);
@@ -48,7 +84,7 @@ export function QuestionsAdmin() {
           : done
         : `Not done: ${data.error ?? 'try again'}.`,
     );
-    await load(tab);
+    await load(tab, post, questions?.length ?? 0);
     return ok;
   }
 
@@ -70,14 +106,22 @@ export function QuestionsAdmin() {
             className="btn"
             aria-pressed={t.status === tab}
             onClick={() => {
-              setQuestions(null);
+              setInbox(null);
               setTab(t.status);
             }}
           >
-            {t.label}
+            {counts ? `${t.label} (${counts[t.status]})` : t.label}
           </button>
         ))}
       </div>
+      {post && (
+        <p className="adm-filter">
+          Only <strong>{post.title}</strong>{' '}
+          <button type="button" className="btn" onClick={() => only(null)}>
+            Show all posts
+          </button>
+        </p>
+      )}
       <p className="adm-live" role="status">
         {message}
       </p>
@@ -99,6 +143,7 @@ export function QuestionsAdmin() {
               question={q}
               busy={busy}
               onSave={save}
+              onOnly={post ? undefined : only}
               onDelete={() =>
                 change(
                   () => api(`/api/admin/questions/${q.id}`, { method: 'DELETE' }),
@@ -108,6 +153,13 @@ export function QuestionsAdmin() {
             />
           ))}
         </ol>
+      )}
+      {inbox && inbox.more > 0 && (
+        <p className="adm-more">
+          <button type="button" className="btn" disabled={loadingMore} onClick={() => void loadMore()}>
+            {loadingMore ? 'Loading…' : `Load more (${inbox.more} older)`}
+          </button>
+        </p>
       )}
     </>
   );
@@ -120,11 +172,14 @@ function QuestionCard({
   question: q,
   busy,
   onSave,
+  onOnly,
   onDelete,
 }: {
   question: AdminQuestion;
   busy: boolean;
   onSave: (q: AdminQuestion, status: QuestionStatus, answer: string, done: string) => Promise<boolean>;
+  /** Show only the questions and comments under this card's post (left out when already filtered). */
+  onOnly?: (post: PostFilter) => void;
   onDelete: () => void;
 }) {
   const id = useId();
@@ -149,6 +204,19 @@ function QuestionCard({
           )
         ) : (
           'a deleted post'
+        )}
+        {onOnly && q.lesson && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="btn adm-only"
+              onClick={() => onOnly({ slug: q.lesson!.slug, title: q.lesson!.title })}
+              aria-label={`Only this post: ${q.lesson.title}`}
+            >
+              Only this post
+            </button>
+          </>
         )}
       </p>
       {/* The student's text exactly as typed: the site renders it (Markdown) once published. */}
