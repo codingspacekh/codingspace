@@ -35,20 +35,36 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
     const form = page.getByRole('form', { name: 'Add a project' });
     await form.getByRole('textbox', { name: 'Name' }).fill(name);
-    await form.getByRole('textbox', { name: 'Short description' }).fill('Made by the end-to-end test.');
-    await form.getByRole('textbox', { name: 'Landing page' }).fill('http://insecure.example');
+    await form.getByRole('textbox', { name: /Short description/ }).fill('Made by the end-to-end test.');
+    // v1.1: the page is ours; a download link must be https.
+    await form.locator('summary', { hasText: 'Why use it' }).click();
+    await form.getByRole('button', { name: 'Add a reason' }).click();
+    await form.getByRole('textbox', { name: 'Title' }).fill('Tested end to end');
+    await form.locator('summary', { hasText: 'Download' }).click();
+    await form.getByRole('button', { name: 'Add a download' }).click();
+    await form.getByRole('textbox', { name: /^For/ }).fill('Windows');
+    await form.getByRole('textbox', { name: 'Link' }).fill('http://insecure.example/app.exe');
     await form.getByRole('button', { name: 'Add project' }).click();
     await expect(form.getByRole('alert')).toContainText('https://');
-    await form.getByRole('textbox', { name: 'Landing page' }).fill('https://example.com/e2e-project');
+    await form.getByRole('textbox', { name: 'Link' }).fill('https://example.com/e2e-project.exe');
     await form.getByRole('button', { name: 'Add project' }).click();
-    await expect(page.getByRole('status')).toHaveText(`Added “${name}” at the end.`);
+    // The page's own message (the screenshot uploader has one too).
+    const status = page.locator('.adm-main > .adm-live');
+    await expect(status).toHaveText(`Added “${name}” at the end.`);
     await page.getByRole('button', { name: `Feature ${name}` }).click();
-    await expect(page.getByRole('status')).toHaveText(`“${name}” is now the featured project.`);
+    await expect(status).toHaveText(`“${name}” is now the featured project.`);
     await expectAccessible(page);
 
     const student = await (await context.browser()!.newContext({ baseURL })).newPage();
     await student.goto('/projects');
-    await expect(student.locator('main a[target="_blank"]').first()).toContainText(name);
+    await expect(student.locator('main a.proj').first()).toContainText(name);
+    await student.locator('main a.proj').first().click();
+    await expect(student.getByRole('heading', { level: 1 })).toContainText(name);
+    await expect(student.getByRole('heading', { name: 'Tested end to end' })).toBeVisible();
+    await expect(student.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute(
+      'href',
+      'https://example.com/e2e-project.exe',
+    );
     await student.goto('/');
     await expect(student.locator('main').getByRole('link', { name: new RegExp(name) })).toBeVisible();
 
@@ -58,7 +74,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await page.reload();
     await page.getByRole('button', { name: `Delete ${name}` }).click();
     await page.getByRole('button', { name: 'Delete permanently' }).click();
-    await expect(page.getByRole('status')).toHaveText(`Deleted “${name}”.`);
+    await expect(status).toHaveText(`Deleted “${name}”.`);
     await student.goto('/projects');
     await expect(student.getByText(name)).toHaveCount(0);
     await student.context().close();

@@ -99,11 +99,20 @@ describe('importContent', () => {
     expect(store.projects).toHaveLength(3);
     expect(store.projects[0]).toMatchObject({
       slug: 'pseudocode-runner',
-      landing_url: 'https://example.com/pseudocode-runner',
+      landing_url: null, // its page is here (v1.1); no website of its own
       is_featured: true,
       subject_id: 'coding',
-      platforms: ['Web'],
+      platforms: ['Windows', 'macOS'],
+      version: '0.9.0',
+      source_url: 'https://example.com/source/pseudocode-runner',
     });
+    const runner = store.projects[0] as { features: unknown[]; downloads: unknown[] };
+    expect(runner.features).toHaveLength(4);
+    expect(runner.downloads[0]).toEqual({
+      label: 'Windows',
+      url: 'https://example.com/downloads/pseudocode-runner-setup.exe',
+    });
+    expect(store.projects[1]).toMatchObject({ tagline: expect.stringContaining('inequality'), downloads: [] });
     expect(store.profile).toMatchObject({ id: true, name: 'CodingSpace', years: 8, students: 500 });
     expect(store.timeline).toHaveLength(4);
     expect(store.problems).toEqual([

@@ -83,3 +83,30 @@ export function articleJsonLd(
     publisher: { '@type': 'Organization', name: SITE_NAME },
   }).replace(/</g, '\\u003c');
 }
+
+/** schema.org SoftwareApplication for a project page (v1.1): free, with its platforms and version. */
+export function softwareJsonLd(
+  p: {
+    slug: string;
+    name: string;
+    description: string;
+    platforms: string[];
+    version: string;
+    downloadUrl: string | null;
+  },
+  { author, base = siteUrl() }: { author: string; base?: string },
+): string {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: p.name,
+    description: p.description,
+    url: absoluteUrl(`/projects/${p.slug}`, base),
+    applicationCategory: 'EducationalApplication',
+    ...(p.platforms.length ? { operatingSystem: p.platforms.join(', ') } : {}),
+    ...(p.version ? { softwareVersion: p.version } : {}),
+    ...(p.downloadUrl ? { downloadUrl: p.downloadUrl } : {}),
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    author: { '@type': 'Person', name: author },
+  }).replace(/</g, '\\u003c');
+}

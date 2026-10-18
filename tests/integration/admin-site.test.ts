@@ -15,6 +15,7 @@ import {
   setCurrentProblem,
 } from '@/server/admin/site';
 import { BUILT_IN, KINDS, type AuthorSection } from '@/lib/author';
+import { getProjectPage, getProjects } from '@/server/data/public';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // Site content against a real database (03 ADM-11, ADM-13, ADM-14). The tables hold the
@@ -51,7 +52,7 @@ describe('projects (ADM-13)', () => {
   it('adds projects last with a slug from the name, and rebuilds Home and Projects', async () => {
     const a = await saveProject(owner, null, project('IT Test Quiz', { platforms: ['Web', 'Android'] }));
     const b = await saveProject(owner, null, project('IT Test Quiz'));
-    expect(a.paths).toEqual(['/', '/projects']);
+    expect(a.paths).toEqual(['/', '/projects', '/projects/it-test-quiz']);
     const list = await listProjects(owner);
     const mine = list.filter((p) => p.name === 'IT Test Quiz');
     expect(mine.map((p) => p.slug)).toEqual(['it-test-quiz', 'it-test-quiz-2']);
@@ -87,6 +88,80 @@ describe('projects (ADM-13)', () => {
     await deleteProject(owner, id);
     await expect(deleteProject(owner, id)).rejects.toMatchObject({ status: 404 });
     for (const p of await listProjects(owner)) if (p.name.startsWith('IT Test')) await deleteProject(owner, p.id);
+  });
+
+  it('a project page (v1.1): its sections, a screenshot from the library, and downloads', async () => {
+    const media = '40000000-0000-4000-8000-0000000000a7';
+    await service.from('media').delete().eq('id', media);
+    expect(
+      (
+        await service.from('media').insert({
+          id: media,
+          kind: 'image',
+          mime: 'image/png',
+          bytes: 10,
+          sha256: 'c'.repeat(64),
+          width: 1280,
+          height: 720,
+          widths: [640, 1280],
+          alt: 'The editor',
+          original_name: 'editor.png',
+        })
+      ).error,
+    ).toBeNull();
+    const { id, paths } = await saveProject(
+      owner,
+      null,
+      project('IT Test Easy Media', {
+        landing_url: '',
+        tagline: 'Video editing for class projects.',
+        intro: 'Made for **students**.',
+        reasons: [
+          { title: 'Free', text: 'No ads.' },
+          { title: ' ', text: '' }, // left blank: dropped
+        ],
+        features: [{ glyph: '✂', title: 'Trim', text: 'Cut the ends.' }],
+        faq: [{ question: 'Offline?', answer: 'Yes, [always](https://example.com).' }],
+        downloads: [{ label: 'Windows', url: 'https://github.com/x/em/releases/download/v1/setup.exe' }],
+        version: '1.0.0',
+        source_url: 'https://github.com/x/em',
+        screenshots: [{ media_id: media, caption: 'Trimming' }],
+      }),
+    );
+    expect(paths).toContain('/projects/it-test-easy-media');
+    expect((await listProjects(owner)).find((p) => p.id === id)).toMatchObject({
+      landing_url: null,
+      reasons: [{ title: 'Free', text: 'No ads.' }],
+      screenshots: [{ media_id: media, caption: 'Trimming', widths: [640, 1280] }],
+    });
+
+    const page = (await getProjectPage('it-test-easy-media'))!;
+    expect(page).toMatchObject({
+      tagline: 'Video editing for class projects.',
+      version: '1.0.0',
+      sourceUrl: 'https://github.com/x/em',
+      project: { name: 'IT Test Easy Media', landingUrl: null, available: true },
+      screenshots: [{ media, caption: 'Trimming', alt: 'The editor', widths: [640, 1280], width: 1280, height: 720 }],
+    });
+    expect(page.introHtml).toContain('<strong>students</strong>');
+    expect(page.faq[0]!.answerHtml).toMatch(/<a href="https:\/\/example.com\/?"/);
+    expect((await getProjects()).find((p) => p.slug === 'it-test-easy-media')?.available).toBe(true);
+    expect(await getProjectPage('it-test-nothing')).toBeNull();
+
+    // The screenshot is in use: the library won't delete it.
+    const { error } = await owner.rpc('admin_delete_media', { p_id: media });
+    expect(error?.message).toBe('this image is a screenshot of IT Test Easy Media');
+
+    await expect(
+      saveProject(owner, id, project('IT Test Easy Media', { downloads: [{ label: 'Mac', url: 'http://x.example' }] })),
+    ).rejects.toMatchObject({ status: 422 });
+    await expect(
+      saveProject(owner, id, project('IT Test Easy Media', { features: [{ title: '', text: 'No title' }] })),
+    ).rejects.toMatchObject({ status: 422 });
+
+    const gone = await deleteProject(owner, id);
+    expect(gone.paths).toContain('/projects/it-test-easy-media');
+    await service.from('media').delete().eq('id', media);
   });
 });
 

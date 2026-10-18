@@ -1,6 +1,14 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import {
+  PROJECT_LIMITS,
+  type ProjectDownload,
+  type ProjectFaq,
+  type ProjectFeature,
+  type ProjectReason,
+  type ProjectStep,
+} from '@/lib/project-page';
 import { markdownToDoc, type MarkdownResult } from './markdown';
 
 /**
@@ -41,9 +49,21 @@ export type LoadedProject = {
   tag: string;
   description: string;
   platforms: string[];
-  landingUrl: string;
+  landingUrl: string | null;
   featured: boolean;
   sort: number;
+  /** The project's landing page (v1.1); every part is optional. */
+  page: {
+    tagline: string;
+    intro: string;
+    reasons: ProjectReason[];
+    features: ProjectFeature[];
+    steps: ProjectStep[];
+    faq: ProjectFaq[];
+    downloads: ProjectDownload[];
+    version: string;
+    sourceUrl: string | null;
+  };
 };
 
 export type LoadedProfile = {
@@ -93,6 +113,7 @@ class Problems {
   }
 }
 
+const HTTPS = /^https:\/\/\S+$/;
 const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v.trim() : fallback);
 const int = (v: unknown, fallback: number): number | null =>
   v === undefined ? fallback : typeof v === 'number' && Number.isInteger(v) ? v : null;
@@ -141,11 +162,38 @@ function loadProjects(json: Obj | null, problems: Problems): LoadedProject[] {
   for (const [i, raw] of (Array.isArray(json?.projects) ? json.projects : []).entries()) {
     const p = isObj(raw) ? raw : {};
     const where = `project "${str(p.slug) || i + 1}"`;
-    const landingUrl = str(p.landingUrl);
+    const landingUrl = str(p.landingUrl) || null;
+    const page = isObj(p.page) ? p.page : {};
+    const sourceUrl = str(page.sourceUrl) || null;
     if (!SLUG.test(str(p.slug))) problems.add(file, `${where}: slug must be lowercase letters, digits and hyphens`);
     if (!str(p.name)) problems.add(file, `${where}: name is required`);
     if (!str(p.description)) problems.add(file, `${where}: description is required`);
-    if (!/^https:\/\/\S+$/.test(landingUrl)) problems.add(file, `${where}: landingUrl must start with https://`);
+    for (const [key, v] of [
+      ['landingUrl', landingUrl],
+      ['page.sourceUrl', sourceUrl],
+    ] as const)
+      if (v !== null && !HTTPS.test(v)) problems.add(file, `${where}: ${key} must start with https://`);
+    /** A list of objects with these string fields; the first is required. */
+    const items = <K extends string>(key: keyof typeof PROJECT_LIMITS, fields: readonly K[]) => {
+      const raw = page[key];
+      if (raw === undefined) return [];
+      const list = Array.isArray(raw) ? raw : [];
+      const ok = list.every((i) => isObj(i) && fields.every((f) => i[f] === undefined || typeof i[f] === 'string'));
+      if (
+        !Array.isArray(raw) ||
+        !ok ||
+        list.length > PROJECT_LIMITS[key] ||
+        list.some((i) => !str((i as Obj)[fields[0]!]))
+      )
+        problems.add(
+          file,
+          `${where}: page.${key} must be at most ${PROJECT_LIMITS[key]} items, each with ${fields[0]}`,
+        );
+      return list.map((i) => Object.fromEntries(fields.map((f) => [f, str((i as Obj)[f])])) as Record<K, string>);
+    };
+    const downloads = items('downloads', ['label', 'url'] as const);
+    if (downloads.some((d) => !HTTPS.test(d.url)))
+      problems.add(file, `${where}: every download url must start with https://`);
     if (p.subject !== undefined && !isSubject(p.subject)) problems.add(file, `${where}: unknown subject`);
     out.push({
       slug: str(p.slug),
@@ -158,6 +206,17 @@ function loadProjects(json: Obj | null, problems: Problems): LoadedProject[] {
       landingUrl,
       featured: p.featured === true,
       sort: int(p.sort, i) ?? i,
+      page: {
+        tagline: str(page.tagline),
+        intro: str(page.intro),
+        reasons: items('reasons', ['title', 'text'] as const),
+        features: items('features', ['title', 'glyph', 'text'] as const),
+        steps: items('steps', ['title', 'text'] as const),
+        faq: items('faq', ['question', 'answer'] as const),
+        downloads,
+        version: str(page.version),
+        sourceUrl,
+      },
     });
   }
   if (out.filter((p) => p.featured).length > 1) problems.add(file, 'only one project can be featured');

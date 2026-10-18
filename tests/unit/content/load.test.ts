@@ -164,6 +164,33 @@ describe('loadContent: validation', () => {
     ]);
   });
 
+  it('checks a project’s page: lists with their first field, https links (v1.1)', () => {
+    const problems = errorsOf(
+      fixture({
+        'projects.json': {
+          projects: [
+            { slug: 'a', name: 'A', description: 'd' }, // no website: fine
+            {
+              slug: 'b',
+              name: 'B',
+              description: 'd',
+              page: {
+                reasons: [{ text: 'no title' }],
+                downloads: [{ label: 'Windows', url: 'http://example.com/b.exe' }],
+                sourceUrl: 'ftp://example.com',
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(problems).toEqual([
+      'projects.json: project "b": every download url must start with https://',
+      'projects.json: project "b": page.reasons must be at most 8 items, each with title',
+      'projects.json: project "b": page.sourceUrl must start with https://',
+    ]);
+  });
+
   it('reports Markdown that cannot be converted, with the line in the file', () => {
     const problems = errorsOf(
       fixture({ 'posts/math/html.md': post('title: T\nsection: inequalities', '<iframe src="x"></iframe>') }),

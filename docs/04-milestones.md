@@ -331,6 +331,12 @@ Each milestone lists the **tests written first**. They start red and define "don
   > - **Pages rebuilt** on a change visitors can see: every public page (they all list the subjects), 10 at a time. Editing a hidden subject rebuilds nothing.
   > - **Backup:** the new columns go with `subjects` in the export and the restore.
   > - Migration `20261101000000_subjects_admin.sql` (additive): push it to staging **before** merging (Vercel builds every page against staging, and they now read `subjects.blurb`).
+- Project pages on our site. **BUILT 2026-10-18** (owner: link each project to its detail page here instead of a separate landing site; download from GitHub once it is ready):
+  > - **Visitors:** each card on Projects and Home opens `/projects/<slug>`, one fixed landing layout: hero (name, tagline, intro, Download / Source code / Website buttons, the first screenshot beside it), Screenshots (with two or more), Why <name>?, Features, Get started (numbered steps), Questions (closed until opened), and the download section (version, one button per link). No links yet = “Coming soon” on the card and the page. SoftwareApplication JSON-LD; in the sitemap; counted by the analytics.
+  > - **Admin** (`/admin/projects`): the same form, with the page's parts as collapsible sections; lists can be added, reordered and removed (blank items are dropped); screenshots are uploaded or chosen from the media library (a screenshot counts as a use and can't be deleted from the library). The project's own website is optional now.
+  > - **Pages rebuilt:** Home, Projects and the project's page.
+  > - **Backup:** `project_screenshots` is in the export and the restore; the page fields go with `projects`.
+  > - Migration `20261102000000_project_pages.sql` (additive): push it to staging **before** merging (Vercel builds the project pages against staging).
 - Offline reading (PWA).
 - Saved lessons on the device. **BUILT 2026-10-18** (owner: bookmarks without sign-in; emailing the list or moving it to another device later, if wanted):
   > - **☆ Save** on every post (next to Reading mode and Print); **Saved** in the top bar opens `/saved`: the list, newest first, with Remove. `noindex`; counted by the analytics like other pages.

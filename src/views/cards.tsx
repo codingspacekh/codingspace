@@ -58,7 +58,7 @@ export function LessonRow({ lesson }: { lesson: PostCard }) {
 export function ProjectCard({ project }: { project: Project }) {
   const s = useSubjects().subject(project.subject);
   return (
-    <a href={project.landingUrl} target="_blank" rel="noopener noreferrer" className={`frame proj ${color(s)}`}>
+    <Link href={`/projects/${project.slug}`} className={`frame proj ${color(s)}`}>
       <span className="ico" aria-hidden="true">
         {project.glyph || '◆'}
       </span>
@@ -66,13 +66,12 @@ export function ProjectCard({ project }: { project: Project }) {
         <span className="stack">
           <strong className="proj-name">{project.name}</strong>
           {project.tag && <span className="tag">{project.tag}</span>}
+          {!project.available && <span className="tag tag-soon">Coming soon</span>}
         </span>
         <span className="desc">{project.description}</span>
         {project.platforms.length > 0 && <span className="meta">{project.platforms.join(' · ')}</span>}
-        <span className="more">
-          Visit site ↗<span className="sr-only"> (opens in a new tab)</span>
-        </span>
+        <span className="more">{project.available ? 'Details and download →' : 'See the project →'}</span>
       </span>
-    </a>
+    </Link>
   );
 }

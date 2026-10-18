@@ -2,7 +2,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { BUILT_IN, cleanItem, HEADER_PARTS, PHOTO_SHAPES, type AuthorItem, type AuthorSection } from '@/lib/author';
 import { postSlug } from '@/lib/post-rules';
-import { EMAIL, landingUrlProblem } from '@/lib/site-rules';
+import {
+  isBlank,
+  PROJECT_LIMITS,
+  PROJECT_TEXT,
+  type ProjectDownload,
+  type ProjectFaq,
+  type ProjectFeature,
+  type ProjectReason,
+  type ProjectStep,
+} from '@/lib/project-page';
+import { EMAIL, landingUrlProblem, optionalUrlProblem } from '@/lib/site-rules';
 import { SUBJECT_ID, type SubjectId } from '@/lib/subjects';
 import { renderSnippet } from '@/server/render/snippet';
 import { PostError } from './posts';
@@ -46,25 +56,72 @@ function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
 const uuid = z.uuid();
 const subject = z.string().regex(SUBJECT_ID);
 
-// ── Projects (ADM-13) ───────────────────────────────────────────────────────
+// ── Projects (ADM-13; v1.1: each has its own landing page) ─────────────────
 
 export const PROJECT_PAGES = ['/', '/projects'];
 
-export const projectInput = z.object({
-  name: z.string().trim().min(1).max(80),
-  glyph: z.string().trim().max(4).default(''),
-  subject_id: subject.nullable().default(null),
-  tag: z.string().trim().max(40).default(''),
-  description: z.string().trim().min(1).max(500),
-  platforms: z.array(z.string().trim().max(30)).max(8).default([]),
-  landing_url: z
+const text = (max: number) => z.string().trim().max(max).default('');
+const url = (optional: boolean) =>
+  z
     .string()
     .trim()
     .superRefine((v, ctx) => {
-      const problem = landingUrlProblem(v);
+      const problem = optional ? optionalUrlProblem(v) : landingUrlProblem(v);
       if (problem) ctx.addIssue({ code: 'custom', message: problem });
-    }),
+    });
+/** A list for the page; items with every field blank are dropped first. */
+const list = <T extends z.ZodRawShape>(shape: T, max: number) =>
+  z.preprocess(
+    (v) =>
+      Array.isArray(v)
+        ? v.filter(
+            (i) =>
+              !(
+                typeof i === 'object' &&
+                i !== null &&
+                Object.values(i).every((x) => typeof x === 'string') &&
+                isBlank(i as Record<string, string>)
+              ),
+          )
+        : v,
+    z.array(z.object(shape)).max(max).default([]),
+  );
+const L = PROJECT_LIMITS;
+const T = PROJECT_TEXT;
+const titled = { title: z.string().trim().min(1, 'every item needs a title').max(T.title), text: text(T.text) };
+
+export const projectInput = z.object({
+  name: z.string().trim().min(1).max(80),
+  glyph: text(T.glyph),
+  subject_id: subject.nullable().default(null),
+  tag: text(40),
+  /** The card's text on Projects and Home. */
+  description: z.string().trim().min(1).max(500),
+  platforms: z.array(z.string().trim().max(30)).max(8).default([]),
+  /** The project's own website, if it has one (optional since v1.1). */
+  landing_url: url(true).default(''),
+  tagline: text(T.tagline),
+  intro: text(T.intro),
+  reasons: list(titled, L.reasons),
+  features: list({ glyph: text(T.glyph), ...titled }, L.features),
+  steps: list(titled, L.steps),
+  faq: list(
+    { question: z.string().trim().min(1, 'every question needs its text').max(T.question), answer: text(T.answer) },
+    L.faq,
+  ),
+  downloads: list(
+    { label: z.string().trim().min(1, 'every download needs a label').max(T.label), url: url(false) },
+    L.downloads,
+  ),
+  version: text(T.version),
+  source_url: url(true).default(''),
+  screenshots: z
+    .array(z.object({ media_id: uuid, caption: text(T.caption) }))
+    .max(L.screenshots)
+    .default([]),
 });
+
+export type AdminScreenshot = { media_id: string; caption: string; widths: number[] };
 
 export type AdminProject = {
   id: string;
@@ -75,19 +132,46 @@ export type AdminProject = {
   tag: string;
   description: string;
   platforms: string[];
-  landing_url: string;
+  landing_url: string | null;
   is_featured: boolean;
   sort: number;
+  tagline: string;
+  intro: string;
+  reasons: ProjectReason[];
+  features: ProjectFeature[];
+  steps: ProjectStep[];
+  faq: ProjectFaq[];
+  downloads: ProjectDownload[];
+  version: string;
+  source_url: string | null;
+  screenshots: AdminScreenshot[];
 };
 
+const PROJECT_COLUMNS =
+  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, sort, ' +
+  'tagline, intro, reasons, features, steps, faq, downloads, version, source_url';
+
 export async function listProjects(supabase: SupabaseClient): Promise<AdminProject[]> {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, sort')
-    .order('sort')
-    .order('name');
+  const [projects, shots] = await Promise.all([
+    supabase.from('projects').select(PROJECT_COLUMNS).order('sort').order('name'),
+    supabase.from('project_screenshots').select('project_id, media_id, caption, widths').order('position'),
+  ]);
+  if (projects.error) refused(projects.error, 'projects');
+  if (shots.error) refused(shots.error, 'project_screenshots');
+  const rows = shots.data as (AdminScreenshot & { project_id: string })[];
+  return (projects.data as unknown as Omit<AdminProject, 'screenshots'>[]).map((p) => ({
+    ...p,
+    screenshots: rows
+      .filter((s) => s.project_id === p.id)
+      .map((s) => ({ media_id: s.media_id, caption: s.caption, widths: s.widths })),
+  }));
+}
+
+/** Home, Projects and the project's own page. */
+async function projectPages(supabase: SupabaseClient, id: string): Promise<string[]> {
+  const { data, error } = await supabase.from('projects').select('slug').eq('id', id).maybeSingle();
   if (error) refused(error, 'projects');
-  return data as AdminProject[];
+  return data ? [...PROJECT_PAGES, `/projects/${(data as { slug: string }).slug}`] : PROJECT_PAGES;
 }
 
 /** Adds (id null) or edits a project. A new one gets a slug from its name: -2, -3… if taken. */
@@ -95,13 +179,13 @@ export async function saveProject(supabase: SupabaseClient, id: string | null, i
   const p = parse(projectInput, input);
   if (id !== null) {
     await call(supabase, 'admin_save_project', { p_id: uuid.parse(id), p });
-    return { id, paths: PROJECT_PAGES };
+    return { id, paths: await projectPages(supabase, id) };
   }
   const base = postSlug(p.name, 'project');
   for (let n = 1; n <= 20; n++) {
     const slug = n === 1 && base !== 'project' ? base : `${base}-${n}`;
     const { data, error } = await supabase.rpc('admin_save_project', { p_id: null, p: { ...p, slug } });
-    if (!error) return { id: data as string, paths: PROJECT_PAGES };
+    if (!error) return { id: data as string, paths: [...PROJECT_PAGES, `/projects/${slug}`] };
     if (error.code !== '23505') refused(error, 'admin_save_project');
   }
   throw new PostError(409, 'could not find a free address for this project');
@@ -113,8 +197,10 @@ export async function featureProject(supabase: SupabaseClient, id: unknown) {
 }
 
 export async function deleteProject(supabase: SupabaseClient, id: string) {
-  await call(supabase, 'admin_delete_project', { p_id: uuid.parse(id) });
-  return { paths: PROJECT_PAGES };
+  // Listed first: its page goes too (a 404 from now on).
+  const paths = await projectPages(supabase, uuid.parse(id));
+  await call(supabase, 'admin_delete_project', { p_id: id });
+  return { paths };
 }
 
 export async function reorderProjects(supabase: SupabaseClient, input: unknown) {

@@ -27,6 +27,7 @@ describe('which pages are counted', () => {
     ['/series', '/series'],
     ['/search?q=cauchy', '/search'],
     ['/projects/', '/projects'],
+    ['/projects/easy-media#download', '/projects/easy-media'],
     ['/author', '/author'],
     ['/saved', '/saved'],
   ])('%s → %s', (asPath, path) => expect(trackedPath(asPath)).toBe(path));

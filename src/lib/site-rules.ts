@@ -3,10 +3,10 @@
  * feedback) and the server. No zod: this file is part of the admin's browser bundle.
  */
 
-/** A project's landing page: https only, a real host, no user:password@ (03 ADM-13). */
+/** A link to another site: https only, a real host, no user:password@ (03 ADM-13). */
 export function landingUrlProblem(value: string): string | null {
   const v = value.trim();
-  if (!v) return 'A landing page address is required.';
+  if (!v) return 'An address is required.';
   if ([...v].some((c) => c.codePointAt(0)! <= 0x20)) return 'The address can’t contain spaces.';
   let url: URL;
   try {
@@ -29,5 +29,8 @@ export function mondayOf(date: Date): string {
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 }
+
+/** The same for a link that may be left empty. */
+export const optionalUrlProblem = (value: string): string | null => (value.trim() ? landingUrlProblem(value) : null);
 
 export const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
