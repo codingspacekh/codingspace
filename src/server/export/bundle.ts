@@ -29,6 +29,7 @@ export const EXPORT_TABLES = [
   { name: 'syllabuses', order: 'id' },
   { name: 'syllabus_points', order: 'id' },
   { name: 'post_syllabus', order: 'post_id' },
+  { name: 'questions', order: 'id' },
 ] as const;
 
 export type TableName = (typeof EXPORT_TABLES)[number]['name'];

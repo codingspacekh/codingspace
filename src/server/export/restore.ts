@@ -27,6 +27,7 @@ const CONFLICT: Record<TableName, string> = {
   syllabuses: 'id',
   syllabus_points: 'id',
   post_syllabus: 'post_id,point_id',
+  questions: 'id',
 };
 const BATCH = 200;
 

@@ -63,6 +63,7 @@ function content() {
     syllabuses: [{ id: 'y1', slug: '9618', code: '9618', title: 'CS', sort: 1 }],
     syllabus_points: [{ id: 'pt1', syllabus_id: 'y1', code: '1.1', title: 'Data', sort: 1 }],
     post_syllabus: [{ post_id: 'p1', point_id: 'pt1' }],
+    questions: [{ id: 'q1', post_id: 'p1', name: 'Dara', body: 'Why?', status: 'published' }],
   };
 }
 

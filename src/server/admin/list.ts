@@ -26,16 +26,19 @@ export async function listPosts(supabase: SupabaseClient, f: PostFilters): Promi
 }
 
 export async function dashboard(supabase: SupabaseClient): Promise<Dashboard> {
-  const [all, recent, activity] = await Promise.all([
+  const [all, recent, activity, waiting] = await Promise.all([
     supabase.from('admin_posts').select('kind, status'),
     supabase.from('admin_posts').select(LIST_COLUMNS).order('updated_at', { ascending: false }).limit(5),
     listActivity(supabase, { limit: 8 }),
+    supabase.from('questions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ]);
   if (all.error) throw new Error(`admin_posts: ${all.error.message}`);
   if (recent.error) throw new Error(`admin_posts: ${recent.error.message}`);
+  if (waiting.error) throw new Error(`questions: ${waiting.error.message}`);
   return {
     counts: countPosts(all.data as Parameters<typeof countPosts>[0]),
     recent: recent.data as PostListItem[],
     activity: activity.events,
+    questions: waiting.count ?? 0,
   };
 }

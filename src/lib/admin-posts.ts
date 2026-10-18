@@ -26,6 +26,8 @@ export type Dashboard = {
   counts: ReturnType<typeof countPosts>;
   recent: PostListItem[];
   activity: ActivityEvent[];
+  /** Questions on lessons waiting for the owner (v1.1). */
+  questions: number;
 };
 
 export type PostFilters = {
