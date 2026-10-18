@@ -92,7 +92,11 @@ export function Dashboard({ request }: { request?: Request }) {
             ))}
             <li>
               <Link href="/admin/questions" className="frame">
-                <strong>{data.questions ?? 0}</strong> <span>Questions &amp; comments waiting</span>
+                <strong>{data.questions ?? 0}</strong>{' '}
+                <span>
+                  {/* Short so it fits on one line like the other tiles. */}
+                  <abbr title="Questions &amp; comments">Q&amp;C</abbr> waiting
+                </span>
               </Link>
             </li>
           </ul>

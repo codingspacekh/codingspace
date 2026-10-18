@@ -2381,14 +2381,14 @@ html[data-reading='on'] .prose li {
 }
 /* Questions & comments inbox (v1.1): the post filter, Load more. */
 .adm-filter,
-.adm-more {
+.adm-loadmore {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin: 0 0 16px;
 }
-.adm-more {
+.adm-loadmore {
   margin-top: 16px;
 }
 .btn.adm-only {
@@ -2467,6 +2467,9 @@ html[data-reading='on'] .prose li {
   gap: 4px;
   padding: 16px;
   color: var(--fg2);
+  text-decoration: none;
+}
+.adm-stats abbr {
   text-decoration: none;
 }
 .adm-stats strong {
