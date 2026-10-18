@@ -14,7 +14,10 @@ export function cronAuthorized(header: string | string[] | undefined, secret = p
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-/** Service-role client: only for the cron route, never imported by pages or the browser. */
+/**
+ * Service-role client, for server code that acts without a session: the cron route and the
+ * sign-in throttle (src/server/auth/throttle.ts). Never imported by pages or the browser.
+ */
 export function serviceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
