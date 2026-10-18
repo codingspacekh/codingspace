@@ -2,9 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { cleanFileName } from '@/lib/media-rules';
 import { fileKey, IMAGE_FORMATS, imageKey } from '@/lib/media-urls';
-import { PostError } from '@/server/admin/posts';
 import type { MediaStore } from './store';
 import type { MediaItem } from './uploads';
+import { ApiError, dbError } from '@/server/admin/errors';
 
 /**
  * The media library (03 ADM-10): browse, search, see where a file is used, rename, delete unused.
@@ -27,7 +27,7 @@ export const listQuery = z.object({
 /** Newest first, PAGE_SIZE at a time; `more` says whether to ask again with `before`. */
 export async function listMedia(supabase: SupabaseClient, query: unknown) {
   const q = listQuery.safeParse(query);
-  if (!q.success) throw new PostError(400, z.prettifyError(q.error));
+  if (!q.success) throw new ApiError(400, z.prettifyError(q.error));
   let req = supabase
     .from('admin_media')
     .select(SELECT)
@@ -61,7 +61,7 @@ export async function getMedia(supabase: SupabaseClient, id: string) {
   if (media.error) throw new Error(`admin_media: ${media.error.message}`);
   if (uses.error) throw new Error(`post_media: ${uses.error.message}`);
   if (profile.error) throw new Error(`profile: ${profile.error.message}`);
-  if (!media.data) throw new PostError(404, 'file not found');
+  if (!media.data) throw new ApiError(404, 'file not found');
   const used_by = (uses.data ?? []).map((u) => {
     const post = u.posts as unknown as { id: string; title: string; slug: string };
     return { ...post, in_draft: u.in_draft as boolean, in_live: u.in_live as boolean };
@@ -78,29 +78,22 @@ export const mediaEdit = z.object({
 /** The default alt text (offered when the image is inserted again) and the display name. */
 export async function updateMedia(supabase: SupabaseClient, id: string, input: unknown) {
   const body = mediaEdit.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const name = cleanFileName(body.data.original_name);
-  if (!name) throw new PostError(422, 'a name is required');
+  if (!name) throw new ApiError(422, 'a name is required');
   const { error } = await supabase.rpc('admin_update_media', {
     p_id: uuid.parse(id),
     p_alt: body.data.alt,
     p_original_name: name,
   });
-  if (error) {
-    if (error.code === 'PT404') throw new PostError(404, error.message);
-    throw new Error(`admin_update_media: ${error.message}`);
-  }
+  if (error) dbError(error, 'admin_update_media');
 }
 
 /** Only an unused file (409 otherwise). The row goes first; then its objects in R2. */
 export async function deleteMedia(supabase: SupabaseClient, store: MediaStore | null, id: string) {
   const mediaId = uuid.parse(id);
   const { data, error } = await supabase.rpc('admin_delete_media', { p_id: mediaId });
-  if (error) {
-    if (error.code === 'PT404') throw new PostError(404, error.message);
-    if (error.code === 'PT409') throw new PostError(409, error.message);
-    throw new Error(`admin_delete_media: ${error.message}`);
-  }
+  if (error) dbError(error, 'admin_delete_media');
   const { kind, widths } = data as { kind: 'image' | 'file'; widths: number[] };
   const keys =
     kind === 'image' ? widths.flatMap((w) => IMAGE_FORMATS.map((f) => imageKey(mediaId, w, f))) : [fileKey(mediaId)];
@@ -127,30 +120,24 @@ export async function listFolders(supabase: SupabaseClient): Promise<MediaFolder
   return { folders: list, all: all.count ?? 0, unsorted: unsorted.count ?? 0 };
 }
 
-function folderError(error: { code?: string; message: string }, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422 }[error.code ?? ''];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  throw new Error(`${what}: ${error.message}`);
-}
-
 export const folderInput = z.object({ name: z.string().trim().min(1, 'a folder needs a name').max(80) });
 
 /** A new folder (id null) or a new name for one; returns its id. Names are unique, whatever the case. */
 export async function saveFolder(supabase: SupabaseClient, id: string | null, input: unknown) {
   const body = folderInput.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const { data, error } = await supabase.rpc('admin_save_media_folder', {
     p_id: id === null ? null : uuid.parse(id),
     p_name: body.data.name,
   });
-  if (error) folderError(error, 'admin_save_media_folder');
+  if (error) dbError(error, 'admin_save_media_folder');
   return { id: data as string };
 }
 
 /** Deletes a folder; its files go back to Unsorted (never deleted). Returns how many moved. */
 export async function deleteFolder(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.rpc('admin_delete_media_folder', { p_id: uuid.parse(id) });
-  if (error) folderError(error, 'admin_delete_media_folder');
+  if (error) dbError(error, 'admin_delete_media_folder');
   return { moved: data as number };
 }
 
@@ -163,8 +150,8 @@ export const moveInput = z.object({
 /** Moves files into a folder (or back to Unsorted). Returns how many moved. */
 export async function moveMedia(supabase: SupabaseClient, input: unknown) {
   const body = moveInput.safeParse(input);
-  if (!body.success) throw new PostError(422, z.prettifyError(body.error));
+  if (!body.success) throw new ApiError(422, z.prettifyError(body.error));
   const { data, error } = await supabase.rpc('admin_move_media', { p_ids: body.data.ids, p_folder: body.data.folder });
-  if (error) folderError(error, 'admin_move_media');
+  if (error) dbError(error, 'admin_move_media');
   return { moved: data as number };
 }

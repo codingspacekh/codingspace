@@ -15,7 +15,7 @@ import {
 import { EMAIL, landingUrlProblem, optionalUrlProblem } from '@/lib/site-rules';
 import { SUBJECT_ID, type SubjectId } from '@/lib/subjects';
 import { renderSnippet } from '@/server/render/snippet';
-import { PostError } from './posts';
+import { ApiError, dbError, rpc } from './errors';
 
 /**
  * Site content for the admin API (03 ADM-11, ADM-13, ADM-14): projects, the author profile and
@@ -23,33 +23,9 @@ import { PostError } from './posts';
  * owner-only through RLS) and returns the public pages to rebuild.
  */
 
-type DbError = { code?: string; message: string };
-
-function refused(error: DbError, what: string): never {
-  const status = {
-    PT404: 404,
-    PT409: 409,
-    PT422: 422,
-    '23503': 422,
-    '23505': 409,
-    '23514': 422,
-    '22P02': 400,
-    '22007': 422,
-  }[error.code ?? ''];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  if (error.code === '42501') throw new PostError(404, 'not allowed');
-  throw new Error(`${what}: ${error.message}`);
-}
-
-async function call<T>(supabase: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(fn, args);
-  if (error) refused(error, fn);
-  return data as T;
-}
-
 function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
   const out = schema.safeParse(input);
-  if (!out.success) throw new PostError(422, z.prettifyError(out.error));
+  if (!out.success) throw new ApiError(422, z.prettifyError(out.error));
   return out.data;
 }
 
@@ -156,8 +132,8 @@ export async function listProjects(supabase: SupabaseClient): Promise<AdminProje
     supabase.from('projects').select(PROJECT_COLUMNS).order('sort').order('name'),
     supabase.from('project_screenshots').select('project_id, media_id, caption, widths').order('position'),
   ]);
-  if (projects.error) refused(projects.error, 'projects');
-  if (shots.error) refused(shots.error, 'project_screenshots');
+  if (projects.error) dbError(projects.error, 'projects');
+  if (shots.error) dbError(shots.error, 'project_screenshots');
   const rows = shots.data as (AdminScreenshot & { project_id: string })[];
   return (projects.data as unknown as Omit<AdminProject, 'screenshots'>[]).map((p) => ({
     ...p,
@@ -170,7 +146,7 @@ export async function listProjects(supabase: SupabaseClient): Promise<AdminProje
 /** Home, Projects and the project's own page. */
 async function projectPages(supabase: SupabaseClient, id: string): Promise<string[]> {
   const { data, error } = await supabase.from('projects').select('slug').eq('id', id).maybeSingle();
-  if (error) refused(error, 'projects');
+  if (error) dbError(error, 'projects');
   return data ? [...PROJECT_PAGES, `/projects/${(data as { slug: string }).slug}`] : PROJECT_PAGES;
 }
 
@@ -178,7 +154,7 @@ async function projectPages(supabase: SupabaseClient, id: string): Promise<strin
 export async function saveProject(supabase: SupabaseClient, id: string | null, input: unknown) {
   const p = parse(projectInput, input);
   if (id !== null) {
-    await call(supabase, 'admin_save_project', { p_id: uuid.parse(id), p });
+    await rpc(supabase, 'admin_save_project', { p_id: uuid.parse(id), p });
     return { id, paths: await projectPages(supabase, id) };
   }
   const base = postSlug(p.name, 'project');
@@ -186,26 +162,26 @@ export async function saveProject(supabase: SupabaseClient, id: string | null, i
     const slug = n === 1 && base !== 'project' ? base : `${base}-${n}`;
     const { data, error } = await supabase.rpc('admin_save_project', { p_id: null, p: { ...p, slug } });
     if (!error) return { id: data as string, paths: [...PROJECT_PAGES, `/projects/${slug}`] };
-    if (error.code !== '23505') refused(error, 'admin_save_project');
+    if (error.code !== '23505') dbError(error, 'admin_save_project');
   }
-  throw new PostError(409, 'could not find a free address for this project');
+  throw new ApiError(409, 'could not find a free address for this project');
 }
 
 export async function featureProject(supabase: SupabaseClient, id: unknown) {
-  await call(supabase, 'admin_feature_project', { p_id: id === null ? null : uuid.parse(id) });
+  await rpc(supabase, 'admin_feature_project', { p_id: id === null ? null : uuid.parse(id) });
   return { paths: PROJECT_PAGES };
 }
 
 export async function deleteProject(supabase: SupabaseClient, id: string) {
   // Listed first: its page goes too (a 404 from now on).
   const paths = await projectPages(supabase, uuid.parse(id));
-  await call(supabase, 'admin_delete_project', { p_id: id });
+  await rpc(supabase, 'admin_delete_project', { p_id: id });
   return { paths };
 }
 
 export async function reorderProjects(supabase: SupabaseClient, input: unknown) {
   const { ids } = parse(z.object({ ids: z.array(uuid).max(200) }), input);
-  await call(supabase, 'admin_reorder_projects', { p_ids: ids });
+  await rpc(supabase, 'admin_reorder_projects', { p_ids: ids });
   return { paths: PROJECT_PAGES };
 }
 
@@ -292,8 +268,8 @@ export async function getAuthor(supabase: SupabaseClient) {
       .order('sort')
       .order('sort', { referencedTable: 'author_items' }),
   ]);
-  if (profile.error) refused(profile.error, 'profile');
-  if (sections.error) refused(sections.error, 'author_sections');
+  if (profile.error) dbError(profile.error, 'profile');
+  if (sections.error) dbError(sections.error, 'author_sections');
   const { photo_widths, ...p } = profile.data ?? {
     name: '',
     bio: '',
@@ -319,7 +295,7 @@ export async function getAuthor(supabase: SupabaseClient) {
 /** Saves the whole page in one go: the header, then every section and item in the order given. */
 export async function saveAuthor(supabase: SupabaseClient, input: unknown) {
   const { profile, sections } = parse(authorInput, input);
-  await call(supabase, 'admin_save_author', {
+  await rpc(supabase, 'admin_save_author', {
     p: { profile, sections: sections.map((s) => ({ ...s, items: s.items.map((i) => cleanItem(s.kind, i)) })) },
   });
   return { paths: AUTHOR_PAGES };
@@ -364,13 +340,13 @@ export async function listProblems(supabase: SupabaseClient): Promise<AdminProbl
     .select('id, subject_id, section_id, week_of, statement, hint, solution, is_current, updated_at')
     .order('week_of', { ascending: false })
     .order('updated_at', { ascending: false });
-  if (error) refused(error, 'featured_problems');
+  if (error) dbError(error, 'featured_problems');
   return data as AdminProblem[];
 }
 
 export async function saveProblem(supabase: SupabaseClient, id: string | null, input: unknown) {
   const p = parse(problemInput, input);
-  const out = await call<{ id: string; subjects: string[] }>(supabase, 'admin_save_problem', {
+  const out = await rpc<{ id: string; subjects: string[] }>(supabase, 'admin_save_problem', {
     p_id: id === null ? null : uuid.parse(id),
     p,
   });
@@ -379,7 +355,7 @@ export async function saveProblem(supabase: SupabaseClient, id: string | null, i
 
 export async function setCurrentProblem(supabase: SupabaseClient, id: string, input: unknown) {
   const { current } = parse(z.object({ current: z.boolean() }), input);
-  const out = await call<{ subjects: string[] }>(supabase, 'admin_set_current_problem', {
+  const out = await rpc<{ subjects: string[] }>(supabase, 'admin_set_current_problem', {
     p_id: uuid.parse(id),
     p_current: current,
   });
@@ -387,7 +363,7 @@ export async function setCurrentProblem(supabase: SupabaseClient, id: string, in
 }
 
 export async function deleteProblem(supabase: SupabaseClient, id: string) {
-  const out = await call<{ subjects: string[]; was_current: boolean }>(supabase, 'admin_delete_problem', {
+  const out = await rpc<{ subjects: string[]; was_current: boolean }>(supabase, 'admin_delete_problem', {
     p_id: uuid.parse(id),
   });
   // A hidden problem was on no page.

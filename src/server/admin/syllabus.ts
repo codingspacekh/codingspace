@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { postSlug } from '@/lib/post-rules';
 import { SUBJECT_ID } from '@/lib/subjects';
-import { PostError } from './posts';
+import { ApiError, dbError, rpc } from './errors';
+import { allRows } from '@/server/db-rows';
 
 /**
  * Syllabus tags for the admin API (v1.1): the syllabuses the owner teaches, their points, and
@@ -10,26 +11,9 @@ import { PostError } from './posts';
  * (owner-only through RLS) and returns the public pages to rebuild.
  */
 
-type DbError = { code?: string; message: string };
-
-function refused(error: DbError, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23503': 422, '23505': 409, '23514': 422, '22P02': 400 }[
-    error.code ?? ''
-  ];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  if (error.code === '42501') throw new PostError(404, 'not allowed');
-  throw new Error(`${what}: ${error.message}`);
-}
-
-async function call(supabase: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<unknown> {
-  const { data, error } = await supabase.rpc(fn, args);
-  if (error) refused(error, fn);
-  return data;
-}
-
 function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
   const out = schema.safeParse(input);
-  if (!out.success) throw new PostError(422, z.prettifyError(out.error));
+  if (!out.success) throw new ApiError(422, z.prettifyError(out.error));
   return out.data;
 }
 
@@ -66,10 +50,14 @@ export type AdminSyllabus = {
 export async function listSyllabuses(supabase: SupabaseClient): Promise<AdminSyllabus[]> {
   const [syllabuses, points, tags] = await Promise.all([
     supabase.from('syllabuses').select('id, slug, code, title, description, subject_id').order('sort').order('title'),
-    supabase.from('syllabus_points').select('id, syllabus_id, code, title').order('sort'),
-    supabase.from('post_syllabus').select('point_id'),
+    allRows((from, to) =>
+      supabase.from('syllabus_points').select('id, syllabus_id, code, title').order('sort').order('id').range(from, to),
+    ),
+    allRows((from, to) =>
+      supabase.from('post_syllabus').select('point_id').order('post_id').order('point_id').range(from, to),
+    ),
   ]);
-  for (const r of [syllabuses, points, tags]) if (r.error) refused(r.error, 'syllabuses');
+  for (const r of [syllabuses, points, tags]) if (r.error) dbError(r.error, 'syllabuses');
   const count = new Map<string, number>();
   for (const t of tags.data as { point_id: string }[]) count.set(t.point_id, (count.get(t.point_id) ?? 0) + 1);
   const rows = points.data as (Omit<AdminPoint, 'lessons'> & { syllabus_id: string })[];
@@ -87,8 +75,8 @@ async function syllabusPages(supabase: SupabaseClient, id: string): Promise<stri
     supabase.from('syllabuses').select('slug').eq('id', id).maybeSingle(),
     supabase.from('public_syllabus_lessons').select('slug').eq('syllabus_id', id),
   ]);
-  if (syllabus.error) refused(syllabus.error, 'syllabuses');
-  if (lessons.error) refused(lessons.error, 'public_syllabus_lessons');
+  if (syllabus.error) dbError(syllabus.error, 'syllabuses');
+  if (lessons.error) dbError(lessons.error, 'public_syllabus_lessons');
   const own = syllabus.data ? [`/syllabus/${(syllabus.data as { slug: string }).slug}`] : [];
   return ['/syllabus', ...own, ...(lessons.data as { slug: string }[]).map((l) => `/posts/${l.slug}`)];
 }
@@ -99,7 +87,7 @@ const merge = (...lists: string[][]) => [...new Set(lists.flat())];
 export async function saveSyllabus(supabase: SupabaseClient, id: string | null, input: unknown) {
   const p = parse(syllabusInput, input);
   if (id !== null) {
-    await call(supabase, 'admin_save_syllabus', { p_id: uuid.parse(id), p });
+    await rpc(supabase, 'admin_save_syllabus', { p_id: uuid.parse(id), p });
     return { id, paths: await syllabusPages(supabase, id) };
   }
   const base = postSlug(p.code, postSlug(p.title, 'syllabus'));
@@ -107,28 +95,28 @@ export async function saveSyllabus(supabase: SupabaseClient, id: string | null, 
     const slug = n === 1 ? base : `${base}-${n}`;
     const { data, error } = await supabase.rpc('admin_save_syllabus', { p_id: null, p: { ...p, slug } });
     if (!error) return { id: data as string, paths: ['/syllabus', `/syllabus/${slug}`] };
-    if (error.code !== '23505') refused(error, 'admin_save_syllabus');
+    if (error.code !== '23505') dbError(error, 'admin_save_syllabus');
   }
-  throw new PostError(409, 'could not find a free address for this syllabus');
+  throw new ApiError(409, 'could not find a free address for this syllabus');
 }
 
 /** Replaces a syllabus's points (kept ones keep their tags). */
 export async function saveSyllabusPoints(supabase: SupabaseClient, id: string, input: unknown) {
   const points = parse(pointsInput, input);
   const before = await syllabusPages(supabase, uuid.parse(id));
-  await call(supabase, 'admin_save_syllabus_points', { p_syllabus: id, p: points });
+  await rpc(supabase, 'admin_save_syllabus_points', { p_syllabus: id, p: points });
   return { paths: merge(before, await syllabusPages(supabase, id)) };
 }
 
 export async function deleteSyllabus(supabase: SupabaseClient, id: string) {
   const paths = await syllabusPages(supabase, uuid.parse(id));
-  await call(supabase, 'admin_delete_syllabus', { p_id: id });
+  await rpc(supabase, 'admin_delete_syllabus', { p_id: id });
   return { paths };
 }
 
 export async function reorderSyllabuses(supabase: SupabaseClient, input: unknown) {
   const { ids } = parse(z.object({ ids: z.array(uuid).max(100) }), input);
-  await call(supabase, 'admin_reorder_syllabuses', { p_ids: ids });
+  await rpc(supabase, 'admin_reorder_syllabuses', { p_ids: ids });
   return { paths: ['/syllabus'] };
 }
 
@@ -140,7 +128,7 @@ export async function getPostSyllabus(supabase: SupabaseClient, postId: string) 
     listSyllabuses(supabase),
     supabase.from('post_syllabus').select('point_id').eq('post_id', uuid.parse(postId)),
   ]);
-  if (tags.error) refused(tags.error, 'post_syllabus');
+  if (tags.error) dbError(tags.error, 'post_syllabus');
   return {
     syllabuses: syllabuses.map(({ id, code, title, points }) => ({
       id,
@@ -160,8 +148,8 @@ async function postPages(supabase: SupabaseClient, postId: string, pointIds: str
       ? supabase.from('syllabus_points').select('syllabuses(slug)').in('id', pointIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
-  if (post.error) refused(post.error, 'public_posts');
-  if (syllabuses.error) refused(syllabuses.error, 'syllabus_points');
+  if (post.error) dbError(post.error, 'public_posts');
+  if (syllabuses.error) dbError(syllabuses.error, 'syllabus_points');
   if (!post.data) return []; // a draft: nothing public changes
   const slugs = (syllabuses.data as unknown as { syllabuses: { slug: string } | null }[]).flatMap((r) =>
     r.syllabuses ? [`/syllabus/${r.syllabuses.slug}`] : [],
@@ -173,8 +161,8 @@ export async function setPostSyllabus(supabase: SupabaseClient, postId: string, 
   const { point_ids } = parse(z.object({ point_ids: z.array(uuid).max(30) }), input);
   const id = uuid.parse(postId);
   const { data: before, error } = await supabase.from('post_syllabus').select('point_id').eq('post_id', id);
-  if (error) refused(error, 'post_syllabus');
-  await call(supabase, 'admin_set_post_syllabus', { p_post: id, p_points: point_ids });
+  if (error) dbError(error, 'post_syllabus');
+  await rpc(supabase, 'admin_set_post_syllabus', { p_post: id, p_points: point_ids });
   const old = (before as { point_id: string }[]).map((t) => t.point_id);
   return { paths: await postPages(supabase, id, [...new Set([...old, ...point_ids])]) };
 }

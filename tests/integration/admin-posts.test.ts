@@ -1,10 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { ApiError } from '@/server/admin/errors';
 import {
   createPost,
   deletePost,
   getPostForEdit,
   listRevisions,
-  PostError,
   publishDuePosts,
   publishPost,
   restoreRevision,
@@ -92,7 +92,7 @@ describe('writing and publishing a lesson', () => {
   it('saves the draft, refuses a stale save, and rejects unknown fields before the database', async () => {
     expect(await savePost(owner, id, 1, { content_json: doc('Version one'), level: 2 })).toBe(2);
     await expect(savePost(owner, id, 1, { title: 'old tab' })).rejects.toMatchObject({ status: 409 });
-    await expect(savePost(owner, id, 2, { status: 'published' })).rejects.toBeInstanceOf(PostError);
+    await expect(savePost(owner, id, 2, { status: 'published' })).rejects.toBeInstanceOf(ApiError);
   });
 
   it('publishes: live snapshot, a revision and an audit row, and the pages to revalidate', async () => {
@@ -204,6 +204,15 @@ describe('the posts list and dashboard', () => {
     const d = await dashboard(owner);
     expect(d.counts.published).toBeGreaterThanOrEqual(1);
     expect(d.counts.life).toBeGreaterThanOrEqual(1);
+    // Counted by the database: the same numbers as counting every post here.
+    const { data: all } = await owner.from('admin_posts').select('kind, status');
+    const rows = all as { kind: string; status: string }[];
+    expect(d.counts).toEqual({
+      published: rows.filter((r) => r.status === 'published').length,
+      scheduled: rows.filter((r) => r.status === 'scheduled').length,
+      drafts: rows.filter((r) => r.status !== 'published' && r.status !== 'scheduled').length,
+      life: rows.filter((r) => r.kind === 'life').length,
+    });
     expect(d.recent.length).toBeLessThanOrEqual(5);
     expect(d.recent[0]!.title).toMatch(/^IT test list/);
   });

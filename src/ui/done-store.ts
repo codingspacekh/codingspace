@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { SLUG } from '@/lib/slug';
 
 /**
  * Lessons the visitor marked as done (v1.1), kept in this browser only like saved lessons
@@ -13,7 +14,6 @@ export type DoneLessons = Readonly<Record<string, string>>;
 const KEY = 'cs-done';
 /** Far more lessons than the site will have; keeps the stored list bounded. */
 export const MAX_DONE = 2000;
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const EMPTY: DoneLessons = Object.freeze({});
 
 function load(): Record<string, string> {

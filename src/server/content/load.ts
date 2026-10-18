@@ -10,6 +10,7 @@ import {
   type ProjectStep,
 } from '@/lib/project-page';
 import { markdownToDoc, type MarkdownResult } from './markdown';
+import { SLUG } from '@/lib/slug';
 
 /**
  * Reads and validates the content/ folder (content/README.md). Every problem is collected
@@ -21,7 +22,6 @@ import { markdownToDoc, type MarkdownResult } from './markdown';
 export const SUBJECTS = ['math', 'physics', 'coding', 'it'] as const;
 export type Subject = (typeof SUBJECTS)[number];
 
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type LoadedSection = { subject: Subject; slug: string; title: string; description: string; sort: number };

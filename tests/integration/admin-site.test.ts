@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { PostError } from '@/server/admin/posts';
+import { ApiError } from '@/server/admin/errors';
 import {
   deleteProblem,
   deleteProject,
@@ -256,7 +256,7 @@ describe('author (ADM-14)', () => {
   it('refuses a bad email, an empty name, a missing section or an http link', async () => {
     await expect(
       saveAuthor(owner, { profile: { name: 'X', email: 'nope' }, sections: sections() }),
-    ).rejects.toBeInstanceOf(PostError);
+    ).rejects.toBeInstanceOf(ApiError);
     await expect(saveAuthor(owner, { profile: { name: ' ' }, sections: sections() })).rejects.toMatchObject({
       status: 422,
     });

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { PostError } from './posts';
+import { ApiError, dbError } from './errors';
+import { SLUG } from '@/lib/slug';
 
 /**
  * Questions on lessons and comments on life posts for the admin (v1.1): the inbox, approving,
@@ -22,13 +23,6 @@ export type AdminQuestion = {
   lesson: { slug: string; title: string; live: boolean; kind: 'lesson' | 'life' } | null;
 };
 
-function refused(error: { code?: string; message: string }, what: string): never {
-  const status = { PT404: 404, PT422: 422, '22P02': 400 }[error.code ?? ''];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  if (error.code === '42501') throw new PostError(404, 'not allowed');
-  throw new Error(`${what}: ${error.message}`);
-}
-
 const uuid = z.uuid();
 
 /** How many the inbox loads at a time ("Load more" for the rest). */
@@ -47,11 +41,7 @@ const inboxQuery = z.object({
   /** Only the ones written before this (the last one shown): "Load more". */
   before: z.iso.datetime({ offset: true }).optional().catch(undefined),
   /** Only the ones under this post (its slug). */
-  post: z
-    .string()
-    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
-    .optional()
-    .catch(undefined),
+  post: z.string().regex(SLUG).optional().catch(undefined),
   /** How many to load: a page, or more to reload what is already shown after a change. */
   limit: z.coerce.number().int().min(1).max(500).catch(INBOX_PAGE),
 });
@@ -81,8 +71,8 @@ export async function listQuestions(supabase: SupabaseClient, query: unknown): P
     list.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(q.limit),
     ...QUESTION_STATUSES.map(count),
   ]);
-  if (rows.error) refused(rows.error, 'questions');
-  for (const c of counts) if (c.error) refused(c.error, 'questions');
+  if (rows.error) dbError(rows.error, 'questions');
+  for (const c of counts) if (c.error) dbError(c.error, 'questions');
 
   const questions = (
     rows.data as unknown as (Omit<AdminQuestion, 'lesson'> & {
@@ -111,14 +101,14 @@ export const questionInput = z.object({
 
 export async function saveQuestion(supabase: SupabaseClient, id: string, input: unknown) {
   const out = questionInput.safeParse(input);
-  if (!out.success) throw new PostError(422, z.prettifyError(out.error));
+  if (!out.success) throw new ApiError(422, z.prettifyError(out.error));
   const { data, error } = await supabase.rpc('admin_save_question', { p_id: uuid.parse(id), p: out.data });
-  if (error) refused(error, 'admin_save_question');
+  if (error) dbError(error, 'admin_save_question');
   return { paths: data ? [`/posts/${data as string}`] : [] };
 }
 
 export async function deleteQuestion(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.rpc('admin_delete_question', { p_id: uuid.parse(id) });
-  if (error) refused(error, 'admin_delete_question');
+  if (error) dbError(error, 'admin_delete_question');
   return { paths: data ? [`/posts/${data as string}`] : [] };
 }

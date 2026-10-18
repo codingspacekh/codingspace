@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
-import { createPost, PostError, saveDraft } from '@/server/admin/posts';
+import { ApiError } from '@/server/admin/errors';
+import { createPost, saveDraft } from '@/server/admin/posts';
 import { fileKey, imageKey, uploadKey } from '@/lib/media-urls';
 import {
   deleteFolder,
@@ -119,7 +120,7 @@ describe('image upload', () => {
   it('refuses a damaged image', async () => {
     const bad = await upload('image', 'it-media-broken.jpg', (await photo(400, 300, '#00f')).subarray(0, 200));
     await expect(finishUpload(owner, store, bad, { kind: 'image', name: 'it-media-broken.jpg' })).rejects.toThrow(
-      PostError,
+      ApiError,
     );
   });
 

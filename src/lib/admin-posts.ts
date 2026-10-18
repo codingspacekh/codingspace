@@ -23,7 +23,7 @@ export type PostListItem = {
 };
 
 export type Dashboard = {
-  counts: ReturnType<typeof countPosts>;
+  counts: { published: number; drafts: number; scheduled: number; life: number };
   recent: PostListItem[];
   activity: ActivityEvent[];
   /** Questions on lessons and comments on life posts waiting for the owner (v1.1). */
@@ -73,15 +73,4 @@ export function searchPattern(q: string): string | null {
 export function postStatus(p: { status: PostStatus; has_unpublished_changes: boolean }): string {
   if (p.status === 'published') return p.has_unpublished_changes ? 'Unpublished changes' : 'Published';
   return p.status === 'scheduled' ? 'Scheduled' : 'Draft';
-}
-
-export function countPosts(rows: readonly { kind: PostKind; status: PostStatus }[]) {
-  const counts = { published: 0, drafts: 0, scheduled: 0, life: 0 };
-  for (const r of rows) {
-    if (r.status === 'published') counts.published++;
-    else if (r.status === 'scheduled') counts.scheduled++;
-    else counts.drafts++;
-    if (r.kind === 'life') counts.life++;
-  }
-  return counts;
 }

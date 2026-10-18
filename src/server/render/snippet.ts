@@ -10,3 +10,13 @@ export async function renderSnippet(md: string, lang: 'en' | 'km' = 'en') {
   const { html, hasMath } = await renderContent(markdownToDoc(md).doc, { lang });
   return { html, hasMath };
 }
+
+/**
+ * A visitor's question or comment (v1.1): Markdown with $maths$, but only words, lists, quotes,
+ * code and maths, and links marked rel="nofollow ugc". The teacher's answer uses renderSnippet.
+ */
+export async function renderVisitorText(md: string) {
+  if (!md.trim()) return { html: '', hasMath: false };
+  const { html, hasMath } = await renderContent(markdownToDoc(md).doc, { ugc: true });
+  return { html, hasMath };
+}

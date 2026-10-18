@@ -4,38 +4,14 @@ import { normalizeDoc } from '@/lib/content-json';
 import { postSlug, revalidationPaths, scheduleProblem, type PublishedRef } from '@/lib/post-rules';
 import { SUBJECT_ID } from '@/lib/subjects';
 import { renderContent } from '@/server/render';
+import { ApiError, dbError, rpc } from './errors';
+import { SLUG } from '@/lib/slug';
 
 /**
  * Post changes for the admin API (03 ADM-03, ADM-05…09). Each call is one admin_* database
  * function, so the change, its revision and its audit row commit together or not at all.
  * The client passed in decides who is acting: the owner's session, or the service role (cron).
  */
-
-/** A refused change. `status` is the HTTP status for the API (PostgREST PTxxx codes map 1:1). */
-export class PostError extends Error {
-  constructor(
-    readonly status: 400 | 404 | 409 | 422,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-type DbError = { code?: string; message: string };
-
-function fail(error: DbError, what: string): never {
-  const status = { PT404: 404, PT409: 409, PT422: 422, '23503': 422, '23505': 409, '23514': 422, '22P02': 400 }[
-    error.code ?? ''
-  ];
-  if (status) throw new PostError(status as PostError['status'], error.message);
-  throw new Error(`${what}: ${error.message}`);
-}
-
-async function call<T>(supabase: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(fn, args);
-  if (error) fail(error, fn);
-  return data as T;
-}
 
 const uuid = z.uuid();
 // Any subject's id; the database checks that it exists (foreign key → 422).
@@ -47,10 +23,7 @@ export const draftFields = z
     title: z.string().max(200),
     summary: z.string().max(500),
     content_json: z.object({ type: z.literal('doc'), content: z.array(z.unknown()) }).loose(),
-    slug: z
-      .string()
-      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
-      .max(80),
+    slug: z.string().regex(SLUG).max(80),
     subject_id: subjectId.nullable(),
     section_id: uuid.nullable(),
     level: z.number().int().min(1).max(3),
@@ -73,7 +46,7 @@ export const newPost = z.object({
 /** Creates a draft with a slug from its title; adds -2, -3… if the slug is taken. */
 export async function createPost(supabase: SupabaseClient, input: z.input<typeof newPost>, now = new Date()) {
   const p = newPost.parse(input);
-  if (p.kind === 'lesson' && !p.subject_id) throw new PostError(422, 'a lesson needs a subject');
+  if (p.kind === 'lesson' && !p.subject_id) throw new ApiError(422, 'a lesson needs a subject');
   const base = postSlug(p.title, `${p.kind}-${now.toISOString().slice(0, 10)}`);
   for (let n = 1; n <= 20; n++) {
     const slug = n === 1 ? base : `${base}-${n}`;
@@ -86,16 +59,16 @@ export async function createPost(supabase: SupabaseClient, input: z.input<typeof
       p_lang: p.lang,
     });
     if (!error) return { id: data as string, slug };
-    if (error.code !== '23505') fail(error, 'admin_create_post');
+    if (error.code !== '23505') dbError(error, 'admin_create_post');
   }
-  throw new PostError(409, 'could not find a free URL for this title');
+  throw new ApiError(409, 'could not find a free URL for this title');
 }
 
 /** Autosave. Returns the new revision; 409 if another tab saved first. */
 export async function savePost(supabase: SupabaseClient, id: string, revision: number, fields: unknown) {
   const parsed = draftFields.safeParse(fields);
-  if (!parsed.success) throw new PostError(422, z.prettifyError(parsed.error));
-  return call<number>(supabase, 'admin_save_post', {
+  if (!parsed.success) throw new ApiError(422, z.prettifyError(parsed.error));
+  return rpc<number>(supabase, 'admin_save_post', {
     p_id: uuid.parse(id),
     p_revision: revision,
     p_fields: parsed.data,
@@ -114,13 +87,13 @@ export async function publishPost(supabase: SupabaseClient, id: string, revision
     .select('content_json, lang, revision')
     .eq('id', uuid.parse(id))
     .maybeSingle();
-  if (error) fail(error, 'posts');
-  if (!draft) throw new PostError(404, 'post not found');
+  if (error) dbError(error, 'posts');
+  if (!draft) throw new ApiError(404, 'post not found');
   // Renders only what the caller has seen; the function re-checks under a row lock.
-  if (draft.revision !== revision) throw new PostError(409, `the post changed since revision ${revision}`);
+  if (draft.revision !== revision) throw new ApiError(409, `the post changed since revision ${revision}`);
 
   const out = await renderContent(draft.content_json, { lang: draft.lang });
-  const result = await call<Omit<Published, 'paths'>>(supabase, 'admin_publish_post', {
+  const result = await rpc<Omit<Published, 'paths'>>(supabase, 'admin_publish_post', {
     p_id: id,
     p_revision: revision,
     p_render: {
@@ -153,8 +126,8 @@ async function listingPages(supabase: SupabaseClient, id: string): Promise<strin
     supabase.from('series_lessons').select('series_id').eq('post_id', id),
     supabase.from('post_syllabus').select('syllabus_points(syllabuses(slug))').eq('post_id', id),
   ]);
-  if (inSeries.error) fail(inSeries.error, 'series_lessons');
-  if (inSyllabus.error) fail(inSyllabus.error, 'post_syllabus');
+  if (inSeries.error) dbError(inSeries.error, 'series_lessons');
+  if (inSyllabus.error) dbError(inSyllabus.error, 'post_syllabus');
   const syllabuses = [
     ...new Set(
       (inSyllabus.data as unknown as { syllabus_points: { syllabuses: { slug: string } | null } | null }[]).flatMap(
@@ -169,8 +142,8 @@ async function listingPages(supabase: SupabaseClient, id: string): Promise<strin
     supabase.from('series').select('slug').in('id', ids),
     supabase.from('public_series_lessons').select('slug').in('series_id', ids),
   ]);
-  if (series.error) fail(series.error, 'series');
-  if (lessons.error) fail(lessons.error, 'public_series_lessons');
+  if (series.error) dbError(series.error, 'series');
+  if (lessons.error) dbError(lessons.error, 'public_series_lessons');
   return [
     '/series',
     ...series.data.map((r) => `/series/${r.slug as string}`),
@@ -184,27 +157,27 @@ async function sectionLessons(supabase: SupabaseClient, ref: PublishedRef): Prom
   const sections = [...new Set([ref.section, ref.previous_section].filter((s): s is string => !!s))];
   if (!sections.length) return [];
   const { data, error } = await supabase.from('public_posts').select('slug').in('section_id', sections);
-  if (error) fail(error, 'public_posts');
+  if (error) dbError(error, 'public_posts');
   return (data ?? []).map((r) => r.slug as string);
 }
 
 export async function unpublishPost(supabase: SupabaseClient, id: string) {
-  const result = await call<PublishedRef>(supabase, 'admin_unpublish_post', { p_id: uuid.parse(id) });
+  const result = await rpc<PublishedRef>(supabase, 'admin_unpublish_post', { p_id: uuid.parse(id) });
   return { ...result, paths: await pagesShowing(supabase, id, result) };
 }
 
 export async function schedulePost(supabase: SupabaseClient, id: string, revision: number, at: Date, now = new Date()) {
   const problem = scheduleProblem(at, now);
-  if (problem) throw new PostError(422, `schedule time: ${problem}`);
-  await call(supabase, 'admin_schedule_post', { p_id: uuid.parse(id), p_revision: revision, p_at: at.toISOString() });
+  if (problem) throw new ApiError(422, `schedule time: ${problem}`);
+  await rpc(supabase, 'admin_schedule_post', { p_id: uuid.parse(id), p_revision: revision, p_at: at.toISOString() });
 }
 
 export async function unschedulePost(supabase: SupabaseClient, id: string) {
-  await call(supabase, 'admin_unschedule_post', { p_id: uuid.parse(id) });
+  await rpc(supabase, 'admin_unschedule_post', { p_id: uuid.parse(id) });
 }
 
 export async function restoreRevision(supabase: SupabaseClient, id: string, revision: number, revisionId: number) {
-  return call<number>(supabase, 'admin_restore_revision', {
+  return rpc<number>(supabase, 'admin_restore_revision', {
     p_id: uuid.parse(id),
     p_revision: revision,
     p_revision_id: revisionId,
@@ -214,7 +187,7 @@ export async function restoreRevision(supabase: SupabaseClient, id: string, revi
 export async function deletePost(supabase: SupabaseClient, id: string) {
   // Read before deleting: the lesson leaves its series and syllabus points with it.
   const series = await listingPages(supabase, uuid.parse(id));
-  const result = await call<PublishedRef & { was_published: boolean }>(supabase, 'admin_delete_post', {
+  const result = await rpc<PublishedRef & { was_published: boolean }>(supabase, 'admin_delete_post', {
     p_id: id,
   });
   return {
@@ -234,7 +207,7 @@ export async function publishDuePosts(service: SupabaseClient, now = new Date())
     .eq('status', 'scheduled')
     .lte('scheduled_at', now.toISOString())
     .order('scheduled_at');
-  if (error) fail(error, 'due posts');
+  if (error) dbError(error, 'due posts');
   const published: Published[] = [];
   const failed: { id: string; error: string }[] = [];
   for (const post of data ?? []) {
@@ -280,9 +253,9 @@ export async function getPostForEdit(supabase: SupabaseClient, id: string) {
       .maybeSingle(),
     supabase.from('sections').select('id, subject_id, slug, title, sort').order('sort'),
   ]);
-  if (post.error) fail(post.error, 'posts');
-  if (sections.error) fail(sections.error, 'sections');
-  if (!post.data) throw new PostError(404, 'post not found');
+  if (post.error) dbError(post.error, 'posts');
+  if (sections.error) dbError(sections.error, 'sections');
+  if (!post.data) throw new ApiError(404, 'post not found');
   const { live_revision, ...rest } = post.data;
   return {
     post: {
@@ -304,7 +277,7 @@ export async function saveDraft(
   fields: unknown,
 ): Promise<{ revision: number; slug: string }> {
   const parsed = draftFields.safeParse(fields);
-  if (!parsed.success) throw new PostError(422, z.prettifyError(parsed.error));
+  if (!parsed.success) throw new ApiError(422, z.prettifyError(parsed.error));
   // The slug is the server's to set (below), never the client's.
   const data = { ...parsed.data };
   delete data.slug;
@@ -315,8 +288,8 @@ export async function saveDraft(
     .select('slug, published_at')
     .eq('id', uuid.parse(id))
     .maybeSingle();
-  if (error) fail(error, 'posts');
-  if (!current) throw new PostError(404, 'post not found');
+  if (error) dbError(error, 'posts');
+  if (!current) throw new ApiError(404, 'post not found');
 
   let slug = current.slug as string;
   if (data.title !== undefined && current.published_at === null) {
@@ -335,7 +308,7 @@ async function slugTaken(supabase: SupabaseClient, slug: string, except: string)
     .select('id', { count: 'exact', head: true })
     .eq('slug', slug)
     .neq('id', except);
-  if (error) fail(error, 'posts');
+  if (error) dbError(error, 'posts');
   return (count ?? 0) > 0;
 }
 
@@ -344,7 +317,7 @@ async function freeSlug(supabase: SupabaseClient, base: string, except: string):
     const slug = n === 1 ? base : `${base}-${n}`;
     if (!(await slugTaken(supabase, slug, except))) return slug;
   }
-  throw new PostError(409, 'could not find a free URL for this title');
+  throw new ApiError(409, 'could not find a free URL for this title');
 }
 
 export type RevisionItem = {
@@ -362,7 +335,7 @@ export async function listRevisions(supabase: SupabaseClient, postId: string): P
     .select('id, revision, reason, title, created_at')
     .eq('post_id', uuid.parse(postId))
     .order('id', { ascending: false });
-  if (error) fail(error, 'post_revisions');
+  if (error) dbError(error, 'post_revisions');
   return data as RevisionItem[];
 }
 
@@ -376,8 +349,8 @@ export async function revisionPreview(supabase: SupabaseClient, postId: string, 
     .eq('post_id', uuid.parse(postId))
     .eq('id', revisionId.parse(id))
     .maybeSingle();
-  if (error) fail(error, 'post_revisions');
-  if (!data) throw new PostError(404, 'revision not found');
+  if (error) dbError(error, 'post_revisions');
+  if (!data) throw new ApiError(404, 'revision not found');
   const { content_json, posts, ...meta } = data as typeof data & { posts: { lang: 'en' | 'km' } };
   const { html } = await renderContent(content_json, { lang: posts.lang });
   return { revision: meta as RevisionItem & { summary: string }, html };

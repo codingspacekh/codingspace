@@ -1,7 +1,7 @@
 import type { NextApiResponse } from 'next';
 import { z } from 'zod';
 import { revalidate, sendError } from '@/server/admin/http';
-import { PostError } from '@/server/admin/posts';
+import { ApiError } from '@/server/admin/errors';
 
 function fakeRes(revalidateImpl: (p: string) => Promise<void> = async () => {}) {
   const res = {
@@ -31,7 +31,7 @@ describe('sendError', () => {
 
   it('sends a refused change with its status and reason', () => {
     const res = fakeRes();
-    sendError(as(res), new PostError(409, 'the post changed since revision 2'));
+    sendError(as(res), new ApiError(409, 'the post changed since revision 2'));
     expect(res.statusCode).toBe(409);
     expect(res.body).toEqual({ error: 'the post changed since revision 2' });
   });

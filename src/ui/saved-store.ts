@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { SLUG } from '@/lib/slug';
 
 /**
  * Lessons and posts the visitor saved for later, kept in this browser only (no sign-in, nothing
@@ -21,7 +22,6 @@ export type SavedPost = {
 const KEY = 'cs-saved';
 /** Plenty for a student; keeps the stored list small. */
 export const MAX_SAVED = 200;
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const EMPTY: readonly SavedPost[] = Object.freeze([]);
 
 function valid(v: unknown): v is SavedPost {

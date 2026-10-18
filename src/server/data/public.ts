@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { renderSnippet } from '@/server/render/snippet';
+import { renderSnippet, renderVisitorText } from '@/server/render/snippet';
 import type { ProjectDownload, ProjectFaq, ProjectFeature, ProjectReason, ProjectStep } from '@/lib/project-page';
 import type { Subject, SubjectId } from '@/lib/subjects';
 import { plainText, type PhotoShape, type SectionKind } from '@/lib/author';
@@ -23,6 +23,8 @@ import type {
   SyllabusTag,
   QuestionsPage,
 } from './types';
+import { isSlug } from '@/lib/slug';
+import { allRows } from '@/server/db-rows';
 
 /**
  * Read side for public pages (getStaticProps only). Uses the anon key and the public_*
@@ -176,13 +178,16 @@ export async function getSubjectSections(subject: SubjectId): Promise<SectionWit
 // ---------- posts ----------
 
 export async function getPostSlugs(): Promise<string[]> {
-  return must<{ slug: string }[]>(await db().from('public_posts').select('slug'), 'post slugs').map((r) => r.slug);
+  return must<{ slug: string }[]>(
+    await allRows((from, to) => db().from('public_posts').select('slug').order('slug').range(from, to)),
+    'post slugs',
+  ).map((r) => r.slug);
 }
 
 /** A real post slug (matches the DB CHECK on posts.slug). Anything else can't exist, so the page
  *  is a 404 and we never send it to the database — a junk address (e.g. an injection probe) would
  *  otherwise reach the WAF in front of the DB and come back as a non-JSON error, i.e. a 500. */
-export const isPostSlug = (slug: string): boolean => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
+export const isPostSlug = isSlug;
 
 export async function getPostPage(slug: string): Promise<PostPageData | null> {
   if (!isPostSlug(slug)) return null;
@@ -297,8 +302,10 @@ const SYLLABUS_COLUMNS = 'id, slug, code, title, description, subject_id';
 export async function getSyllabusList(): Promise<SyllabusSummary[]> {
   const [syllabuses, points, lessons] = await Promise.all([
     db().from('syllabuses').select(SYLLABUS_COLUMNS).order('sort'),
-    db().from('syllabus_points').select('id, syllabus_id'),
-    db().from('public_syllabus_lessons').select('point_id'),
+    allRows((from, to) => db().from('syllabus_points').select('id, syllabus_id').order('id').range(from, to)),
+    allRows((from, to) =>
+      db().from('public_syllabus_lessons').select('point_id').order('point_id').order('slug').range(from, to),
+    ),
   ]);
   const pointRows = must<{ id: string; syllabus_id: string }[]>(points, 'syllabus points');
   const covered = new Set(must<{ point_id: string }[]>(lessons, 'syllabus lessons').map((l) => l.point_id));
@@ -384,7 +391,8 @@ export async function getQuestionsPage(postId: string, before?: string): Promise
   );
   const questions = await Promise.all(
     rows.map(async (q) => {
-      const [body, answer] = await Promise.all([renderSnippet(q.body), renderSnippet(q.answer)]);
+      // The visitor's text is rendered as theirs; the teacher's answer like the rest of the site.
+      const [body, answer] = await Promise.all([renderVisitorText(q.body), renderSnippet(q.answer)]);
       return {
         id: q.id,
         name: q.name,
@@ -452,7 +460,14 @@ async function getSeriesNav(slug: string): Promise<SeriesNav[]> {
 export async function getSeriesList(): Promise<SeriesSummary[]> {
   const [series, lessons, order] = await Promise.all([
     db().from('public_series').select('id, slug, title, description, lesson_count').gt('lesson_count', 0).order('sort'),
-    db().from('public_series_lessons').select('series_id, subject_id, slug, position').order('position'),
+    allRows((from, to) =>
+      db()
+        .from('public_series_lessons')
+        .select('series_id, subject_id, slug, position')
+        .order('position')
+        .order('series_id')
+        .range(from, to),
+    ),
     getSubjects(),
   ]);
   const lessonRows = must<{ series_id: string; subject_id: string | null; slug: string }[]>(lessons, 'series lessons');
@@ -538,9 +553,10 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getProjectSlugs(): Promise<string[]> {
-  return must<{ slug: string }[]>(await db().from('public_projects').select('slug'), 'project slugs').map(
-    (r) => r.slug,
-  );
+  return must<{ slug: string }[]>(
+    await allRows((from, to) => db().from('public_projects').select('slug').order('slug').range(from, to)),
+    'project slugs',
+  ).map((r) => r.slug);
 }
 
 /** A project's landing page (v1.1): the intro and FAQ answers are Markdown, rendered like lessons. */
@@ -670,7 +686,7 @@ export async function getAuthorPage(): Promise<{
 
 export async function getSitemapPosts(): Promise<{ slug: string; updatedAt: string }[]> {
   const rows = must<{ slug: string; updated_at: string }[]>(
-    await db().from('public_posts').select('slug, updated_at').order('slug'),
+    await allRows((from, to) => db().from('public_posts').select('slug, updated_at').order('slug').range(from, to)),
     'sitemap posts',
   );
   return rows.map((r) => ({ slug: r.slug, updatedAt: r.updated_at }));
