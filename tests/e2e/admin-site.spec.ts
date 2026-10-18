@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import { serviceClient } from '../support/admin-users';
 import { collectProblems, enrolEditor, expectAccessible, openStudyMenu, signInEditor } from './helpers';
@@ -445,6 +447,61 @@ test.describe('site content', { tag: '@single-account' }, () => {
     } finally {
       // Even if a step fails: a leftover syllabus would change the sitemap for later tests.
       await serviceClient().from('syllabuses').delete().eq('code', code);
+    }
+  });
+
+  test('practice: a lesson with questions → a student checks answers on the page; then delete it', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const headers = { Origin: baseURL! };
+    const doc = JSON.parse(readFileSync(join(__dirname, '../fixtures/lessons/practice.json'), 'utf8'));
+    const created = await page.request.post('/api/admin/posts', {
+      headers,
+      data: { kind: 'lesson', title: `E2E practice ${Date.now()}`, subject_id: 'coding' },
+    });
+    const { id, slug } = (await created.json()) as { id: string; slug: string };
+    try {
+      const edit = (await (await page.request.get(`/api/admin/posts/${id}`)).json()) as {
+        post: { revision: number };
+        sections: { id: string; subject_id: string }[];
+      };
+      const section = edit.sections.find((s) => s.subject_id === 'coding')!.id;
+      const saved = await page.request.put(`/api/admin/posts/${id}`, {
+        headers,
+        data: { revision: edit.post.revision, fields: { content_json: doc, section_id: section } },
+      });
+      const { revision } = (await saved.json()) as { revision: number };
+      expect(
+        (await page.request.post(`/api/admin/posts/${id}/publish`, { headers, data: { revision } })).status(),
+      ).toBe(200);
+
+      const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+      const problems = await collectProblems(student);
+      await student.goto(`/posts/${slug}`);
+      const questions = student.locator('section.practice');
+      const [choice, text, reveal] = [questions.nth(0), questions.nth(1), questions.nth(2)];
+      await choice.getByRole('radio', { name: '1000' }).check();
+      await choice.getByRole('button', { name: 'Check' }).click();
+      await expect(choice.getByRole('status')).toHaveText('✗ Not quite. Try again, or open the hint.');
+      await choice.getByRole('radio', { name: '1024' }).check();
+      await choice.getByRole('button', { name: 'Check' }).click();
+      await expect(choice.getByRole('status')).toHaveText('✓ Correct!');
+      await expect(choice.getByText('Ten doublings of 1 give')).toBeVisible();
+
+      await text.getByRole('textbox', { name: 'Your answer' }).fill('Bubble Sort');
+      await text.getByRole('textbox', { name: 'Your answer' }).press('Enter');
+      await expect(text.getByRole('status')).toHaveText('✓ Correct!');
+
+      await reveal.getByText('Show the answer').click();
+      await reveal.getByRole('button', { name: 'I got it' }).click();
+      await expect(reveal.getByRole('status')).toHaveText('✓ Great, well done.');
+      await expectAccessible(student);
+      await student.context().close();
+      expect(problems).toEqual([]);
+    } finally {
+      await page.request.delete(`/api/admin/posts/${id}`, { headers });
     }
   });
 });

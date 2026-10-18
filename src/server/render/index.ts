@@ -2,6 +2,8 @@ import katex from 'katex';
 import { KATEX_OPTIONS, MAX_LATEX } from '@/lib/katex-options';
 import { highlight, resolveLanguage } from './highlight';
 import { fallbackWidth, fileKey, imageKey, isMediaId, mediaUrl, mediaWidths, srcset } from '@/lib/media-urls';
+import { markdownToDoc } from '@/server/content/markdown';
+import { PRACTICE_KINDS, PRACTICE_LIMITS, type PracticeKind } from '@/lib/practice';
 import { safeEmbed, safeLinkHref, safeMediaUrl } from './policy';
 import { CALLOUT_VARIANTS, type RenderResult, type TocEntry } from './schema';
 
@@ -29,6 +31,8 @@ type Context = {
   prose: string[];
   hasMath: boolean;
   hasCode: boolean;
+  /** Practice questions so far: each gets its own ids. */
+  practice: number;
 };
 
 const isNode = (v: unknown): v is Node => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -352,9 +356,107 @@ async function renderBlock(node: Node, ctx: Context, depth: number): Promise<str
       );
     }
 
+    case 'practice':
+      return renderPractice(a, ctx, depth);
+
     default:
       return '';
   }
+}
+
+// ---------- practice (v1.1) ----------
+
+/** A practice field's Markdown (with $maths$) as blocks of this lesson: maths, search text and all. */
+async function markdownBlocks(value: unknown, max: number, ctx: Context, depth: number): Promise<string> {
+  const source = str(value).slice(0, max);
+  if (!source.trim()) return '';
+  return renderBlocks(children(markdownToDoc(source).doc as Node), ctx, depth + 1);
+}
+
+/** The same for one line (an option): without the paragraph around it. */
+async function markdownLine(value: unknown, max: number, ctx: Context, depth: number): Promise<string> {
+  const html = await markdownBlocks(value, max, ctx, depth);
+  const m = /^<p>([\s\S]*)<\/p>$/.exec(html);
+  return m && !m[1]!.includes('<p>') ? m[1]! : html;
+}
+
+/**
+ * A practice question (03 v1.1): multiple choice, a short answer, or an answer to reveal and
+ * mark yourself. The page checks answers in the browser (src/views/practice.ts); without
+ * JavaScript, "Show answer" still works. The answers are in the page: practice, not marks.
+ */
+async function renderPractice(a: Record<string, unknown>, ctx: Context, depth: number): Promise<string> {
+  const kind: PracticeKind =
+    typeof a.kind === 'string' && Object.hasOwn(PRACTICE_KINDS, a.kind) ? (a.kind as PracticeKind) : 'reveal';
+  const L = PRACTICE_LIMITS;
+  const prompt = await markdownBlocks(a.prompt, L.prompt, ctx, depth);
+  if (!prompt) return '';
+  const n = ++ctx.practice;
+  const id = `pq-${n}`;
+  let body = '';
+  let answerHtml = '';
+
+  if (kind === 'choice') {
+    const options = (Array.isArray(a.options) ? a.options : [])
+      .filter(isNode)
+      .map((o) => ({
+        text: str((o as Record<string, unknown>).text),
+        correct: (o as Record<string, unknown>).correct === true,
+      }))
+      .filter((o) => o.text.trim())
+      .slice(0, L.options);
+    if (options.length < 2 || !options.some((o) => o.correct)) return '';
+    const multi = options.filter((o) => o.correct).length > 1;
+    let items = '';
+    const right: string[] = [];
+    for (const [i, o] of options.entries()) {
+      const html = await markdownLine(o.text, L.option, ctx, depth);
+      if (o.correct) right.push(html);
+      items +=
+        `<label class="practice-option"><input type="${multi ? 'checkbox' : 'radio'}" name="${id}" value="${i}"` +
+        `${o.correct ? ' data-correct=""' : ''}> <span>${html}</span></label>`;
+    }
+    body =
+      `<fieldset class="practice-options"><legend class="sr-only">${multi ? 'Choose all that apply' : 'Choose one answer'}</legend>` +
+      `${items}</fieldset>`;
+    answerHtml = `<p><strong>Answer:</strong> ${right.join('; ')}</p>`;
+  } else if (kind === 'text') {
+    const answers = (Array.isArray(a.answers) ? a.answers : [])
+      .map((x) => str(x).slice(0, L.answer))
+      .filter((x) => x.trim())
+      .slice(0, L.answers);
+    if (!answers.length) return '';
+    body =
+      `<p class="practice-field"><label for="${id}-a">Your answer</label> ` +
+      `<input id="${id}-a" class="practice-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"` +
+      ` data-accept="${escapeHtml(JSON.stringify(answers))}"></p>`;
+    answerHtml = `<p><strong>Answer:</strong> ${escapeHtml(answers[0]!)}</p>`;
+  }
+
+  const hint = await markdownBlocks(a.hint, L.hint, ctx, depth);
+  const explanation = await markdownBlocks(a.explanation, L.explanation, ctx, depth);
+  if (kind === 'reveal' && !explanation) return '';
+  const check =
+    kind === 'reveal'
+      ? ''
+      : `<p class="practice-actions"><button type="button" class="btn practice-check">Check</button></p>`;
+  const self =
+    kind === 'reveal'
+      ? `<p class="practice-self">Did you get it? <button type="button" class="btn" data-self="yes">I got it</button> ` +
+        `<button type="button" class="btn" data-self="no">Not yet</button></p>`
+      : '';
+
+  return (
+    `<section class="practice practice--${kind}" data-kind="${kind}" aria-labelledby="${id}-q">` +
+    `<p class="practice-label">Practice</p><div class="practice-q" id="${id}-q">${prompt}</div>` +
+    body +
+    check +
+    `<p class="practice-result" role="status"></p>` +
+    (hint ? `<details class="practice-hint"><summary>Hint</summary>${hint}</details>` : '') +
+    `<details class="practice-solution"><summary>${kind === 'reveal' ? 'Show the answer' : 'Show answer'}</summary>` +
+    `${answerHtml}${explanation}${self}</details>` +
+    `</section>`
+  );
 }
 
 // ---------- metadata ----------
@@ -373,7 +475,7 @@ function countWords(text: string, lang: string): number {
 export type RenderOptions = { lang?: 'en' | 'km' };
 
 export async function renderContent(input: unknown, options: RenderOptions = {}): Promise<RenderResult> {
-  const ctx: Context = { toc: [], ids: new Set(), blocks: [], prose: [], hasMath: false, hasCode: false };
+  const ctx: Context = { toc: [], ids: new Set(), blocks: [], prose: [], hasMath: false, hasCode: false, practice: 0 };
   const root = isNode(input) && input.type === 'doc' ? children(input) : [];
   const html = await renderBlocks(root, ctx, 0);
   const words = countWords(ctx.prose.join(' '), options.lang ?? 'en');

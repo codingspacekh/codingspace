@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { parseEmbedUrl } from '@/lib/embed-url';
+import { PRACTICE_KINDS, type PracticeKind } from '@/lib/practice';
 import { CALLOUT_VARIANTS, type CalloutVariant } from '@/server/render/schema';
 
 /** Blocks the "/" menu (and the toolbar's Insert menu) can add: 03 ADM-04. */
@@ -56,6 +57,12 @@ export const BLOCK_ITEMS: BlockItem[] = [
     hint: 'YouTube, Desmos or GeoGebra link',
   },
   { id: 'table', label: 'Table', keywords: ['grid', 'rows', 'columns'] },
+  ...(Object.entries(PRACTICE_KINDS) as [PracticeKind, string][]).map(([kind, label]) => ({
+    id: `practice:${kind}`,
+    label: `Practice: ${label}`,
+    keywords: ['practice', 'question', 'quiz', 'exercise', 'check', kind],
+    hint: 'Checked instantly on the page',
+  })),
   { id: 'horizontalRule', label: 'Divider', keywords: ['hr', 'line', 'separator', 'rule'] },
 ];
 
@@ -71,6 +78,24 @@ export function filterBlockItems(query: string, items = BLOCK_ITEMS): BlockItem[
   return [...starts, ...contains, ...keyword];
 }
 
+/** A new practice question: two empty options to fill in, or one answer. */
+export function newPractice(kind: PracticeKind) {
+  return {
+    kind,
+    prompt: '',
+    options:
+      kind === 'choice'
+        ? [
+            { text: '', correct: true },
+            { text: '', correct: false },
+          ]
+        : null,
+    answers: kind === 'text' ? [''] : null,
+    hint: null,
+    explanation: null,
+  };
+}
+
 /** Asks the owner for a value (an embed link…); null means cancelled. */
 export type Ask = (question: string) => string | null;
 
@@ -83,6 +108,12 @@ export const UPLOAD_ITEMS = { image: 'image', file: 'file', library: 'library' }
  */
 export function runBlockItem(editor: Editor, id: string, ask: Ask): string | null {
   const chain = editor.chain().focus();
+  if (id.startsWith('practice:')) {
+    const kind = id.slice('practice:'.length);
+    if (!Object.hasOwn(PRACTICE_KINDS, kind)) return `Unknown block “${id}”.`;
+    chain.insertContent({ type: 'practice', attrs: newPractice(kind as PracticeKind) }).run();
+    return null;
+  }
   if (id.startsWith('callout:')) {
     const variant = id.slice('callout:'.length);
     chain.wrapIn('callout', { variant }).run();

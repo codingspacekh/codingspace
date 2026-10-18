@@ -16,6 +16,20 @@ const attr = (name: string, fallback: unknown = null) => ({
     attrs[name] == null ? {} : { [`data-${name}`]: String(attrs[name]) },
 });
 
+/** A list attribute, as JSON in copy/paste HTML. */
+const json = (name: string) => ({
+  default: null,
+  parseHTML: (el: HTMLElement) => {
+    try {
+      return JSON.parse(el.getAttribute(`data-${name}`) ?? 'null') as unknown;
+    } catch {
+      return null;
+    }
+  },
+  renderHTML: (attrs: Record<string, unknown>) =>
+    attrs[name] == null ? {} : { [`data-${name}`]: JSON.stringify(attrs[name]) },
+});
+
 export const MathInline = Node.create({
   name: 'mathInline',
   group: 'inline',
@@ -95,6 +109,23 @@ export const FileNode = Node.create({
   renderHTML: ({ HTMLAttributes }) => ['div', mergeAttributes(HTMLAttributes, { 'data-file': '' })],
 });
 
+/** v1.1 practice question (src/lib/practice.ts): edited in its node view, checked on the lesson page. */
+export const Practice = Node.create({
+  name: 'practice',
+  group: 'block',
+  atom: true,
+  addAttributes: () => ({
+    kind: attr('kind', 'choice'),
+    prompt: attr('prompt', ''),
+    options: json('options'),
+    answers: json('answers'),
+    hint: attr('hint'),
+    explanation: attr('explanation'),
+  }),
+  parseHTML: () => [{ tag: 'section[data-practice]' }],
+  renderHTML: ({ HTMLAttributes }) => ['section', mergeAttributes(HTMLAttributes, { 'data-practice': '' })],
+});
+
 type Named = { name: string };
 
 /**
@@ -114,6 +145,6 @@ export function contentExtensions(views: (Named & Extensions[number])[] = []): E
     }),
     ...(codeBlock ? [codeBlock] : []),
     TableKit.configure({ table: { resizable: false } }),
-    ...[MathInline, MathBlock, Callout, Embed, Image, FileNode].map((n) => view(n.name) ?? n),
+    ...[MathInline, MathBlock, Callout, Embed, Image, FileNode, Practice].map((n) => view(n.name) ?? n),
   ];
 }

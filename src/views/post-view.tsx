@@ -5,6 +5,7 @@ import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { useSubjects } from '@/lib/subjects';
 import { pointAnchor } from '@/lib/syllabus';
+import { usePractice } from './practice';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
 import { markDone, savePost, unmarkDone, unsavePost, useDone, useHydrated, usePrefs, useSaved } from '@/ui';
 import { DoneTick, Progress } from './progress';
@@ -36,7 +37,8 @@ function usePrintOpensDetails() {
   useEffect(() => {
     let opened: HTMLDetailsElement[] = [];
     const before = () => {
-      opened = Array.from(document.querySelectorAll<HTMLDetailsElement>('details:not([open])'));
+      // Practice answers stay closed: a printed lesson is a worksheet.
+      opened = Array.from(document.querySelectorAll<HTMLDetailsElement>('details:not([open]):not(.practice-solution)'));
       opened.forEach((d) => (d.open = true));
     };
     const after = () => opened.forEach((d) => (d.open = false));
@@ -167,6 +169,7 @@ function SeriesBox({ series }: { series: SeriesNav }) {
 export function PostView({ post, section, siblings, series = [], syllabus = [] }: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
+  usePractice(article);
   usePrintOpensDetails();
   const subject = useSubjects().subject(post.subject);
   const { prev, next } = neighbours(siblings, post.slug);

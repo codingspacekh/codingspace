@@ -1,0 +1,36 @@
+{
+  "type": "doc",
+  "content": [
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "Check yourself" }] },
+    {
+      "type": "practice",
+      "attrs": {
+        "kind": "choice",
+        "prompt": "What is $2^{10}$?",
+        "options": [
+          { "text": "1000", "correct": false },
+          { "text": "1024", "correct": true },
+          { "text": "2048", "correct": false }
+        ],
+        "hint": "Double 512.",
+        "explanation": "Ten doublings of 1 give **1024**."
+      }
+    },
+    {
+      "type": "practice",
+      "attrs": {
+        "kind": "text",
+        "prompt": "Which sort repeatedly swaps neighbouring items?",
+        "answers": ["bubble sort", "bubble"]
+      }
+    },
+    {
+      "type": "practice",
+      "attrs": {
+        "kind": "reveal",
+        "prompt": "Prove that $\\sqrt{2}$ is irrational.",
+        "explanation": "Suppose $\\sqrt{2} = p/q$ in lowest terms…"
+      }
+    }
+  ]
+}

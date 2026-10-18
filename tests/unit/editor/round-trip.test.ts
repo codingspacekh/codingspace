@@ -47,6 +47,7 @@ describe('editor round trip', () => {
       'file',
       'table',
       'codeBlock',
+      'practice',
       'mark:link',
     ]) {
       expect(types).toContain(t);
