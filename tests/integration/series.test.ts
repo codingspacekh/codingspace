@@ -61,6 +61,7 @@ describe('lesson series', () => {
     expect(page!.lessons.map((l) => l.slug)).toEqual(['am-gm-inequality', 'projectile-motion']);
     expect((await getSeriesList()).find((s) => s.slug === 'it-maths-for-physics')).toMatchObject({
       lessonCount: 2,
+      lessonSlugs: ['am-gm-inequality', 'projectile-motion'],
       subjectIds: ['math', 'physics'],
     });
 
@@ -72,6 +73,7 @@ describe('lesson series', () => {
       total: 2,
       prev: { slug: 'am-gm-inequality', title: expect.any(String), subject: 'math' },
       next: null,
+      lessons: ['am-gm-inequality', 'projectile-motion'],
     });
   });
 

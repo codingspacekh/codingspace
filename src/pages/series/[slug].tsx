@@ -5,7 +5,9 @@ import { REVALIDATE } from '@/lib/isr';
 import { useSubjects, type Subject } from '@/lib/subjects';
 import { getSeriesPage, getSeriesSlugs, getSubjects } from '@/server/data/public';
 import type { SeriesPageData } from '@/server/data/types';
+import { progressOf, useDone, useHydrated } from '@/ui';
 import { LessonRow } from '@/views/cards';
+import { Progress } from '@/views/progress';
 
 export const getStaticPaths: GetStaticPaths = async () => ({
   paths: (await getSeriesSlugs()).map((slug) => ({ params: { slug } })),
@@ -23,6 +25,23 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
 };
 
 /** v1.1 (FR-03): one series: its lessons in order, from whichever subjects they belong to. */
+/** "Start with part 1", or where this visitor left off (lessons marked done on this device). */
+function Continue({ lessons }: { lessons: SeriesPageData['lessons'] }) {
+  const done = useDone();
+  const ready = useHydrated();
+  const p = progressOf(
+    lessons.map((l) => l.slug),
+    ready ? done : {},
+  );
+  if (p.next === null) return <p className="meta">You’ve done every lesson in this series. ✓</p>;
+  const lesson = lessons[p.next]!;
+  return (
+    <Link href={`/posts/${lesson.slug}`} className="btn pri">
+      {p.done === 0 ? 'Start with part 1 →' : `Continue with part ${p.next + 1}: ${lesson.title} →`}
+    </Link>
+  );
+}
+
 export default function SeriesPage({ slug, title, description, subjectIds, lessons }: Props) {
   const { subject } = useSubjects();
   return (
@@ -55,6 +74,7 @@ export default function SeriesPage({ slug, title, description, subjectIds, lesso
             ⇢
           </div>
         </header>
+        <Progress slugs={lessons.map((l) => l.slug)} label={`Your progress in ${title}`} />
         <ol className="series-lessons" aria-label={`${title}, in order`}>
           {lessons.map((l, i) => (
             <li key={l.slug} className={subject(l.subject) ? `c-${subject(l.subject)!.color}` : undefined}>
@@ -69,9 +89,7 @@ export default function SeriesPage({ slug, title, description, subjectIds, lesso
           ))}
         </ol>
         <p>
-          <Link href={`/posts/${lessons[0]!.slug}`} className="btn pri">
-            Start with part 1 →
-          </Link>
+          <Continue lessons={lessons} />
         </p>
       </div>
     </Layout>

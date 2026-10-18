@@ -1,22 +1,12 @@
 import type { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useSyncExternalStore } from 'react';
 import { Layout } from '@/components/layout';
 import { formatDate } from '@/lib/format';
 import { REVALIDATE } from '@/lib/isr';
 import { useSubjects, type Subject } from '@/lib/subjects';
 import { getSubjects } from '@/server/data/public';
-import { unsavePost, useSaved } from '@/ui';
-
-const noop = () => () => {};
-/** False on the server and in the first render, true once the browser's list can be read. */
-const useHydrated = () =>
-  useSyncExternalStore(
-    noop,
-    () => true,
-    () => false,
-  );
+import { unsavePost, useHydrated, useSaved } from '@/ui';
 
 export const getStaticProps: GetStaticProps<{ subjects: Subject[] }> = async () => ({
   props: { subjects: await getSubjects() },

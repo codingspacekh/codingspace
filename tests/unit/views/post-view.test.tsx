@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { UiRoot } from '@/ui';
 import { PostView } from '@/views/post-view';
 import type { PostPageData } from '@/server/data/types';
@@ -109,8 +110,17 @@ describe('<PostView>', () => {
           total: 3,
           prev: { slug: 'vectors', title: 'Vectors', subject: 'math' },
           next: { slug: 'projectile-motion', title: 'Projectile motion', subject: 'physics' },
+          lessons: ['vectors', 'am-gm-inequality', 'projectile-motion'],
         },
-        { slug: 'olympiad-start', title: 'Olympiad start', position: 1, total: 1, prev: null, next: null },
+        {
+          slug: 'olympiad-start',
+          title: 'Olympiad start',
+          position: 1,
+          total: 1,
+          prev: null,
+          next: null,
+          lessons: ['am-gm-inequality'],
+        },
       ],
     });
     expect(screen.getByText(/Part 2 of 3 in the series/)).toBeInTheDocument();
@@ -133,11 +143,58 @@ describe('<PostView>', () => {
     expect(within(single).getAllByRole('link')).toHaveLength(1);
   });
 
+  it('marks a lesson as done on this device, then points to the next one (v1.1)', async () => {
+    const user = userEvent.setup();
+    renderPost({
+      ...base,
+      series: [
+        {
+          slug: 'maths-for-physics',
+          title: 'Maths for Physics',
+          position: 2,
+          total: 3,
+          prev: { slug: 'vectors', title: 'Vectors', subject: 'math' },
+          next: { slug: 'projectile-motion', title: 'Projectile motion', subject: 'physics' },
+          lessons: ['vectors', 'am-gm-inequality', 'projectile-motion'],
+        },
+      ],
+    });
+    const box = screen.getByRole('region', { name: 'Your progress' });
+    const button = within(box).getByRole('button', { name: 'Mark as done' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    // Nothing done yet: no progress bar.
+    expect(screen.queryByRole('progressbar')).toBeNull();
+
+    await user.click(button);
+    expect(within(box).getByRole('button', { name: '✓ Done' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(box).getByRole('status')).toHaveTextContent(
+      'Marked as done on this device. Up next: Projectile motion',
+    );
+    expect(within(box).getByRole('link', { name: 'Projectile motion' })).toHaveAttribute(
+      'href',
+      '/posts/projectile-motion',
+    );
+    expect(JSON.parse(localStorage.getItem('cs-done')!).items).toHaveProperty('am-gm-inequality');
+    // The series box and the section list show it.
+    expect(screen.getByRole('progressbar', { name: 'Your progress in Maths for Physics' })).toHaveAttribute(
+      'value',
+      '1',
+    );
+    expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
+    const rail = screen.getByRole('navigation', { name: 'Inequalities lessons' });
+    expect(within(rail).getByRole('link', { name: /^The AM–GM inequality ?\(done\)$/ })).toBeInTheDocument();
+
+    await user.click(within(box).getByRole('button', { name: '✓ Done' }));
+    expect(within(box).getByRole('button', { name: 'Mark as done' })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('cs-done')!).items).toEqual({});
+  });
+
   it('puts life posts under the Author page', () => {
     renderPost({ post: { ...base.post, kind: 'life', subject: null }, section: null, siblings: [], series: [] });
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Author' })).toHaveAttribute('href', '/author');
     expect(screen.queryByText('Beginner')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mark as done' })).toBeNull();
   });
 });
 

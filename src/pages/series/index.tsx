@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
 import { useSubjects, type Subject } from '@/lib/subjects';
 import { getSeriesList, getSubjects } from '@/server/data/public';
+import { Progress } from '@/views/progress';
 import type { SeriesSummary } from '@/server/data/types';
 
 type Props = { series: SeriesSummary[]; subjects: Subject[] };
@@ -58,6 +59,7 @@ export default function SeriesIndex({ series }: Props) {
                       {s.lessonCount} lesson{s.lessonCount === 1 ? '' : 's'}
                     </span>
                   </span>
+                  <Progress slugs={s.lessonSlugs} label={`Your progress in ${s.title}`} />
                 </Link>
               </li>
             ))}

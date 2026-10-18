@@ -1186,6 +1186,54 @@ html {
   letter-spacing: 0.14em;
 }
 
+/* Lesson progress (v1.1): lessons marked done on this device. */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.progress progress {
+  appearance: none;
+  flex: 0 1 220px;
+  height: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--lime);
+}
+.progress progress::-webkit-progress-bar {
+  background: transparent;
+}
+.progress progress::-webkit-progress-value {
+  background: var(--lime);
+}
+.progress progress::-moz-progress-bar {
+  background: var(--lime);
+}
+.done-tick {
+  color: var(--lime);
+}
+.done-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: 32px;
+  padding: 18px 20px;
+}
+.done-box p {
+  margin: 0;
+  color: var(--fg2);
+}
+.done-box a {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.series-box .progress {
+  margin-bottom: 12px;
+}
+
 /* Project pages (v1.1): /projects/<slug>, a landing page in one fixed layout. */
 .tag-soon {
   --c: var(--amber);
@@ -1859,6 +1907,7 @@ html[data-reading='on'] .prose li {
   .pn,
   .crumbs,
   .read-tools,
+  .done-box,
   .code-copy,
   .embed {
     display: none !important;

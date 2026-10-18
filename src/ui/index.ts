@@ -10,3 +10,5 @@ export { SkipLink } from './skip-link';
 export { PageEffects } from './page-effects';
 export { VisitTracker } from './visit-tracker';
 export { savePost, unsavePost, useSaved, type SavedPost } from './saved-store';
+export { markDone, progressOf, unmarkDone, useDone, type DoneLessons } from './done-store';
+export { useHydrated } from './hydrated';

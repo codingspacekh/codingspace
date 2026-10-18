@@ -278,6 +278,7 @@ async function getSeriesNav(slug: string): Promise<SeriesNav[]> {
       total: list.length,
       prev: link(list[i - 1]),
       next: link(list[i + 1]),
+      lessons: list.map((l) => l.slug),
     };
   });
 }
@@ -286,10 +287,10 @@ async function getSeriesNav(slug: string): Promise<SeriesNav[]> {
 export async function getSeriesList(): Promise<SeriesSummary[]> {
   const [series, lessons, order] = await Promise.all([
     db().from('public_series').select('id, slug, title, description, lesson_count').gt('lesson_count', 0).order('sort'),
-    db().from('public_series_lessons').select('series_id, subject_id'),
+    db().from('public_series_lessons').select('series_id, subject_id, slug, position').order('position'),
     getSubjects(),
   ]);
-  const lessonRows = must<{ series_id: string; subject_id: string | null }[]>(lessons, 'series lessons');
+  const lessonRows = must<{ series_id: string; subject_id: string | null; slug: string }[]>(lessons, 'series lessons');
   return must<{ id: string; slug: string; title: string; description: string; lesson_count: number }[]>(
     series,
     'series',
@@ -298,6 +299,7 @@ export async function getSeriesList(): Promise<SeriesSummary[]> {
     title: s.title,
     description: s.description,
     lessonCount: s.lesson_count,
+    lessonSlugs: lessonRows.filter((l) => l.series_id === s.id).map((l) => l.slug),
     subjectIds: subjectsOf(
       order,
       lessonRows.filter((l) => l.series_id === s.id),

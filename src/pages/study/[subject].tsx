@@ -7,6 +7,7 @@ import { getFeaturedProblem, getSubjects, getSubjectSections } from '@/server/da
 import type { FeaturedProblem, SectionWithLessons } from '@/server/data/types';
 import { LessonRow } from '@/views/cards';
 import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
+import { Progress } from '@/views/progress';
 
 type Props = { subject: Subject; sections: SectionWithLessons[]; problem: FeaturedProblem | null; subjects: Subject[] };
 
@@ -37,6 +38,10 @@ export default function StudySubject({ subject: s, sections, problem }: Props) {
             <span className="crumbs">Study / {s.name}</span>
             <h1>{s.name}</h1>
             <p className="lead">{s.intro}</p>
+            <Progress
+              slugs={sections.flatMap((sec) => sec.lessons.map((l) => l.slug))}
+              label={`Your progress in ${s.name}`}
+            />
           </div>
           <div className="big" aria-hidden="true">
             {s.glyph}
@@ -63,6 +68,7 @@ export default function StudySubject({ subject: s, sections, problem }: Props) {
               <span className="sn">{String(i + 1).padStart(2, '0')}</span>
               <h2 id={`${sec.slug}-title`}>{sec.title}</h2>
               {sec.description && <p>{sec.description}</p>}
+              <Progress slugs={sec.lessons.map((l) => l.slug)} label={`Your progress in ${sec.title}`} />
             </div>
             {sec.lessons.length > 0 ? (
               <div className="lessons">

@@ -5,7 +5,8 @@ import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { useSubjects } from '@/lib/subjects';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
-import { savePost, unsavePost, usePrefs, useSaved } from '@/ui';
+import { markDone, savePost, unmarkDone, unsavePost, useDone, useHydrated, usePrefs, useSaved } from '@/ui';
+import { DoneTick, Progress } from './progress';
 
 /** Copy buttons in code blocks (rendered by the server as plain <button class="code-copy">). */
 function useCopyButtons(root: React.RefObject<HTMLElement | null>) {
@@ -105,6 +106,42 @@ function SeriesStep({ lesson, dir }: { lesson: SeriesLink; dir: 'prev' | 'next' 
   );
 }
 
+/**
+ * v1.1: mark the lesson as done (kept on this device). Then points to the next lesson: in its
+ * first series if it is in one, otherwise in its section.
+ */
+function DoneBox({ slug, next }: { slug: string; next: { slug: string; title: string } | null }) {
+  const marked = Boolean(useDone()[slug]);
+  const done = useHydrated() && marked;
+  return (
+    <section className="done-box frame" aria-label="Your progress">
+      <button
+        type="button"
+        className={`btn${done ? '' : ' pri'}`}
+        aria-pressed={done}
+        onClick={() => (done ? unmarkDone(slug) : markDone(slug))}
+      >
+        {done ? '✓ Done' : 'Mark as done'}
+      </button>
+      <p role="status">
+        {done ? (
+          <>
+            Marked as done on this device.
+            {next && (
+              <>
+                {' '}
+                Up next: <Link href={`/posts/${next.slug}`}>{next.title}</Link>
+              </>
+            )}
+          </>
+        ) : (
+          'Finished this lesson? Mark it as done to track your progress (kept on this device only).'
+        )}
+      </p>
+    </section>
+  );
+}
+
 /** v1.1: "Part 3 of 7" in each series the lesson is in, with the lessons before and after it. */
 function SeriesBox({ series }: { series: SeriesNav }) {
   return (
@@ -115,6 +152,7 @@ function SeriesBox({ series }: { series: SeriesNav }) {
       <p className="series-title">
         <Link href={`/series/${series.slug}`}>{series.title}</Link>
       </p>
+      <Progress slugs={series.lessons} label={`Your progress in ${series.title}`} />
       {(series.prev || series.next) && (
         <div className="pn">
           {series.prev ? <SeriesStep lesson={series.prev} dir="prev" /> : <span />}
@@ -180,7 +218,10 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
             </div>
           )}
           <h1>{post.title}</h1>
-          <div className="meta">{postMeta(post)}</div>
+          <div className="meta">
+            {postMeta(post)}
+            {isLesson && <DoneTick slug={post.slug} />}
+          </div>
           {series.map((s) => (
             <p key={s.slug} className="series-line">
               Part {s.position} of {s.total} in the series <Link href={`/series/${s.slug}`}>{s.title}</Link>
@@ -189,6 +230,7 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
           <ReadingTools post={post} />
           {post.summary && <p className="lead">{post.summary}</p>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
+          {isLesson && <DoneBox slug={post.slug} next={series.find((s) => s.next)?.next ?? next ?? null} />}
 
           {(prev || next) && (
             <nav aria-label="More lessons in this section" className="pn">
@@ -218,6 +260,7 @@ export function PostView({ post, section, siblings, series = [] }: PostPageData)
               {siblings.map((s) => (
                 <Link key={s.slug} href={`/posts/${s.slug}`} aria-current={s.slug === post.slug ? 'page' : undefined}>
                   {s.title}
+                  <DoneTick slug={s.slug} />
                 </Link>
               ))}
             </nav>

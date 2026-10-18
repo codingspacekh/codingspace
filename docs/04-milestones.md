@@ -337,6 +337,10 @@ Each milestone lists the **tests written first**. They start red and define "don
   > - **Pages rebuilt:** Home, Projects and the project's page.
   > - **Backup:** `project_screenshots` is in the export and the restore; the page fields go with `projects`.
   > - Migration `20261102000000_project_pages.sql` (additive): push it to staging **before** merging (Vercel builds the project pages against staging).
+- Lesson progress on the device. **BUILT 2026-10-18** (owner's list of v1.1 features, item 2 “mark as done, progress through series”; items 1, 3 and 7 follow as their own PRs: syllabus tags, practice with instant checking, questions on lessons):
+  > - **Mark as done** at the end of every lesson (not life posts); then “Up next” points to the next lesson in its first series, or in its section. A ✓ follows the lesson's title in the meta line, the section list beside it, and lesson rows on subject and series pages.
+  > - **Progress bars** (“3 of 7 done”, only once something is done): each series on `/series` and its page (where “Start with part 1” becomes “Continue with part n”), the series box on a lesson, each section and the whole subject on a study page.
+  > - Kept in this browser's `localStorage` (`cs-done`, `src/ui/done-store.ts`) like saved lessons: no account, no cookie, nothing sent to the server; shown only after hydration, so pages stay static. Hidden when printing.
 - Offline reading (PWA).
 - Saved lessons on the device. **BUILT 2026-10-18** (owner: bookmarks without sign-in; emailing the list or moving it to another device later, if wanted):
   > - **☆ Save** on every post (next to Reading mode and Print); **Saved** in the top bar opens `/saved`: the list, newest first, with Remove. `noindex`; counted by the analytics like other pages.

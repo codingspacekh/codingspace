@@ -228,7 +228,7 @@ describe('projects admin (03 ADM-13)', () => {
       },
     });
     expect(upload).toHaveBeenCalledWith(expect.any(File), 'image');
-  });
+  }, 20_000); // many keystrokes: slow when the whole suite runs at once
 
   it('asks for a title on a reason that has text', async () => {
     const calls = mockApi();
