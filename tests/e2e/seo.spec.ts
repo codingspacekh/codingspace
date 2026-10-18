@@ -6,7 +6,7 @@ test('pages have a canonical URL, one description and OpenGraph tags', async ({ 
   await expect(head.locator('meta[name="description"]')).toHaveCount(1);
   await expect(head.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/study\/math$/);
   await expect(head.locator('meta[name="description"]')).toHaveAttribute('content', /Olympiad-style/);
-  await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Math · CodingSpace');
+  await expect(head.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Math · CodingSpaceKH');
   await expect(head.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
 });
 

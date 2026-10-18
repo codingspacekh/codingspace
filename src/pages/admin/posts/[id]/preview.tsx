@@ -32,7 +32,7 @@ export default function PreviewPage() {
 
   if (!data)
     return (
-      <Layout title="Preview · CodingSpace admin">
+      <Layout title="Preview · CodingSpaceKH admin">
         {banner}
         {error ? (
           <p role="alert" className="adm-error">
@@ -46,7 +46,7 @@ export default function PreviewPage() {
 
   return (
     <Layout
-      title={`Preview: ${data.post.title} · CodingSpace admin`}
+      title={`Preview: ${data.post.title} · CodingSpaceKH admin`}
       active={data.post.kind === 'life' ? 'author' : 'study'}
     >
       {banner}

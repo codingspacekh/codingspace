@@ -4,7 +4,7 @@ import { Frame } from '@/ui';
 
 export default function NotFound() {
   return (
-    <Layout title="Page not found · CodingSpace">
+    <Layout title="Page not found · CodingSpaceKH">
       <Frame>
         <span className="eyebrow">Error 404</span>
         <h1>Signal lost</h1>
