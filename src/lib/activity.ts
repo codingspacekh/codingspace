@@ -122,7 +122,11 @@ export function describeEvent(
   if (a === 'post.syllabus')
     return { text: `Changed the syllabus points of ${q}`, href: `/admin/posts/${e.entity_id}` };
 
-  if (a in QUESTION) return { text: `${QUESTION[a]} ${str(m.name) ?? 'a student'}`, href: '/admin/questions' };
+  if (a in QUESTION) {
+    // Entries before comments on life posts have no kind: they were all questions.
+    const text = m.kind === 'life' ? QUESTION[a]!.replace('question', 'comment') : QUESTION[a];
+    return { text: `${text} ${str(m.name) ?? 'a student'}`, href: '/admin/questions' };
+  }
 
   if (a in SERIES) return { text: `${SERIES[a]} ${q}`, href: '/admin/series' };
   if (a === 'series.reorder') return { text: 'Reordered the series', href: '/admin/series' };

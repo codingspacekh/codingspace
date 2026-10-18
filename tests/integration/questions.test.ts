@@ -55,6 +55,21 @@ describe('questions on lessons', () => {
     await expect(saveQuestion(owner, waiting[0]!.id, { status: 'published' })).rejects.toMatchObject({ status: 404 });
   });
 
+  it('comments on a life post: the same rules, shown on its page once published', async () => {
+    expect(await ask({ post: 'why-i-started-codingspace', name: 'IT Sok', question: 'Nice post!' }, '192.0.2.4')).toBe(
+      'ok',
+    );
+    const [waiting] = (await listQuestions(owner, 'pending')).filter((q) => q.name === 'IT Sok');
+    expect(waiting!.lesson).toMatchObject({ slug: 'why-i-started-codingspace', kind: 'life', live: true });
+    expect((await getPostPage('why-i-started-codingspace'))!.questions).toEqual([]);
+
+    expect((await saveQuestion(owner, waiting!.id, { status: 'published', answer: 'Thanks!' })).paths).toEqual([
+      '/posts/why-i-started-codingspace',
+    ]);
+    const shown = (await getPostPage('why-i-started-codingspace'))!.questions!.find((q) => q.name === 'IT Sok')!;
+    expect(shown.answerHtml).toContain('Thanks!');
+  });
+
   it('five questions an hour per visitor', async () => {
     for (let i = 0; i < 5; i++)
       expect(await ask({ post: 'projectile-motion', name: 'IT Rate', question: `Q${i}` }, '198.51.100.9')).not.toBe(

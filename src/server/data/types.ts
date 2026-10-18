@@ -43,7 +43,7 @@ export type PostPageData = {
   series: SeriesNav[];
   /** The syllabus points it covers (v1.1). */
   syllabus?: SyllabusTag[];
-  /** Approved questions under the lesson, oldest first (v1.1). */
+  /** Approved questions under the lesson, or comments under a life post, oldest first (v1.1). */
   questions?: LessonQuestion[];
 };
 
@@ -91,7 +91,7 @@ export type SeriesSummary = {
   subjectIds: SubjectId[];
 };
 
-/** A student's question and the teacher's answer, both rendered from Markdown. */
+/** A student's question (or comment on a life post) and the teacher's answer, both rendered from Markdown. */
 export type LessonQuestion = {
   id: string;
   name: string;

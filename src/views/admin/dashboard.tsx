@@ -92,7 +92,7 @@ export function Dashboard({ request }: { request?: Request }) {
             ))}
             <li>
               <Link href="/admin/questions" className="frame">
-                <strong>{data.questions ?? 0}</strong> <span>Questions waiting</span>
+                <strong>{data.questions ?? 0}</strong> <span>Questions &amp; comments waiting</span>
               </Link>
             </li>
           </ul>

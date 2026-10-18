@@ -525,7 +525,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await expectAccessible(student);
 
       await page.goto('/admin');
-      await expect(page.getByRole('link', { name: /Questions waiting/ })).toBeVisible();
+      await expect(page.getByRole('link', { name: /Questions & comments waiting/ })).toBeVisible();
       await page.goto('/admin/questions');
       const card = page.getByRole('listitem').filter({ hasText: name });
       await card.getByRole('textbox', { name: /Your answer/ }).fill('Exactly when $a = b$.');
@@ -541,6 +541,43 @@ test.describe('site content', { tag: '@single-account' }, () => {
       expect(problems).toEqual([]);
     } finally {
       // Even if a step fails: a leftover question would show on a lesson other tests read.
+      await serviceClient().from('questions').delete().eq('name', name);
+    }
+  });
+
+  test('comments: a visitor comments on a life post → the owner publishes it with a reply → it shows there', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const name = `E2E reader ${Date.now() % 100000}`;
+    try {
+      const reader = await (await context.browser()!.newContext({ baseURL })).newPage();
+      const problems = await collectProblems(reader);
+      await reader.goto('/posts/why-i-started-codingspace');
+      const form = reader.getByRole('form', { name: 'Leave a comment' });
+      await form.getByRole('textbox', { name: 'Your name' }).fill(name);
+      await form.getByRole('textbox', { name: 'Your comment' }).fill('Thank you for the site!');
+      await form.getByRole('button', { name: 'Send comment' }).click();
+      await expect(form.getByRole('status')).toHaveText(
+        'Thank you! Your comment will appear here once the teacher has read it.',
+      );
+      await expectAccessible(reader);
+
+      await page.goto('/admin/questions');
+      const card = page.getByRole('listitem').filter({ hasText: name });
+      await expect(card).toContainText('Comment on');
+      await card.getByRole('textbox', { name: /Your reply/ }).fill('You are welcome.');
+      await card.getByRole('button', { name: 'Publish with reply' }).click();
+      await expect(page.locator('.adm-main > .adm-live')).toHaveText('Published, with your reply.');
+
+      await reader.goto('/posts/why-i-started-codingspace');
+      const shown = reader.getByRole('region', { name: 'Comments' }).getByRole('listitem').filter({ hasText: name });
+      await expect(shown.getByText('Teacher')).toBeVisible();
+      await expect(shown).toContainText('You are welcome.');
+      await reader.context().close();
+      expect(problems).toEqual([]);
+    } finally {
       await serviceClient().from('questions').delete().eq('name', name);
     }
   });
