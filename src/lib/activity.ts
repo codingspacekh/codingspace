@@ -48,6 +48,11 @@ const PROJECT: Record<string, string> = {
   'project.update': 'Edited the project',
   'project.feature': 'Featured the project',
 };
+const SERIES: Record<string, string> = {
+  'series.create': 'Added the series',
+  'series.update': 'Edited the series',
+  'series.delete': 'Deleted the series',
+};
 const PROBLEM: Record<string, string> = {
   'problem.create': 'Added',
   'problem.update': 'Edited',
@@ -86,6 +91,9 @@ export function describeEvent(e: ActivityEvent): { text: string; href: string | 
   if (a === 'project.feature' && !e.entity_id) return { text: 'Featured no project', href: '/admin/projects' };
   if (a in PROJECT) return { text: `${PROJECT[a]} ${q}`, href: '/admin/projects' };
   if (a === 'project.delete') return { text: `Deleted the project ${q}`, href: '/admin/projects' };
+
+  if (a in SERIES) return { text: `${SERIES[a]} ${q}`, href: '/admin/series' };
+  if (a === 'series.reorder') return { text: 'Reordered the series', href: '/admin/series' };
 
   if (a in PROBLEM)
     return { text: `${PROBLEM[a]} a ${subject(m.subject)}problem of the week`, href: '/admin/problems' };

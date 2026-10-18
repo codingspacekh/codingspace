@@ -29,6 +29,20 @@ describe('describeEvent', () => {
     expect(describeEvent(event('post.delete', { meta: { slug: 'am-gm', title: '' } })).text).toBe('Deleted “am-gm”');
   });
 
+  it('describes series changes and links to the series admin (v1.1)', () => {
+    expect(describeEvent(event('series.create', { name: 'Maths for Physics' }))).toEqual({
+      text: 'Added the series “Maths for Physics”',
+      href: '/admin/series',
+    });
+    expect(describeEvent(event('series.delete', { meta: { title: 'Paper 1' } })).text).toBe(
+      'Deleted the series “Paper 1”',
+    );
+    expect(describeEvent(event('series.reorder', { entity_id: '' }))).toEqual({
+      text: 'Reordered the series',
+      href: '/admin/series',
+    });
+  });
+
   it('shows when a post was scheduled for', () => {
     expect(describeEvent(event('post.schedule', { name: 'Vectors', meta: { at: '2026-10-20T01:00:00Z' } })).text).toBe(
       'Scheduled “Vectors” for 20 Oct 2026',

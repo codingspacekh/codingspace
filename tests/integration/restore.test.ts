@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { exportZip, type ExportData } from '@/server/export/bundle';
 import { readExport, RestoreError, restoreContent } from '@/server/export/restore';
+import { deleteSeries, saveSeries } from '@/server/admin/series';
 import { ownerSession, serviceClient } from '../support/admin-users';
 
 // The restore drill in miniature (NFR-REL-2), on the local database: export, empty every
@@ -17,7 +18,7 @@ beforeAll(async () => {
 
 /** Children first; post_revisions and post_media go with their posts. */
 async function emptyContent(db: SupabaseClient) {
-  for (const table of ['posts', 'featured_problems', 'author_items', 'projects', 'media', 'sections']) {
+  for (const table of ['series', 'posts', 'featured_problems', 'author_items', 'projects', 'media', 'sections']) {
     const { error } = await db.from(table).delete().not('id', 'is', null);
     if (error) throw new Error(`${table}: ${error.message}`);
   }
@@ -43,8 +44,15 @@ describe('restore', () => {
   });
 
   it('brings an export back exactly into an emptied database', async () => {
+    // A series (v1.1) across two subjects, so its rows make the round trip too.
+    const { data: lessons } = await service.from('public_posts').select('id').eq('kind', 'lesson').limit(2);
+    const { id: series } = await saveSeries(owner, null, {
+      title: 'Restore drill series',
+      post_ids: (lessons ?? []).map((l) => l.id as string),
+    });
     const before = readExport((await exportZip(owner)).body);
     expect(before.tables.posts.length).toBeGreaterThan(0);
+    expect(before.tables.series_lessons).toHaveLength(2);
 
     await emptyContent(service);
     const { count } = await service.from('posts').select('*', { count: 'exact', head: true });
@@ -58,6 +66,7 @@ describe('restore', () => {
     // And students see the same pages again.
     const { count: live } = await service.from('public_posts').select('*', { count: 'exact', head: true });
     expect(live).toBe(before.tables.posts.filter((p) => p.status === 'published').length);
+    await deleteSeries(owner, series);
   });
 
   it('reads a .zip or its content.json, and nothing else', async () => {

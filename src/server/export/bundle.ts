@@ -23,6 +23,8 @@ export const EXPORT_TABLES = [
   { name: 'author_sections', order: 'id' },
   { name: 'author_items', order: 'id' },
   { name: 'featured_problems', order: 'id' },
+  { name: 'series', order: 'id' },
+  { name: 'series_lessons', order: 'series_id' },
 ] as const;
 
 export type TableName = (typeof EXPORT_TABLES)[number]['name'];
@@ -49,7 +51,11 @@ export async function readContent(supabase: SupabaseClient, now = new Date()): P
         .select('*')
         .order(order)
         .range(from, from + PAGE - 1);
-      const { data, error } = await (name === 'post_media' ? query.order('media_id') : query);
+      const { data, error } = await (name === 'post_media'
+        ? query.order('media_id')
+        : name === 'series_lessons'
+          ? query.order('position')
+          : query);
       if (error) throw new Error(`${name}: ${error.message}`);
       rows.push(...(data as Row[]));
       if (data.length < PAGE) break;

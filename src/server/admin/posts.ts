@@ -127,7 +127,38 @@ export async function publishPost(supabase: SupabaseClient, id: string, revision
       has_code: out.hasCode,
     },
   });
-  return { ...result, paths: revalidationPaths(result, await sectionLessons(supabase, result)) };
+  return { ...result, paths: await pagesShowing(supabase, id, result) };
+}
+
+/** Every static page that shows the post: its own, its subject's, its section's and series' lessons… */
+async function pagesShowing(supabase: SupabaseClient, id: string, ref: PublishedRef, series?: string[]) {
+  const [lessons, seriesPaths] = await Promise.all([
+    sectionLessons(supabase, ref),
+    series ?? seriesPages(supabase, id),
+  ]);
+  return [...new Set([...revalidationPaths(ref, lessons), ...seriesPaths])];
+}
+
+/**
+ * The series the post is in (v1.1): their pages, the series list and their lessons' pages
+ * ("Part n of N", previous/next) all change when it comes or goes.
+ */
+async function seriesPages(supabase: SupabaseClient, id: string): Promise<string[]> {
+  const { data, error } = await supabase.from('series_lessons').select('series_id').eq('post_id', id);
+  if (error) fail(error, 'series_lessons');
+  const ids = (data ?? []).map((r) => r.series_id as string);
+  if (!ids.length) return [];
+  const [series, lessons] = await Promise.all([
+    supabase.from('series').select('slug').in('id', ids),
+    supabase.from('public_series_lessons').select('slug').in('series_id', ids),
+  ]);
+  if (series.error) fail(series.error, 'series');
+  if (lessons.error) fail(lessons.error, 'public_series_lessons');
+  return [
+    '/series',
+    ...series.data.map((r) => `/series/${r.slug as string}`),
+    ...lessons.data.map((r) => `/posts/${r.slug as string}`),
+  ];
 }
 
 /** Live lessons in the post's section(s), whose pages list it (prev/next, section list). */
@@ -141,7 +172,7 @@ async function sectionLessons(supabase: SupabaseClient, ref: PublishedRef): Prom
 
 export async function unpublishPost(supabase: SupabaseClient, id: string) {
   const result = await call<PublishedRef>(supabase, 'admin_unpublish_post', { p_id: uuid.parse(id) });
-  return { ...result, paths: revalidationPaths(result, await sectionLessons(supabase, result)) };
+  return { ...result, paths: await pagesShowing(supabase, id, result) };
 }
 
 export async function schedulePost(supabase: SupabaseClient, id: string, revision: number, at: Date, now = new Date()) {
@@ -163,12 +194,14 @@ export async function restoreRevision(supabase: SupabaseClient, id: string, revi
 }
 
 export async function deletePost(supabase: SupabaseClient, id: string) {
+  // Read before deleting: the lesson leaves its series with it.
+  const series = await seriesPages(supabase, uuid.parse(id));
   const result = await call<PublishedRef & { was_published: boolean }>(supabase, 'admin_delete_post', {
-    p_id: uuid.parse(id),
+    p_id: id,
   });
   return {
     ...result,
-    paths: result.was_published ? revalidationPaths(result, await sectionLessons(supabase, result)) : [],
+    paths: result.was_published ? await pagesShowing(supabase, id, result, series) : [],
   };
 }
 

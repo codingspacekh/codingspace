@@ -38,7 +38,33 @@ export type PostPageData = {
   section: { slug: string; title: string } | null;
   /** Lessons in the same section, in order (empty for life posts). */
   siblings: { slug: string; title: string }[];
+  /** The series this lesson is in (v1.1), each with its place and neighbours. */
+  series: SeriesNav[];
 };
+
+/** A lesson in a series, as its neighbours' links show it. */
+export type SeriesLink = { slug: string; title: string; subject: SubjectId | null };
+
+/** "Part 3 of 7 in Maths for Physics", with the lessons before and after it. */
+export type SeriesNav = {
+  slug: string;
+  title: string;
+  position: number;
+  total: number;
+  prev: SeriesLink | null;
+  next: SeriesLink | null;
+};
+
+export type SeriesSummary = {
+  slug: string;
+  title: string;
+  description: string;
+  lessonCount: number;
+  /** The subjects its lessons come from, in the site's subject order. */
+  subjects: SubjectId[];
+};
+
+export type SeriesPageData = Omit<SeriesSummary, 'lessonCount'> & { lessons: PostCard[] };
 
 export type SectionWithLessons = {
   slug: string;

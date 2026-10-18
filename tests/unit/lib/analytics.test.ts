@@ -24,6 +24,7 @@ describe('which pages are counted', () => {
     ['/study/math', '/study/math'],
     ['/posts/am-gm-inequality?x=1#proof', '/posts/am-gm-inequality'],
     ['/series/paper-1', '/series/paper-1'],
+    ['/series', '/series'],
     ['/search?q=cauchy', '/search'],
     ['/projects/', '/projects'],
     ['/author', '/author'],

@@ -72,6 +72,17 @@ function StudyMenu({ active }: { active: boolean }) {
             </Link>
           </li>
         ))}
+        <li>
+          <Link href="/series" className="mi c-pink" onClick={() => setOpen(false)}>
+            <span className="g" aria-hidden="true">
+              ⇢
+            </span>
+            <span>
+              <strong>Series</strong>
+              <span>Lessons from across subjects, in the order to take them.</span>
+            </span>
+          </Link>
+        </li>
       </ul>
     </div>
   );

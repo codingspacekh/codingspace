@@ -21,6 +21,8 @@ const CONFLICT: Record<TableName, string> = {
   author_sections: 'id', // the built-in ones are already there, like the subjects
   author_items: 'id',
   featured_problems: 'id',
+  series: 'id',
+  series_lessons: 'series_id,post_id',
 };
 const BATCH = 200;
 
