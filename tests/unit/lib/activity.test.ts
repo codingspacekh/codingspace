@@ -66,6 +66,15 @@ describe('describeEvent', () => {
     });
   });
 
+  it('describes moderating questions without quoting them (v1.1)', () => {
+    expect(
+      describeEvent(event('question.publish', { entity: 'question', meta: { name: 'Dara', lesson: 'am-gm' } })),
+    ).toEqual({
+      text: 'Published a question from Dara',
+      href: '/admin/questions',
+    });
+  });
+
   it('shows when a post was scheduled for', () => {
     expect(describeEvent(event('post.schedule', { name: 'Vectors', meta: { at: '2026-10-20T01:00:00Z' } })).text).toBe(
       'Scheduled “Vectors” for 20 Oct 2026',

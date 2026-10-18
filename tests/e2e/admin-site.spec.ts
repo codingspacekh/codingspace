@@ -504,4 +504,44 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await page.request.delete(`/api/admin/posts/${id}`, { headers });
     }
   });
+
+  test('questions: a student asks under a lesson → the owner publishes it with an answer → it shows there', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const name = `E2E student ${Date.now() % 100000}`;
+    try {
+      const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+      const problems = await collectProblems(student);
+      await student.goto('/posts/am-gm-inequality');
+      const form = student.getByRole('form', { name: 'Ask a question' });
+      await form.getByRole('textbox', { name: 'Your name' }).fill(name);
+      await form.getByRole('textbox', { name: 'Your question' }).fill('When is $a + b = 2\\sqrt{ab}$?');
+      await form.getByRole('button', { name: 'Send question' }).click();
+      await expect(form.getByRole('status')).toHaveText(
+        'Thank you! Your question will appear here once the teacher has read it.',
+      );
+      await expectAccessible(student);
+
+      await page.goto('/admin');
+      await expect(page.getByRole('link', { name: /Questions waiting/ })).toBeVisible();
+      await page.goto('/admin/questions');
+      const card = page.getByRole('listitem').filter({ hasText: name });
+      await card.getByRole('textbox', { name: /Your answer/ }).fill('Exactly when $a = b$.');
+      await card.getByRole('button', { name: 'Publish with answer' }).click();
+      await expect(page.locator('.adm-main > .adm-live')).toHaveText('Published, with your answer.');
+      await expectAccessible(page);
+
+      await student.goto('/posts/am-gm-inequality');
+      const asked = student.getByRole('region', { name: 'Questions' }).getByRole('listitem').filter({ hasText: name });
+      await expect(asked.getByText('Teacher')).toBeVisible();
+      await expect(asked).toContainText('Exactly when');
+      await student.context().close();
+      expect(problems).toEqual([]);
+    } finally {
+      // Even if a step fails: a leftover question would show on a lesson other tests read.
+      await serviceClient().from('questions').delete().eq('name', name);
+    }
+  });
 });

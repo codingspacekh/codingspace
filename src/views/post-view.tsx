@@ -6,6 +6,7 @@ import { neighbours } from '@/lib/lesson-nav';
 import { useSubjects } from '@/lib/subjects';
 import { pointAnchor } from '@/lib/syllabus';
 import { usePractice } from './practice';
+import { LessonQuestions } from './lesson-questions';
 import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
 import { markDone, savePost, unmarkDone, unsavePost, useDone, useHydrated, usePrefs, useSaved } from '@/ui';
 import { DoneTick, Progress } from './progress';
@@ -166,7 +167,7 @@ function SeriesBox({ series }: { series: SeriesNav }) {
   );
 }
 
-export function PostView({ post, section, siblings, series = [], syllabus = [] }: PostPageData) {
+export function PostView({ post, section, siblings, series = [], syllabus = [], questions }: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
   usePractice(article);
@@ -178,7 +179,7 @@ export function PostView({ post, section, siblings, series = [], syllabus = [] }
   return (
     <div className={subject ? `c-${subject.color}` : 'c-pink'}>
       {/* KaTeX CSS and fonts load only on pages that contain maths (03 §7.6). */}
-      {post.hasMath && (
+      {(post.hasMath || questions?.some((q) => q.hasMath)) && (
         <Head>
           <link rel="stylesheet" href="/katex/katex.min.css" />
         </Head>
@@ -269,6 +270,8 @@ export function PostView({ post, section, siblings, series = [], syllabus = [] }
           {series.map((s) => (
             <SeriesBox key={s.slug} series={s} />
           ))}
+          {/* The admin preview has no questions (undefined): no form there. */}
+          {isLesson && questions && <LessonQuestions slug={post.slug} questions={questions} />}
         </article>
 
         {section && siblings.length > 0 ? (

@@ -90,6 +90,11 @@ export function Dashboard({ request }: { request?: Request }) {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/admin/questions" className="frame">
+                <strong>{data.questions ?? 0}</strong> <span>Questions waiting</span>
+              </Link>
+            </li>
           </ul>
           <h2>Recently edited</h2>
           {data.recent.length === 0 ? (

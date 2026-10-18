@@ -1432,6 +1432,84 @@ html {
   }
 }
 
+/* Questions under a lesson (v1.1). */
+.questions {
+  display: grid;
+  gap: 18px;
+  margin-top: 48px;
+}
+.questions h2,
+.questions h3 {
+  margin: 0;
+}
+.q-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.q-list > li {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px;
+}
+.q-list .meta {
+  margin: 0;
+}
+.q-answer {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--lime);
+  background: color-mix(in srgb, var(--lime) 7%, transparent);
+}
+.q-answer .tag {
+  --c: var(--lime);
+}
+.q-form {
+  display: grid;
+  gap: 8px;
+  max-width: 640px;
+}
+.q-form label {
+  color: var(--fg2);
+  font-size: 14px;
+}
+.q-form input,
+.q-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+}
+.q-form input:focus-visible,
+.q-form textarea:focus-visible {
+  outline: 2px solid var(--c, var(--cyan));
+  outline-offset: 2px;
+}
+.q-form .btn {
+  justify-self: start;
+  margin-top: 6px;
+}
+.q-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.q-result:empty {
+  display: none;
+}
+/* The honeypot: off screen, never focused (tabindex -1), hidden from assistive technology. */
+.q-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 /* rendered content (src/server/render): prose, maths, code, callouts, media, tables */
 .prose {
   display: grid;
@@ -2043,6 +2121,7 @@ html[data-reading='on'] .prose li {
   .done-box,
   .practice-check,
   .practice-self,
+  .q-form,
   .code-copy,
   .embed {
     display: none !important;
@@ -3131,6 +3210,24 @@ img.ProseMirror-separator {
 }
 .adm-series-pick .btn {
   padding: 6px 10px;
+}
+/* Questions admin (v1.1): the student's text as typed. */
+.adm-q-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.adm-q textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+}
+.adm-form-label {
+  color: var(--fg2);
+  font-size: 14px;
 }
 /* Subjects admin (v1.1): each subject's symbol in its colour, and the address field. */
 .adm-glyph,

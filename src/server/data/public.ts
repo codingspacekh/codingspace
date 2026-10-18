@@ -21,6 +21,7 @@ import type {
   SyllabusPageData,
   SyllabusSummary,
   SyllabusTag,
+  LessonQuestion,
 } from './types';
 
 /**
@@ -186,6 +187,7 @@ export const isPostSlug = (slug: string): boolean => /^[a-z0-9]+(-[a-z0-9]+)*$/.
 export async function getPostPage(slug: string): Promise<PostPageData | null> {
   if (!isPostSlug(slug)) return null;
   const row = must<{
+    id: string;
     slug: string;
     kind: 'lesson' | 'life';
     title: string;
@@ -205,7 +207,7 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     await db()
       .from('public_posts')
       .select(
-        'slug, kind, title, summary, html, toc, subject_id, section_id, level, lang, minutes, problem_count, has_math, published_at, updated_at',
+        'id, slug, kind, title, summary, html, toc, subject_id, section_id, level, lang, minutes, problem_count, has_math, published_at, updated_at',
       )
       .eq('slug', slug)
       .maybeSingle(),
@@ -231,11 +233,12 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
   };
   if (!row.section_id) return { post, section: null, siblings: [], series: [], syllabus: [] };
 
-  const [section, siblings, series, syllabus] = await Promise.all([
+  const [section, siblings, series, syllabus, questions] = await Promise.all([
     db().from('public_sections').select('slug, title').eq('id', row.section_id).maybeSingle(),
     db().from('public_posts').select('slug, title').eq('section_id', row.section_id).order('sort').order('slug'),
     getSeriesNav(row.slug),
     getSyllabusTags(row.slug),
+    row.kind === 'lesson' ? getLessonQuestions(row.id) : Promise.resolve([]),
   ]);
   return {
     post,
@@ -243,6 +246,7 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     siblings: must<{ slug: string; title: string }[]>(siblings, 'siblings'),
     series,
     syllabus,
+    questions,
   };
 }
 
@@ -337,6 +341,32 @@ export async function getSyllabusPage(slug: string): Promise<SyllabusPageData | 
       lessons: lessonRows.filter((l) => l.point_id === p.id).map(toCard),
     })),
   };
+}
+
+/** Approved questions under a lesson, oldest first; questions and answers are Markdown (v1.1). */
+async function getLessonQuestions(postId: string): Promise<LessonQuestion[]> {
+  const rows = must<{ id: string; name: string; body: string; answer: string; published_at: string }[]>(
+    await db()
+      .from('questions')
+      .select('id, name, body, answer, published_at')
+      .eq('post_id', postId)
+      .order('published_at')
+      .limit(200),
+    'questions',
+  );
+  return Promise.all(
+    rows.map(async (q) => {
+      const [body, answer] = await Promise.all([renderSnippet(q.body), renderSnippet(q.answer)]);
+      return {
+        id: q.id,
+        name: q.name,
+        bodyHtml: body.html,
+        answerHtml: answer.html,
+        publishedAt: q.published_at,
+        hasMath: body.hasMath || answer.hasMath,
+      };
+    }),
+  );
 }
 
 // ---------- series (v1.1) ----------

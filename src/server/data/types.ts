@@ -43,6 +43,8 @@ export type PostPageData = {
   series: SeriesNav[];
   /** The syllabus points it covers (v1.1). */
   syllabus?: SyllabusTag[];
+  /** Approved questions under the lesson, oldest first (v1.1). */
+  questions?: LessonQuestion[];
 };
 
 /** "9618 · 1.1 Data representation", linking to that point on /syllabus/<slug>. */
@@ -87,6 +89,16 @@ export type SeriesSummary = {
   lessonSlugs: string[];
   /** The subjects its lessons come from, in the site's subject order (not `subjects`: _app reads that prop). */
   subjectIds: SubjectId[];
+};
+
+/** A student's question and the teacher's answer, both rendered from Markdown. */
+export type LessonQuestion = {
+  id: string;
+  name: string;
+  bodyHtml: string;
+  answerHtml: string;
+  publishedAt: string;
+  hasMath: boolean;
 };
 
 export type SeriesPageData = Omit<SeriesSummary, 'lessonCount' | 'lessonSlugs'> & { lessons: PostCard[] };

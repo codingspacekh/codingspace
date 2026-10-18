@@ -1,0 +1,94 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { LessonQuestions } from '@/views/lesson-questions';
+import { render } from '../../support/subjects';
+
+const QUESTIONS = [
+  {
+    id: 'q1',
+    name: 'Dara',
+    bodyHtml: '<p>Why is it true?</p>',
+    answerHtml: '<p>Because squares are never negative.</p>',
+    publishedAt: '2026-10-18T03:00:00Z',
+    hasMath: false,
+  },
+  {
+    id: 'q2',
+    name: 'Sok',
+    bodyHtml: '<p>Is there a hint?</p>',
+    answerHtml: '',
+    publishedAt: '2026-10-18T04:00:00Z',
+    hasMath: false,
+  },
+];
+
+function mockFetch(result: string, status = 200) {
+  const calls: { url: string; body: unknown }[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init: RequestInit = {}) => {
+      calls.push({ url, body: JSON.parse(String(init.body)) });
+      return new Response(JSON.stringify({ result }), { status });
+    }),
+  );
+  return calls;
+}
+afterEach(() => vi.unstubAllGlobals());
+
+describe('<LessonQuestions> (v1.1)', () => {
+  it('lists approved questions with the teacher’s answers', () => {
+    render(<LessonQuestions slug="am-gm" questions={QUESTIONS} />);
+    const section = screen.getByRole('region', { name: 'Questions' });
+    const [first, second] = within(section).getAllByRole('listitem');
+    expect(first).toHaveTextContent('Dara · 18 Oct 2026');
+    expect(within(first!).getByText('Teacher')).toBeInTheDocument();
+    expect(first).toHaveTextContent('Because squares are never negative.');
+    expect(within(second!).queryByText('Teacher')).toBeNull();
+  });
+
+  it('asks a question: a plain form that works without JavaScript, sent as JSON with it', async () => {
+    const calls = mockFetch('ok');
+    const user = userEvent.setup();
+    render(<LessonQuestions slug="am-gm" questions={[]} />);
+    expect(screen.getByText('No questions yet. Ask the first one.')).toBeInTheDocument();
+    const form = screen.getByRole('form', { name: 'Ask a question' });
+    expect(form).toHaveAttribute('action', '/api/questions');
+    expect(form).toHaveAttribute('method', 'post');
+
+    await user.click(within(form).getByRole('button', { name: 'Send question' }));
+    // The browser's own "required" check stops an empty form; the script says so too.
+    await user.type(within(form).getByRole('textbox', { name: 'Your name' }), 'Dara');
+    await user.type(within(form).getByRole('textbox', { name: 'Your question' }), 'Why $x^2 \\ge 0$?');
+    await user.click(within(form).getByRole('button', { name: 'Send question' }));
+    await waitFor(() =>
+      expect(calls[0]).toEqual({
+        url: '/api/questions',
+        body: { post: 'am-gm', name: 'Dara', question: 'Why $x^2 \\ge 0$?', website: '' },
+      }),
+    );
+    expect(await within(form).findByRole('status')).toHaveTextContent(
+      'Thank you! Your question will appear here once the teacher has read it.',
+    );
+    expect(within(form).getByRole('textbox', { name: 'Your question' })).toHaveValue('');
+    expect(within(form).getByRole('textbox', { name: 'Your name' })).toHaveValue('Dara');
+  });
+
+  it('says when a visitor has asked too much', async () => {
+    mockFetch('limited', 429);
+    const user = userEvent.setup();
+    render(<LessonQuestions slug="am-gm" questions={[]} />);
+    const form = screen.getByRole('form', { name: 'Ask a question' });
+    await user.type(within(form).getByRole('textbox', { name: 'Your name' }), 'D');
+    await user.type(within(form).getByRole('textbox', { name: 'Your question' }), 'Q');
+    await user.click(within(form).getByRole('button', { name: 'Send question' }));
+    expect(await within(form).findByRole('status')).toHaveTextContent('Please try again later.');
+  });
+
+  it('keeps the honeypot away from people and assistive technology', () => {
+    render(<LessonQuestions slug="am-gm" questions={[]} />);
+    const trap = document.querySelector('input[name="website"]')!;
+    expect(trap).toHaveAttribute('tabindex', '-1');
+    expect(trap.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Leave this empty' })).toBeNull();
+  });
+});
