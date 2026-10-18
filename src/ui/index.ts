@@ -9,3 +9,4 @@ export { TopBar, type NavItem } from './top-bar';
 export { SkipLink } from './skip-link';
 export { PageEffects } from './page-effects';
 export { VisitTracker } from './visit-tracker';
+export { savePost, unsavePost, useSaved, type SavedPost } from './saved-store';

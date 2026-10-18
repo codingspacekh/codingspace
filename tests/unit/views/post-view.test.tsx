@@ -140,6 +140,22 @@ describe('<PostView>', () => {
   });
 });
 
+describe('save for later', () => {
+  it('saves the lesson in this browser and links to the saved list', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const { getSaved } = await import('@/ui/saved-store');
+    renderPost(base);
+    await userEvent.click(screen.getByRole('button', { name: '☆ Save' }));
+    const saved = screen.getByRole('button', { name: '★ Saved' });
+    expect(saved).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('link', { name: 'Your saved lessons' })).toHaveAttribute('href', '/saved');
+    expect(getSaved()).toMatchObject([{ slug: 'am-gm-inequality', title: 'The AM–GM inequality', subject: 'math' }]);
+    await userEvent.click(saved);
+    expect(getSaved()).toEqual([]);
+    expect(screen.getByRole('button', { name: '☆ Save' })).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
 describe('reading mode and print (PUB-11)', () => {
   it('reading mode is a remembered toggle that calms the page', async () => {
     const { default: userEvent } = await import('@testing-library/user-event');
