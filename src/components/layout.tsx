@@ -57,6 +57,7 @@ export function Layout({
                 {SUBJECTS[id].name}
               </Link>
             ))}
+            <Link href="/series">Series</Link>
             <Link href="/projects">Projects</Link>
             <Link href="/author">Author</Link>
             <a href="/rss.xml">RSS</a>

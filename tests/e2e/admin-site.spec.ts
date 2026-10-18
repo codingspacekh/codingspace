@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
-import { collectProblems, enrolEditor, expectAccessible, signInEditor } from './helpers';
+import { collectProblems, enrolEditor, expectAccessible, openStudyMenu, signInEditor } from './helpers';
 
 // M5 site content (03 ADM-11, ADM-13, ADM-14), as the second test owner. Runs in its own
 // Playwright project after the public-page tests, and leaves the content as it found it.
@@ -208,5 +208,65 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await expect(student.locator('.profile .avatar picture')).toHaveCount(0);
     await student.context().close();
     expect(problems).toEqual([]);
+  });
+
+  test('series: build one across two subjects → its page, the Study menu and each lesson show it; then delete it', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const problems = await collectProblems(page);
+    const title = `E2E series ${Date.now()}`;
+    await page.goto('/admin/series');
+    await expect(page.getByRole('heading', { level: 1, name: 'Series' })).toBeVisible();
+    const form = page.getByRole('form', { name: 'Add a series' });
+    await form.getByRole('textbox', { name: 'Title' }).fill(title);
+    const pick = form.getByRole('combobox', { name: 'Add a lesson' });
+    for (const lesson of ['Projectile motion', 'The AM–GM inequality']) {
+      await pick.selectOption({ label: lesson });
+      await form.getByRole('button', { name: 'Add to the series' }).click();
+    }
+    // The maths first, then the physics that uses it.
+    await form.getByRole('button', { name: 'Move The AM–GM inequality up' }).click();
+    await form.getByRole('button', { name: 'Add series' }).click();
+    await expect(page.getByRole('status')).toHaveText(`Added “${title}” at the end.`);
+    await expectAccessible(page);
+    const created = (
+      (await (await page.request.get('/api/admin/series')).json()).series as {
+        slug: string;
+        title: string;
+        id: string;
+      }[]
+    ).find((s) => s.title === title)!;
+
+    const student = await (await context.browser()!.newContext({ baseURL })).newPage();
+    const studentProblems = await collectProblems(student);
+    await student.goto('/');
+    await openStudyMenu(student);
+    await student.getByRole('link', { name: /^Series Lessons from across subjects/ }).click();
+    await expect(student.getByRole('heading', { level: 1, name: 'Series' })).toBeVisible();
+    await student.getByRole('link', { name: new RegExp(title) }).click();
+    await expect(student.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(student.getByRole('list', { name: `${title}, in order` }).getByRole('link')).toHaveText([
+      /The AM–GM inequality/,
+      /Projectile motion/,
+    ]);
+    await expectAccessible(student);
+    await student.getByRole('link', { name: 'Start with part 1 →' }).click();
+    const box = student.getByRole('navigation', { name: `Series: ${title}` });
+    await expect(box).toContainText('Part 1 of 2');
+    await box.getByRole('link', { name: /Next → · Physics/ }).click();
+    await expect(student.getByRole('heading', { level: 1, name: 'Projectile motion' })).toBeVisible();
+    await expect(student.getByText(`Part 2 of 2 in the series ${title}`)).toBeVisible();
+    await expectAccessible(student);
+
+    // Delete it: its page goes, the lessons stay.
+    await page.getByRole('button', { name: `Delete ${title}` }).click();
+    await page.getByRole('button', { name: 'Delete series' }).click();
+    await expect(page.getByRole('status')).toHaveText(`Deleted “${title}”.`);
+    expect((await student.goto(`/series/${created.slug}`))!.status()).toBe(404);
+    await student.context().close();
+    expect(problems).toEqual([]);
+    expect(studentProblems.filter((p) => !p.includes('404'))).toEqual([]);
   });
 });

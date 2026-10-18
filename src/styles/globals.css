@@ -915,7 +915,10 @@ html {
 }
 .crumbs a {
   color: var(--fg2);
-  text-decoration: none;
+  /* A faint underline: links must not differ from the text by colour alone (WCAG 1.4.1). */
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 4px;
 }
 .crumbs a:hover {
   color: var(--cyan);
@@ -1091,6 +1094,78 @@ html {
   .pn a:last-child {
     text-align: left;
   }
+}
+
+/* Lesson series (v1.1): the line under a lesson's title, the box at its end, the series pages. */
+.series-line {
+  color: var(--fg2);
+  font-size: 15px;
+}
+.series-line a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.series-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.series-box .pn {
+  margin-top: 8px;
+}
+.series-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+.series-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.series-card {
+  display: grid;
+  gap: 10px;
+  height: 100%;
+  padding: 20px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.series-card h2 {
+  font-size: 20px;
+}
+.series-card p {
+  color: var(--fg2);
+  font-size: 15px;
+}
+.series-lessons {
+  display: grid;
+  gap: 14px;
+  max-width: 820px;
+  margin: 36px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+.series-lessons li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.series-lessons li > div {
+  display: grid;
+  gap: 8px;
+}
+.series-lessons .sn {
+  padding-top: 4px;
+  color: var(--c);
+  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-size: 13px;
+  letter-spacing: 0.14em;
 }
 
 /* rendered content (src/server/render): prose, maths, code, callouts, media, tables */
@@ -2454,6 +2529,48 @@ img.ProseMirror-separator {
   font-size: 20px;
 }
 .adm-section .adm-quick .btn {
+  padding: 6px 10px;
+}
+/* Series admin (v1.1): the lessons of a series, and the ordered picker in its form. */
+.adm-fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+}
+.adm-fieldset legend {
+  padding: 0 6px;
+  color: var(--fg2);
+  font-size: 14px;
+}
+.adm-fieldset .adm-filters {
+  margin: 0;
+}
+.adm-series-lessons {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.6em;
+}
+.adm-series-lessons .adm-status,
+.adm-series-pick .adm-status {
+  margin-left: 8px;
+}
+.adm-series-pick {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.6em;
+}
+.adm-series-pick li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+.adm-series-pick .btn {
   padding: 6px 10px;
 }
 .adm-lessons {

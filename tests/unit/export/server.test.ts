@@ -57,6 +57,8 @@ function content() {
     author_sections: [{ id: 'timeline', kind: 'timeline', title: 'Timeline', sort: 1 }],
     author_items: [{ id: 'i1', section_id: 'timeline', title: 'Started', period: '2018', sort: 1 }],
     featured_problems: [{ id: 'f1', subject_id: 'math' }],
+    series: [{ id: 's1', slug: 'paper-1', title: 'Paper 1', description: '', sort: 1 }],
+    series_lessons: [{ series_id: 's1', post_id: 'p1', position: 1 }],
   };
 }
 

@@ -25,6 +25,7 @@ const base: PostPageData = {
     { slug: 'am-gm-inequality', title: 'The AM–GM inequality' },
     { slug: 'cauchy-schwarz-inequality', title: 'The Cauchy–Schwarz inequality' },
   ],
+  series: [],
 };
 
 const renderPost = (data: PostPageData) =>
@@ -88,6 +89,7 @@ describe('<PostView>', () => {
       },
       section: null,
       siblings: [],
+      series: [],
     });
     expect(screen.getByRole('article')).toHaveAttribute('lang', 'km');
     // The TOC sits outside the article, so its Khmer links need their own lang.
@@ -95,8 +97,43 @@ describe('<PostView>', () => {
     expect(within(toc).getByRole('link', { name: 'រៀនរាល់ថ្ងៃ' })).toHaveAttribute('lang', 'km');
   });
 
+  it('shows its place in each series, with neighbours from other subjects (v1.1)', () => {
+    renderPost({
+      ...base,
+      series: [
+        {
+          slug: 'maths-for-physics',
+          title: 'Maths for Physics',
+          position: 2,
+          total: 3,
+          prev: { slug: 'vectors', title: 'Vectors', subject: 'math' },
+          next: { slug: 'projectile-motion', title: 'Projectile motion', subject: 'physics' },
+        },
+        { slug: 'olympiad-start', title: 'Olympiad start', position: 1, total: 1, prev: null, next: null },
+      ],
+    });
+    expect(screen.getByText(/Part 2 of 3 in the series/)).toBeInTheDocument();
+    const box = screen.getByRole('navigation', { name: 'Series: Maths for Physics' });
+    expect(within(box).getByText('Series · Part 2 of 3')).toBeInTheDocument();
+    expect(within(box).getByRole('link', { name: 'Maths for Physics' })).toHaveAttribute(
+      'href',
+      '/series/maths-for-physics',
+    );
+    expect(within(box).getByRole('link', { name: /Previous · Math Vectors/ })).toHaveAttribute(
+      'href',
+      '/posts/vectors',
+    );
+    expect(within(box).getByRole('link', { name: /Next → · Physics Projectile motion/ })).toHaveAttribute(
+      'href',
+      '/posts/projectile-motion',
+    );
+    // A one-lesson series has no previous/next.
+    const single = screen.getByRole('navigation', { name: 'Series: Olympiad start' });
+    expect(within(single).getAllByRole('link')).toHaveLength(1);
+  });
+
   it('puts life posts under the Author page', () => {
-    renderPost({ post: { ...base.post, kind: 'life', subject: null }, section: null, siblings: [] });
+    renderPost({ post: { ...base.post, kind: 'life', subject: null }, section: null, siblings: [], series: [] });
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Author' })).toHaveAttribute('href', '/author');
     expect(screen.queryByText('Beginner')).toBeNull();

@@ -29,7 +29,7 @@ export async function previewPost(supabase: SupabaseClient, id: string): Promise
     updatedAt: now,
   };
   const section = sections.find((s) => s.id === draft.section_id);
-  if (draft.kind !== 'lesson' || !section) return { post, section: null, siblings: [] };
+  if (draft.kind !== 'lesson' || !section) return { post, section: null, siblings: [], series: [] };
 
   const { data: live, error } = await supabase
     .from('public_posts')
@@ -45,5 +45,6 @@ export async function previewPost(supabase: SupabaseClient, id: string): Promise
   ]
     .sort((a, b) => a.sort - b.sort || a.slug.localeCompare(b.slug))
     .map(({ slug, title }) => ({ slug, title }));
-  return { post, section: { slug: section.slug, title: section.title }, siblings };
+  // Series links show on the live page only.
+  return { post, section: { slug: section.slug, title: section.title }, siblings, series: [] };
 }

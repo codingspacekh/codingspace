@@ -22,8 +22,8 @@ select hasnt_view('public', v, format('the old view %s is gone (visitors use aut
 -- Invoker views keep RLS and column grants in force underneath the view.
 select is((select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
            where n.nspname = 'public' and c.relkind = 'v' and c.relname like 'public\_%'
-             and 'security_invoker=true' = any (c.reloptions)),
-          4, 'every public view runs with the caller''s rights (security_invoker)');
+             and not coalesce('security_invoker=true' = any (c.reloptions), false)),
+          0, 'every public view runs with the caller''s rights (security_invoker)');
 
 select hasnt_column('public', 'public_posts', c, format('public_posts hides %s', c))
   from unnest(array['content_json', 'live_title', 'status', 'scheduled_at']) as c;

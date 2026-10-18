@@ -26,10 +26,18 @@ test('sitemap.xml lists the pages and every published post', async ({ request })
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('application/xml');
   const xml = await res.text();
-  for (const path of ['/study/math', '/projects', '/author', '/posts/am-gm-inequality', '/posts/study-tips-km']) {
+  for (const path of [
+    '/study/math',
+    '/series',
+    '/projects',
+    '/author',
+    '/posts/am-gm-inequality',
+    '/posts/study-tips-km',
+  ]) {
     expect(xml).toContain(`${path}</loc>`);
   }
-  expect(xml.match(/<url>/g)).toHaveLength(7 + 11); // home, 4 subjects, projects, author + posts
+  // home, 4 subjects, series, projects, author + posts (the content has no series of its own)
+  expect(xml.match(/<url>/g)).toHaveLength(8 + 11);
 });
 
 test('rss.xml is a feed of the newest posts', async ({ request }) => {

@@ -12,6 +12,9 @@ import type {
   Profile,
   Project,
   SectionWithLessons,
+  SeriesNav,
+  SeriesPageData,
+  SeriesSummary,
 } from './types';
 
 /**
@@ -210,16 +213,103 @@ export async function getPostPage(slug: string): Promise<PostPageData | null> {
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
   };
-  if (!row.section_id) return { post, section: null, siblings: [] };
+  if (!row.section_id) return { post, section: null, siblings: [], series: [] };
 
-  const [section, siblings] = await Promise.all([
+  const [section, siblings, series] = await Promise.all([
     db().from('public_sections').select('slug, title').eq('id', row.section_id).maybeSingle(),
     db().from('public_posts').select('slug, title').eq('section_id', row.section_id).order('sort').order('slug'),
+    getSeriesNav(row.slug),
   ]);
   return {
     post,
     section: must<{ slug: string; title: string } | null>(section, 'section'),
     siblings: must<{ slug: string; title: string }[]>(siblings, 'siblings'),
+    series,
+  };
+}
+
+// ---------- series (v1.1) ----------
+
+type SeriesLessonRow = CardRow & { series_id: string; position: number };
+const SERIES_LESSON_COLUMNS = `series_id, position, ${CARD_COLUMNS}`;
+
+/** The subjects a series' lessons come from, in the site's subject order. */
+const subjectsOf = (lessons: { subject_id: string | null }[]): SubjectId[] =>
+  SUBJECT_IDS.filter((s) => lessons.some((l) => l.subject_id === s));
+
+/** Each series the lesson is in: its place, and the lessons before and after it. */
+async function getSeriesNav(slug: string): Promise<SeriesNav[]> {
+  const mine = must<{ series_id: string }[]>(
+    await db().from('public_series_lessons').select('series_id').eq('slug', slug),
+    'series of lesson',
+  );
+  const ids = mine.map((r) => r.series_id);
+  if (!ids.length) return [];
+  const [series, lessons] = await Promise.all([
+    db().from('public_series').select('id, slug, title').in('id', ids).order('sort'),
+    db().from('public_series_lessons').select('series_id, position, slug, title, subject_id').in('series_id', ids),
+  ]);
+  const lessonRows = must<Pick<SeriesLessonRow, 'series_id' | 'position' | 'slug' | 'title' | 'subject_id'>[]>(
+    lessons,
+    'series lessons',
+  );
+  return must<{ id: string; slug: string; title: string }[]>(series, 'series').map((s) => {
+    const list = lessonRows.filter((l) => l.series_id === s.id).sort((a, b) => a.position - b.position);
+    const i = list.findIndex((l) => l.slug === slug);
+    const link = (l: (typeof list)[number] | undefined) =>
+      l ? { slug: l.slug, title: l.title, subject: isSubjectId(l.subject_id) ? l.subject_id : null } : null;
+    return {
+      slug: s.slug,
+      title: s.title,
+      position: i + 1,
+      total: list.length,
+      prev: link(list[i - 1]),
+      next: link(list[i + 1]),
+    };
+  });
+}
+
+/** Every series with at least one published lesson, in the owner's order. */
+export async function getSeriesList(): Promise<SeriesSummary[]> {
+  const [series, lessons] = await Promise.all([
+    db().from('public_series').select('id, slug, title, description, lesson_count').gt('lesson_count', 0).order('sort'),
+    db().from('public_series_lessons').select('series_id, subject_id'),
+  ]);
+  const lessonRows = must<{ series_id: string; subject_id: string | null }[]>(lessons, 'series lessons');
+  return must<{ id: string; slug: string; title: string; description: string; lesson_count: number }[]>(
+    series,
+    'series',
+  ).map((s) => ({
+    slug: s.slug,
+    title: s.title,
+    description: s.description,
+    lessonCount: s.lesson_count,
+    subjects: subjectsOf(lessonRows.filter((l) => l.series_id === s.id)),
+  }));
+}
+
+export async function getSeriesSlugs(): Promise<string[]> {
+  return (await getSeriesList()).map((s) => s.slug);
+}
+
+export async function getSeriesPage(slug: string): Promise<SeriesPageData | null> {
+  if (!isPostSlug(slug)) return null;
+  const series = must<{ id: string; slug: string; title: string; description: string } | null>(
+    await db().from('public_series').select('id, slug, title, description').eq('slug', slug).maybeSingle(),
+    'series',
+  );
+  if (!series) return null;
+  const rows = must<SeriesLessonRow[]>(
+    await db().from('public_series_lessons').select(SERIES_LESSON_COLUMNS).eq('series_id', series.id).order('position'),
+    'series lessons',
+  );
+  if (!rows.length) return null;
+  return {
+    slug: series.slug,
+    title: series.title,
+    description: series.description,
+    subjects: subjectsOf(rows),
+    lessons: rows.map(toCard),
   };
 }
 

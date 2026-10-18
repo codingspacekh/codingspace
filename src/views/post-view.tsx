@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { levelLabel, postMeta } from '@/lib/format';
 import { neighbours } from '@/lib/lesson-nav';
 import { SUBJECTS } from '@/lib/subjects';
-import type { PostPageData } from '@/server/data/types';
+import type { PostPageData, SeriesLink, SeriesNav } from '@/server/data/types';
 import { usePrefs } from '@/ui';
 
 /** Copy buttons in code blocks (rendered by the server as plain <button class="code-copy">). */
@@ -62,7 +62,41 @@ function ReadingTools() {
   );
 }
 
-export function PostView({ post, section, siblings }: PostPageData) {
+/** One step along a series: the lesson's subject is shown, since a series crosses subjects. */
+function SeriesStep({ lesson, dir }: { lesson: SeriesLink; dir: 'prev' | 'next' }) {
+  const subject = lesson.subject ? SUBJECTS[lesson.subject] : null;
+  return (
+    <Link href={`/posts/${lesson.slug}`} className={`frame c-${subject?.color ?? 'pink'}`}>
+      <span className="meta">
+        {dir === 'prev' ? '← Previous' : 'Next →'}
+        {subject && ` · ${subject.name}`}
+      </span>{' '}
+      <strong>{lesson.title}</strong>
+    </Link>
+  );
+}
+
+/** v1.1: "Part 3 of 7" in each series the lesson is in, with the lessons before and after it. */
+function SeriesBox({ series }: { series: SeriesNav }) {
+  return (
+    <nav aria-label={`Series: ${series.title}`} className="series-box c-pink">
+      <p className="eyebrow">
+        Series · Part {series.position} of {series.total}
+      </p>
+      <p className="series-title">
+        <Link href={`/series/${series.slug}`}>{series.title}</Link>
+      </p>
+      {(series.prev || series.next) && (
+        <div className="pn">
+          {series.prev ? <SeriesStep lesson={series.prev} dir="prev" /> : <span />}
+          {series.next && <SeriesStep lesson={series.next} dir="next" />}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+export function PostView({ post, section, siblings, series = [] }: PostPageData) {
   const article = useRef<HTMLElement>(null);
   useCopyButtons(article);
   usePrintOpensDetails();
@@ -118,6 +152,11 @@ export function PostView({ post, section, siblings }: PostPageData) {
           )}
           <h1>{post.title}</h1>
           <div className="meta">{postMeta(post)}</div>
+          {series.map((s) => (
+            <p key={s.slug} className="series-line">
+              Part {s.position} of {s.total} in the series <Link href={`/series/${s.slug}`}>{s.title}</Link>
+            </p>
+          ))}
           <ReadingTools />
           {post.summary && <p className="lead">{post.summary}</p>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
@@ -138,6 +177,9 @@ export function PostView({ post, section, siblings }: PostPageData) {
               )}
             </nav>
           )}
+          {series.map((s) => (
+            <SeriesBox key={s.slug} series={s} />
+          ))}
         </article>
 
         {section && siblings.length > 0 ? (
