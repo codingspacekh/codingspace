@@ -48,3 +48,20 @@ describe('download fields (2026-10-20)', () => {
     ).toBeNull();
   });
 });
+
+describe('showcase points (2026-10-20)', () => {
+  it('reads a short code before a colon, and writes it back the same way', async () => {
+    const { parsePoints, pointsText } = await import('@/views/admin/project-page-fields');
+    const points = parsePoints(
+      'V4: Titles and captions\n\n  Snapshots  \nNote: a longer code-like word: stays text\nA12:EQ',
+    );
+    expect(points).toEqual([
+      { code: 'V4', text: 'Titles and captions' },
+      { code: '', text: 'Snapshots' },
+      { code: 'Note', text: 'a longer code-like word: stays text' },
+      { code: 'A12', text: 'EQ' },
+    ]);
+    expect(pointsText(points.slice(0, 2))).toBe('V4: Titles and captions\nSnapshots');
+    expect(parsePoints('Introduction: read me first')).toEqual([{ code: '', text: 'Introduction: read me first' }]);
+  });
+});

@@ -1,6 +1,17 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { renderSnippet, renderVisitorText } from '@/server/render/snippet';
-import type { ProjectDownload, ProjectFaq, ProjectFeature, ProjectReason, ProjectStep } from '@/lib/project-page';
+import {
+  sectionOrder,
+  type PageSection,
+  type ProjectDownload,
+  type ProjectFaq,
+  type ProjectFeature,
+  type ProjectHighlight,
+  type ProjectReason,
+  type ProjectReplaced,
+  type ProjectRequirement,
+  type ProjectStep,
+} from '@/lib/project-page';
 import type { Subject, SubjectId } from '@/lib/subjects';
 import { plainText, type PhotoShape, type SectionKind } from '@/lib/author';
 import type {
@@ -14,6 +25,7 @@ import type {
   Project,
   ProjectPageData,
   ProjectScreenshot,
+  ProjectShowcase,
   SectionWithLessons,
   SeriesNav,
   SeriesPageData,
@@ -572,12 +584,26 @@ export async function getProjectPage(slug: string): Promise<ProjectPageData | nu
         faq: ProjectFaq[];
         version: string;
         source_url: string | null;
+        highlights: ProjectHighlight[];
+        why_title: string;
+        why_text: string;
+        replaces: ProjectReplaced[];
+        requirements: ProjectRequirement[];
+        requirements_note: string;
+        release_date: string | null;
+        release_notes: string;
+        section_order: string[];
+        hidden_sections: PageSection[];
       })
     | null
   >(
     await db()
       .from('public_projects')
-      .select(`${PROJECT_CARD}, tagline, intro, reasons, features, steps, faq, version, source_url`)
+      .select(
+        `${PROJECT_CARD}, tagline, intro, reasons, features, steps, faq, version, source_url, highlights, ` +
+          'why_title, why_text, replaces, requirements, requirements_note, release_date, release_notes, ' +
+          'section_order, hidden_sections',
+      )
       .eq('slug', slug)
       .maybeSingle(),
     'project',
@@ -590,6 +616,14 @@ export async function getProjectPage(slug: string): Promise<ProjectPageData | nu
       .eq('project_id', row.id)
       .order('position'),
     'project screenshots',
+  );
+  const showcase = must<ProjectShowcase[]>(
+    await db()
+      .from('public_project_showcase')
+      .select('media, label, title, text, points, color, alt, widths, width, height')
+      .eq('project_id', row.id)
+      .order('position'),
+    'project showcase',
   );
   const [intro, ...answers] = await Promise.all([
     renderSnippet(row.intro),
@@ -608,6 +642,19 @@ export async function getProjectPage(slug: string): Promise<ProjectPageData | nu
     sourceUrl: row.source_url,
     screenshots: shots,
     hasMath: intro!.hasMath || answers.some((a) => a.hasMath),
+    sections: sectionOrder(row.section_order).filter((s) => !row.hidden_sections.includes(s)),
+    highlights: row.highlights,
+    whyTitle: row.why_title,
+    whyText: row.why_text,
+    replaces: row.replaces,
+    requirements: row.requirements,
+    requirementsNote: row.requirements_note,
+    releaseDate: row.release_date,
+    releaseNotes: row.release_notes
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean),
+    showcase,
   };
 }
 

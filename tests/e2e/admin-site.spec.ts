@@ -39,7 +39,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await form.getByRole('textbox', { name: 'Name' }).fill(name);
     await form.getByRole('textbox', { name: /Short description/ }).fill('Made by the end-to-end test.');
     // v1.1: the page is ours; a download link must be https.
-    await form.locator('summary', { hasText: 'Why use it' }).click();
+    await form.locator('summary', { hasText: /^Why/ }).click();
     await form.getByRole('button', { name: 'Add a reason' }).click();
     await form.getByRole('textbox', { name: 'Title' }).fill('Tested end to end');
     await form.locator('summary', { hasText: 'Download' }).click();
@@ -73,11 +73,12 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await student.locator('main a.proj').first().click();
     await expect(student.getByRole('heading', { level: 1 })).toContainText(name);
     await expect(student.getByRole('heading', { name: 'Tested end to end' })).toBeVisible();
-    await expect(student.getByRole('link', { name: 'Download for Mirror' }).first()).toHaveAttribute(
+    await expect(student.getByRole('link', { name: 'Download ↗ for Mirror' })).toHaveAttribute(
       'href',
       'https://example.com/e2e-project.exe',
     );
-    const file = student.getByRole('link', { name: 'Download for Windows · 12.0 MB' }).first();
+    const file = student.getByRole('link', { name: 'Download .exe for Windows' });
+    await expect(student.locator('.pj-dl', { has: file })).toContainText('12.0 MB');
     const href = await file.getAttribute('href');
     expect(href).toMatch(/\/f\/[0-9a-f-]{36}$/);
     const served = await student.request.get(href!);
