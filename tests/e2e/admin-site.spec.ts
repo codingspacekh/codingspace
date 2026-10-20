@@ -35,14 +35,18 @@ test.describe('site content', { tag: '@single-account' }, () => {
 
     await page.goto('/admin/projects');
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
+    // 2026-10-20: a project opens in its own editor, the page's parts listed beside the chosen one.
+    await page.getByRole('button', { name: '+ New project' }).click();
     const form = page.getByRole('form', { name: 'Add a project' });
+    const part = (name: string) =>
+      form.getByRole('navigation', { name: 'Page parts' }).getByRole('button', { name: new RegExp(`^${name}\\b`) });
     await form.getByRole('textbox', { name: 'Name' }).fill(name);
     await form.getByRole('textbox', { name: /Short description/ }).fill('Made by the end-to-end test.');
     // v1.1: the page is ours; a download link must be https.
-    await form.locator('summary', { hasText: /^Why/ }).click();
+    await part('Why').click();
     await form.getByRole('button', { name: 'Add a reason' }).click();
     await form.getByRole('textbox', { name: 'Title' }).fill('Tested end to end');
-    await form.locator('summary', { hasText: 'Download' }).click();
+    await part('Download').click();
     await form.getByRole('button', { name: 'Add a link' }).click();
     await form.getByRole('textbox', { name: /^Label/ }).fill('Mirror');
     await form.getByRole('textbox', { name: 'Link' }).fill('http://insecure.example/app.exe');

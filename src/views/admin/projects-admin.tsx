@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
 import { uploadApp as sendApp, uploadMedia } from '@/lib/media-upload';
@@ -14,6 +14,7 @@ import {
   pointsText,
   ProjectPageFields,
   type PageFields,
+  type PagePart,
   type Upload,
 } from './project-page-fields';
 
@@ -111,6 +112,8 @@ function pageSummary(p: AdminProject): string {
  * 03 ADM-13: the projects on the Projects page and Home — add, edit, order, delete, and
  * the one featured project (shown first, and on Home). Since v1.1 each card opens the
  * project's own landing page on this site, /projects/<slug>, filled in here.
+ * Redesigned 2026-10-20 (from the prototype): the list, and an editor per project with
+ * its page's parts on the left and the chosen part on the right.
  */
 export function ProjectsAdmin({
   upload = uploadMedia,
@@ -123,6 +126,8 @@ export function ProjectsAdmin({
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  /** The project open in the editor: its id, 'new', or none (the list). */
+  const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { status, data } = await api<{ projects?: AdminProject[] }>('/api/admin/projects');
@@ -163,75 +168,107 @@ export function ProjectsAdmin({
     );
   }
 
+  const status = (
+    <p className="adm-live" role="status">
+      {message}
+    </p>
+  );
+  const editing = open && open !== 'new' ? projects?.find((p) => p.id === open) : undefined;
+
+  if (open === 'new' || editing)
+    return (
+      <>
+        {status}
+        {editing ? (
+          <ProjectForm
+            key={editing.id}
+            project={editing}
+            initial={toCard(editing)}
+            page={toPage(editing)}
+            upload={upload}
+            uploadApp={uploadApp}
+            label={`Edit ${editing.name}`}
+            submit="Save & update"
+            busy={busy}
+            onSubmit={(f) =>
+              change(
+                () => api(`/api/admin/projects/${editing.id}`, { method: 'PUT', body: toBody(f) }),
+                `Saved “${f.name}”.`,
+              )
+            }
+            onClose={() => setOpen(null)}
+          />
+        ) : (
+          <ProjectForm
+            initial={EMPTY}
+            page={EMPTY_PAGE}
+            upload={upload}
+            uploadApp={uploadApp}
+            label="Add a project"
+            submit="Add project"
+            busy={busy}
+            onSubmit={async (f) => {
+              const ok = await change(
+                () => api('/api/admin/projects', { method: 'POST', body: toBody(f) }),
+                `Added “${f.name}” at the end.`,
+              );
+              if (ok) setOpen(null);
+              return ok;
+            }}
+            onClose={() => setOpen(null)}
+          />
+        )}
+      </>
+    );
+
   return (
     <>
-      <h1>Projects</h1>
+      <div className="adm-head">
+        <h1>Projects</h1>
+        {projects && (
+          <button type="button" className="btn pri" onClick={() => setOpen('new')}>
+            + New project
+          </button>
+        )}
+      </div>
       <p className="adm-lead">
         Shown on the Projects page in this order. The featured one goes first there, and on Home with the next one.
       </p>
-      <p className="adm-live" role="status">
-        {message}
-      </p>
+      {status}
       {failed ? (
         <p role="alert" className="adm-error">
           The projects could not be loaded. Reload the page to try again.
         </p>
       ) : !projects ? (
         <p aria-live="polite">Loading…</p>
+      ) : projects.length === 0 ? (
+        <p className="empty">No projects yet. Add the first one with New project.</p>
       ) : (
-        <>
-          {projects.length === 0 ? (
-            <p className="empty">No projects yet. Add the first one below.</p>
-          ) : (
-            <ol className="adm-sections" aria-label="Projects, in order">
-              {projects.map((p, i) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  upload={upload}
-                  uploadApp={uploadApp}
-                  first={i === 0}
-                  last={i === projects.length - 1}
-                  busy={busy}
-                  onMove={(d) => move(i, d)}
-                  onFeature={(on) =>
-                    change(
-                      () => api('/api/admin/projects/featured', { method: 'PUT', body: { id: on ? p.id : null } }),
-                      on ? `“${p.name}” is now the featured project.` : 'No project is featured now.',
-                    )
-                  }
-                  onSave={(f) =>
-                    change(
-                      () => api(`/api/admin/projects/${p.id}`, { method: 'PUT', body: toBody(f) }),
-                      `Saved “${f.name}”.`,
-                    )
-                  }
-                  onDelete={() =>
-                    change(() => api(`/api/admin/projects/${p.id}`, { method: 'DELETE' }), `Deleted “${p.name}”.`)
-                  }
-                />
-              ))}
-            </ol>
-          )}
-          <section className="frame adm-section" aria-labelledby="add-project">
-            <h2 id="add-project">Add a project</h2>
-            <ProjectForm
-              initial={EMPTY}
-              page={EMPTY_PAGE}
-              upload={upload}
-              uploadApp={uploadApp}
-              label="Add a project"
-              submit="Add project"
+        <ol className="adm-sections" aria-label="Projects, in order">
+          {projects.map((p, i) => (
+            <ProjectCard
+              key={p.id}
+              project={p}
+              first={i === 0}
+              last={i === projects.length - 1}
               busy={busy}
-              onSubmit={(f) =>
+              onMove={(d) => move(i, d)}
+              onEdit={() => {
+                setMessage('');
+                setOpen(p.id);
+              }}
+              onFeature={(on) =>
                 change(
-                  () => api('/api/admin/projects', { method: 'POST', body: toBody(f) }),
-                  `Added “${f.name}” at the end.`,
+                  () => api('/api/admin/projects/featured', { method: 'PUT', body: { id: on ? p.id : null } }),
+                  on ? `“${p.name}” is now the featured project.` : 'No project is featured now.',
                 )
               }
+              onDelete={() =>
+                change(() => api(`/api/admin/projects/${p.id}`, { method: 'DELETE' }), `Deleted “${p.name}”.`)
+              }
             />
-          </section>
-        </>
+          ))}
+        </ol>
       )}
     </>
   );
@@ -239,130 +276,107 @@ export function ProjectsAdmin({
 
 function ProjectCard({
   project: p,
-  upload,
-  uploadApp,
   first,
   last,
   busy,
   onMove,
+  onEdit,
   onFeature,
-  onSave,
   onDelete,
 }: {
   project: AdminProject;
-  upload: Upload;
-  uploadApp: AppUpload;
   first: boolean;
   last: boolean;
   busy: boolean;
   onMove: (delta: -1 | 1) => void;
+  onEdit: () => void;
   onFeature: (on: boolean) => void;
-  onSave: (f: Fields) => Promise<boolean>;
   onDelete: () => void;
 }) {
   const { subject: subjectOf } = useSubjects();
   const id = useId();
-  const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <li className="frame adm-section" aria-labelledby={`${id}-t`}>
+    <li className="frame adm-section adm-pj-card" aria-labelledby={`${id}-t`}>
       <h2 id={`${id}-t`}>
         {p.glyph && <span aria-hidden="true">{p.glyph} </span>}
         {p.name}
         {p.is_featured && <span className="adm-status adm-status--published">Featured</span>}
       </h2>
-      {editing ? (
-        <ProjectForm
-          initial={toCard(p)}
-          page={toPage(p)}
-          upload={upload}
-          uploadApp={uploadApp}
-          label={`Edit ${p.name}`}
-          submit="Save"
-          busy={busy}
-          onSubmit={async (f) => {
-            const ok = await onSave(f);
-            if (ok) setEditing(false);
-            return ok;
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
-        <>
-          <p>{p.description}</p>
-          <p className="meta">
-            {[subjectOf(p.subject_id)?.name, p.tag, p.platforms.join(', ')].filter(Boolean).join(' · ')}
-          </p>
-          <p className="meta">
-            <a href={`/projects/${p.slug}`} target="_blank" rel="noopener">
-              /projects/{p.slug}
+      <p>{p.description}</p>
+      <p className="meta">
+        {[subjectOf(p.subject_id)?.name, p.tag, p.platforms.join(', ')].filter(Boolean).join(' · ')}
+      </p>
+      <p className="meta">
+        <a href={`/projects/${p.slug}`} target="_blank" rel="noopener">
+          /projects/{p.slug}
+        </a>
+        {p.landing_url && (
+          <>
+            {' · Website: '}
+            <a href={p.landing_url} target="_blank" rel="noopener noreferrer">
+              {p.landing_url}
             </a>
-            {p.landing_url && (
-              <>
-                {' · Website: '}
-                <a href={p.landing_url} target="_blank" rel="noopener noreferrer">
-                  {p.landing_url}
-                </a>
-              </>
-            )}
-          </p>
-          <p className="meta">{pageSummary(p)}</p>
-          <div className="adm-quick">
-            <button
-              type="button"
-              className="btn"
-              disabled={busy || first}
-              onClick={() => onMove(-1)}
-              aria-label={`Move ${p.name} up`}
-            >
-              ↑
+          </>
+        )}
+      </p>
+      <p className="meta">{pageSummary(p)}</p>
+      <div className="adm-quick">
+        <button type="button" className="btn pri" onClick={onEdit} aria-label={`Edit ${p.name}`}>
+          Edit
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || first}
+          onClick={() => onMove(-1)}
+          aria-label={`Move ${p.name} up`}
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || last}
+          onClick={() => onMove(1)}
+          aria-label={`Move ${p.name} down`}
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy}
+          aria-pressed={p.is_featured}
+          aria-label={`Feature ${p.name}`}
+          onClick={() => onFeature(!p.is_featured)}
+        >
+          {p.is_featured ? '★ Featured' : '☆ Feature'}
+        </button>
+        {confirming ? (
+          <span className="adm-confirm" role="group" aria-label="Confirm delete">
+            Delete “{p.name}” for good?
+            <button type="button" className="btn adm-danger" disabled={busy} onClick={onDelete}>
+              Delete permanently
             </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={busy || last}
-              onClick={() => onMove(1)}
-              aria-label={`Move ${p.name} down`}
-            >
-              ↓
+            <button type="button" className="btn" onClick={() => setConfirming(false)}>
+              Cancel
             </button>
-            <button type="button" className="btn" onClick={() => setEditing(true)} aria-label={`Edit ${p.name}`}>
-              Edit
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={busy}
-              aria-pressed={p.is_featured}
-              aria-label={`Feature ${p.name}`}
-              onClick={() => onFeature(!p.is_featured)}
-            >
-              {p.is_featured ? '★ Featured' : '☆ Feature'}
-            </button>
-            {confirming ? (
-              <span className="adm-confirm" role="group" aria-label="Confirm delete">
-                Delete “{p.name}” for good?
-                <button type="button" className="btn adm-danger" disabled={busy} onClick={onDelete}>
-                  Delete permanently
-                </button>
-                <button type="button" className="btn" onClick={() => setConfirming(false)}>
-                  Cancel
-                </button>
-              </span>
-            ) : (
-              <button type="button" className="btn" onClick={() => setConfirming(true)} aria-label={`Delete ${p.name}`}>
-                Delete…
-              </button>
-            )}
-          </div>
-        </>
-      )}
+          </span>
+        ) : (
+          <button type="button" className="btn" onClick={() => setConfirming(true)} aria-label={`Delete ${p.name}`}>
+            Delete…
+          </button>
+        )}
+      </div>
     </li>
   );
 }
 
+/** The editor: a bar with the name and Save, then the page's parts beside the chosen part's panel. */
 function ProjectForm({
+  project,
   initial,
   page: initialPage,
   upload,
@@ -371,8 +385,10 @@ function ProjectForm({
   submit,
   busy,
   onSubmit,
-  onCancel,
+  onClose,
 }: {
+  /** The project being edited; none for a new one. */
+  project?: AdminProject;
   initial: CardFields;
   page: PageFields;
   upload: Upload;
@@ -381,41 +397,46 @@ function ProjectForm({
   submit: string;
   busy: boolean;
   onSubmit: (f: Fields) => Promise<boolean>;
-  onCancel?: () => void;
+  onClose: () => void;
 }) {
   const { subjects: allSubjects, subject: subjectOf } = useSubjects();
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
   const [f, setF] = useState(initial);
   const [page, setPage] = useState(initialPage);
+  const [part, setPart] = useState<PagePart>('card');
   const [touched, setTouched] = useState(false);
   const set = <K extends keyof CardFields>(k: K, v: CardFields[K]) => setF((prev) => ({ ...prev, [k]: v }));
   const urlProblem = optionalUrlProblem(f.landing_url);
-  const problem = !f.name.trim()
-    ? 'Add a name.'
+  const problem: { part: PagePart; message: string } | null = !f.name.trim()
+    ? { part: 'card', message: 'Add a name.' }
     : !f.description.trim()
-      ? 'Add a short description.'
+      ? { part: 'card', message: 'Add a short description.' }
       : urlProblem
-        ? `Website: ${urlProblem}`
+        ? { part: 'card', message: `Website: ${urlProblem}` }
         : pageProblem(page);
+
+  // The editor replaces the list: start at its top, for keyboards and screen readers too.
+  useEffect(() => heading.current?.focus(), []);
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (problem) return;
-    if ((await onSubmit({ ...f, ...page })) && !onCancel) {
-      setF(EMPTY);
-      setPage(EMPTY_PAGE);
-      setTouched(false);
-    }
+    if (problem) return setPart(problem.part);
+    await onSubmit({ ...f, ...page });
   }
 
-  return (
-    <form className="adm-form" onSubmit={save} aria-label={label} noValidate>
+  const card = (
+    <div className="adm-pj-fields">
       <label>
         Name
         <input value={f.name} maxLength={80} required onChange={(e) => set('name', e.target.value)} />
       </label>
       <label>
+        Icon: up to 4 characters or an emoji
+        <input value={f.glyph} maxLength={4} onChange={(e) => set('glyph', e.target.value)} />
+      </label>
+      <label className="adm-pj-wide">
         Short description, for the card on Projects and Home
         <textarea
           rows={2}
@@ -425,24 +446,6 @@ function ProjectForm({
           onChange={(e) => set('description', e.target.value)}
         />
       </label>
-      <label>
-        Website (optional)
-        <input
-          type="url"
-          inputMode="url"
-          value={f.landing_url}
-          maxLength={500}
-          aria-invalid={touched && !!urlProblem}
-          aria-describedby={`${id}-url`}
-          onChange={(e) => set('landing_url', e.target.value)}
-          onBlur={() => setTouched(true)}
-        />
-      </label>
-      <p id={`${id}-url`} className={touched && urlProblem ? 'adm-error' : 'adm-hint'}>
-        {touched && urlProblem
-          ? urlProblem
-          : 'Only if the project also has a site of its own (https://). Its page here links to it.'}
-      </p>
       <label>
         Subject
         <select
@@ -461,30 +464,76 @@ function ProjectForm({
         Tag (e.g. Web app, Simulation)
         <input value={f.tag} maxLength={40} onChange={(e) => set('tag', e.target.value)} />
       </label>
-      <label>
+      <label className="adm-pj-wide">
         Platforms, separated by commas (e.g. Web, Android)
         <input value={f.platforms} maxLength={250} onChange={(e) => set('platforms', e.target.value)} />
       </label>
-      <label>
-        Icon: up to 4 characters or an emoji
-        <input value={f.glyph} maxLength={4} onChange={(e) => set('glyph', e.target.value)} />
-      </label>
-      <ProjectPageFields value={page} upload={upload} uploadApp={uploadApp} onChange={setPage} />
+      <div className="adm-pj-wide adm-pj-stack">
+        <label>
+          Website (optional)
+          <input
+            type="url"
+            inputMode="url"
+            value={f.landing_url}
+            maxLength={500}
+            aria-invalid={touched && !!urlProblem}
+            aria-describedby={`${id}-url`}
+            onChange={(e) => set('landing_url', e.target.value)}
+            onBlur={() => setTouched(true)}
+          />
+        </label>
+        <p id={`${id}-url`} className={touched && urlProblem ? 'adm-error' : 'adm-hint'}>
+          {touched && urlProblem
+            ? urlProblem
+            : 'Only if the project also has a site of its own (https://). Its page here links to it.'}
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <form className="adm-form adm-pj-form" onSubmit={save} aria-label={label} noValidate>
+      <div className="adm-pj-top">
+        <div className="adm-pj-title">
+          <p className="meta">
+            <button type="button" className="adm-pj-back" onClick={onClose}>
+              ← Projects
+            </button>
+          </p>
+          <h1 ref={heading} tabIndex={-1}>
+            {f.glyph && <span aria-hidden="true">{f.glyph} </span>}
+            {f.name.trim() || (project ? project.name : 'New project')}
+            {project?.is_featured && <span className="adm-status adm-status--published">Featured</span>}
+          </h1>
+        </div>
+        <div className="adm-quick">
+          {project && (
+            <a className="btn" href={`/projects/${project.slug}`} target="_blank" rel="noopener">
+              View page ↗<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          )}
+          <button type="button" className="btn" onClick={onClose}>
+            {project ? 'Close' : 'Cancel'}
+          </button>
+          <button type="submit" className="btn pri" disabled={busy}>
+            {submit}
+          </button>
+        </div>
+      </div>
       {touched && problem && (
         <p role="alert" className="adm-error">
-          {problem}
+          {problem.message}
         </p>
       )}
-      <div className="adm-quick">
-        <button type="submit" className="btn pri" disabled={busy}>
-          {submit}
-        </button>
-        {onCancel && (
-          <button type="button" className="btn" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-      </div>
+      <ProjectPageFields
+        value={page}
+        upload={upload}
+        uploadApp={uploadApp}
+        onChange={setPage}
+        card={card}
+        current={part}
+        onCurrent={setPart}
+      />
     </form>
   );
 }
