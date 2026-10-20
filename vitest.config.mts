@@ -25,6 +25,7 @@ export default defineConfig({
         'src/server/admin/sections.ts',
         'src/server/admin/preview.ts',
         'src/server/media/uploads.ts',
+        'src/server/media/app-uploads.ts',
         'src/server/media/library.ts',
         'src/server/admin/site.ts',
         'src/server/admin/series.ts',

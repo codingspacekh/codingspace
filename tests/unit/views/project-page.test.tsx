@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import { fileKey, mediaUrl } from '@/lib/media-urls';
 import type { ProjectPageData } from '@/server/data/types';
 import { ProjectPage } from '@/views/project-page';
 import { render } from '../../support/subjects';
@@ -87,6 +88,19 @@ describe('<ProjectPage> (v1.1)', () => {
     const buttons = screen.getAllByRole('link', { name: 'Download for Windows' });
     expect(buttons).toHaveLength(2); // hero and the Download section
     expect(buttons[0]).toHaveClass('pri');
+  });
+
+  it('a file uploaded here downloads from our storage, with its size (2026-10-20)', () => {
+    const media = '41000000-0000-4000-8000-000000000001';
+    render(
+      <ProjectPage
+        {...full()}
+        downloads={[{ label: 'Windows', media, name: 'Setup.exe', bytes: 183_500_800, sha256: 'a'.repeat(64) }]}
+      />,
+    );
+    const [hero] = screen.getAllByRole('link', { name: /Download for Windows/ });
+    expect(hero).toHaveAttribute('href', mediaUrl(fileKey(media)));
+    expect(hero).toHaveTextContent('Download for Windows · 175.0 MB');
   });
 
   it('a project with only a name and description: no empty sections, “Coming soon”', () => {

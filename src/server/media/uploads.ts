@@ -78,7 +78,7 @@ export function attachment(name: string): string {
 
 const SELECT = 'id, kind, mime, bytes, width, height, widths, alt, original_name, created_at, use_count';
 
-async function item(supabase: SupabaseClient, id: string): Promise<MediaItem> {
+export async function mediaItem(supabase: SupabaseClient, id: string): Promise<MediaItem> {
   const { data, error } = await supabase.from('admin_media').select(SELECT).eq('id', id).maybeSingle();
   if (error) throw new Error(`admin_media: ${error.message}`);
   if (!data) refuse(404, 'file not found');
@@ -119,7 +119,7 @@ export async function finishUpload(
       .eq('sha256', sha256)
       .maybeSingle();
     if (error) throw new Error(`media: ${error.message}`);
-    if (same) return { ...(await item(supabase, same.id as string)), duplicate: true };
+    if (same) return { ...(await mediaItem(supabase, same.id as string)), duplicate: true };
 
     let size: { width: number | null; height: number | null; widths: number[] } = {
       width: null,
@@ -162,7 +162,7 @@ export async function finishUpload(
     }
     const { id: savedId, duplicate } = added as { id: string; duplicate: boolean };
     if (duplicate) await store.delete(written.splice(0));
-    return { ...(await item(supabase, savedId)), duplicate };
+    return { ...(await mediaItem(supabase, savedId)), duplicate };
   } catch (e) {
     if (written.length) await store.delete(written).catch((err) => console.error('media cleanup failed', err));
     if (e instanceof ImageError) refuse(422, e.message);

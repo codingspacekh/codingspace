@@ -61,3 +61,32 @@ export function checkContent(type: UploadType, b: Uint8Array): string | null {
       return mismatch;
   }
 }
+
+const MZ = [0x4d, 0x5a];
+const XAR = [0x78, 0x61, 0x72, 0x21];
+
+/**
+ * An app download (2026-10-20) is too big to hold in memory, so it is checked from its first
+ * and last bytes, kept while the file streams past (src/server/media/inspect.ts). Null when
+ * they match the type; otherwise why not.
+ */
+export function checkApp(type: UploadType, head: Uint8Array, tail: Uint8Array): string | null {
+  const mismatch = `This doesn’t look like a ${type.label} file (its content doesn’t match “.${type.ext}”).`;
+  if (head.length === 0) return 'The file is empty.';
+  switch (type.ext) {
+    case 'exe':
+      return startsWith(head, MZ) ? null : mismatch;
+    case 'msi':
+      return startsWith(head, OLE) ? null : mismatch;
+    case 'zip':
+    case 'apk':
+      return startsWith(head, ZIP) ? null : mismatch;
+    case 'pkg':
+      return startsWith(head, XAR) ? null : mismatch;
+    case 'dmg':
+      // A disk image ends with a 512-byte "koly" trailer.
+      return tail.length >= 512 && ascii(tail, tail.length - 512, tail.length - 508) === 'koly' ? null : mismatch;
+    default:
+      return mismatch;
+  }
+}

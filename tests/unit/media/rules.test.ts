@@ -1,4 +1,12 @@
-import { classifyUpload, cleanFileName, extensionOf, FILE_ACCEPT, formatBytes, IMAGE_ACCEPT } from '@/lib/media-rules';
+import {
+  APP_ACCEPT,
+  classifyUpload,
+  cleanFileName,
+  extensionOf,
+  FILE_ACCEPT,
+  formatBytes,
+  IMAGE_ACCEPT,
+} from '@/lib/media-rules';
 
 describe('what may be uploaded (03 ADM-10, §8.4)', () => {
   it.each([
@@ -50,6 +58,32 @@ describe('what may be uploaded (03 ADM-10, §8.4)', () => {
     expect(classifyUpload('file', 'a.txt', 6 * 1024 * 1024)).toMatchObject({ ok: false });
   });
 
+  it.each([
+    ['EasyMedia-Setup-0.11.0.exe', 'application/vnd.microsoft.portable-executable'],
+    ['setup.msi', 'application/x-msi'],
+    ['EasyMedia-0.11.0-mac-arm64.dmg', 'application/x-apple-diskimage'],
+    ['installer.pkg', 'application/vnd.apple.installer+xml'],
+    ['EasyMedia-0.11.0-win.zip', 'application/zip'],
+    ['app-release.apk', 'application/vnd.android.package-archive'],
+  ])('accepts the app download %s (2026-10-20)', (name, mime) => {
+    expect(classifyUpload('app', name, 500 * 1024 * 1024)).toMatchObject({ ok: true, type: { mime, kind: 'app' } });
+  });
+
+  it('takes apps up to 2 GB, and only in a project’s Downloads', () => {
+    expect(classifyUpload('app', 'a.exe', 2048 * 1024 * 1024)).toMatchObject({ ok: true });
+    expect(classifyUpload('app', 'a.exe', 2048 * 1024 * 1024 + 1)).toMatchObject({ ok: false });
+    expect(classifyUpload('app', 'notes.pdf', 10)).toEqual({
+      ok: false,
+      error: 'Downloads must be .exe, .msi, .dmg, .pkg, .zip or .apk files.',
+    });
+    for (const name of ['a.exe', 'a.msi', 'a.dmg', 'a.apk']) {
+      expect(classifyUpload('file', name, 10)).toMatchObject({ ok: false, error: expect.stringMatching(/Downloads/) });
+    }
+    // A small ZIP is still a lesson file; in Downloads it is an app.
+    expect(classifyUpload('file', 'a.zip', 10)).toMatchObject({ ok: true, type: { kind: 'file' } });
+    expect(APP_ACCEPT).toBe('.exe,.msi,.dmg,.pkg,.zip,.apk');
+  });
+
   it('lists the accepted extensions for the file pickers', () => {
     expect(IMAGE_ACCEPT).toBe('.jpg,.jpeg,.png,.gif,.webp,.avif');
     expect(FILE_ACCEPT).toContain('.pdf');
@@ -85,5 +119,6 @@ describe('file names', () => {
     expect(formatBytes(512)).toBe('512 B');
     expect(formatBytes(240 * 1024)).toBe('240 KB');
     expect(formatBytes(1_258_291)).toBe('1.2 MB');
+    expect(formatBytes(1.5 * 1024 * 1024 * 1024)).toBe('1.50 GB');
   });
 });

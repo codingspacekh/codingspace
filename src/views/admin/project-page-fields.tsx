@@ -7,14 +7,14 @@ import {
   isBlank,
   PROJECT_LIMITS,
   PROJECT_TEXT,
-  type ProjectDownload,
   type ProjectFaq,
   type ProjectFeature,
   type ProjectReason,
   type ProjectStep,
 } from '@/lib/project-page';
-import { landingUrlProblem, optionalUrlProblem } from '@/lib/site-rules';
+import { optionalUrlProblem } from '@/lib/site-rules';
 import type { AdminScreenshot } from '@/server/admin/site';
+import { DownloadsEditor, downloadsProblem, type AdminDownload, type AppUpload } from './download-fields';
 import { MediaPicker } from './media-library';
 
 export type Upload = (file: File, kind: MediaKind) => Promise<UploadedMedia>;
@@ -27,7 +27,7 @@ export type PageFields = {
   features: ProjectFeature[];
   steps: ProjectStep[];
   faq: ProjectFaq[];
-  downloads: ProjectDownload[];
+  downloads: AdminDownload[];
   version: string;
   source_url: string;
   screenshots: AdminScreenshot[];
@@ -56,11 +56,8 @@ export function pageProblem(p: PageFields): string | null {
   ] as const)
     if (kept(items).some((i) => !i.title.trim())) return `Every ${name} needs a title (or remove the empty one).`;
   if (kept(p.faq).some((q) => !q.question.trim())) return 'Every question needs its text (or remove it).';
-  for (const d of kept(p.downloads)) {
-    if (!d.label.trim()) return 'Every download needs a label, like Windows.';
-    const problem = landingUrlProblem(d.url);
-    if (problem) return `Download “${d.label}”: ${problem}`;
-  }
+  const downloads = downloadsProblem(p.downloads);
+  if (downloads) return downloads;
   const source = optionalUrlProblem(p.source_url);
   return source ? `Source code: ${source}` : null;
 }
@@ -317,10 +314,12 @@ const count = (n: number, one: string) => (n ? `${n} ${one}${n === 1 ? '' : 's'}
 export function ProjectPageFields({
   value: p,
   upload,
+  uploadApp,
   onChange,
 }: {
   value: PageFields;
   upload: Upload;
+  uploadApp: AppUpload;
   onChange: Dispatch<SetStateAction<PageFields>>;
 }) {
   const set = <K extends keyof PageFields>(k: K, v: PageFields[K]) => onChange((prev) => ({ ...prev, [k]: v }));
@@ -409,7 +408,7 @@ export function ProjectPageFields({
         title="Download"
         summary={
           p.downloads.length
-            ? `${count(p.downloads.length, 'link')}${p.version ? `, version ${p.version}` : ''}`
+            ? `${count(p.downloads.length, 'download')}${p.version ? `, version ${p.version}` : ''}`
             : 'Coming soon'
         }
       >
@@ -417,18 +416,10 @@ export function ProjectPageFields({
           Version (optional, e.g. 1.2.0)
           <input maxLength={T.version} value={p.version} onChange={(e) => set('version', e.target.value)} />
         </label>
-        <ListEditor<ProjectDownload>
-          legend="Download links"
-          hint="One button each. Paste the file’s link from the GitHub release (https://github.com/…/releases/download/…). With no links, the page says “Coming soon”."
-          noun="download"
-          items={p.downloads}
-          fields={[
-            { key: 'label', label: 'For (e.g. Windows, macOS, Android)', max: T.label },
-            { key: 'url', label: 'Link', max: 500, type: 'url' },
-          ]}
-          blank={{ label: '', url: '' }}
-          max={L.downloads}
-          onChange={(v) => set('downloads', v)}
+        <DownloadsEditor
+          downloads={p.downloads}
+          uploadApp={uploadApp}
+          onChange={(update) => onChange((prev) => ({ ...prev, downloads: update(prev.downloads) }))}
         />
         <label>
           Source code (optional, e.g. the GitHub repository)

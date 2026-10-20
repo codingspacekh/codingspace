@@ -67,6 +67,8 @@ Images and files are uploaded to a Cloudflare R2 bucket. Until `codingspacekh.de
 
 Until then uploads answer "Uploads aren't set up yet". Content stores media ids, not URLs, so moving to `files.codingspacekh.dev` later (M7) is: connect the domain to the bucket, change `NEXT_PUBLIC_MEDIA_BASE_URL`, redeploy, and **Update** the published posts that have images. Keep the r2.dev address on until that is done.
 
+**App downloads** (a project's installers, up to 2 GB each) use the same bucket and settings: the browser sends them to `f/<id>` in 10 MB parts (a dropped connection resends one part), and the server joins them, reads the file once for its type and SHA-256, and records it. Nothing extra to set up: R2 drops the parts of an upload nobody finished after 7 days. The r2.dev address is rate-limited, so big downloads should move to the custom domain before many students use them.
+
 Locally, without R2: `MEDIA_STORE=local` and `NEXT_PUBLIC_MEDIA_BASE_URL=http://localhost:3000/api/media-local` keep uploads in `./.media-local` (refused on Vercel). The E2E tests run that way.
 
 Under Authentication → Providers, **Email** must be enabled (it is the sign-in method) while **Allow new users to sign up** stays off. Keep the authenticator's recovery key offline.

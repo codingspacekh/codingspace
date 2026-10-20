@@ -2,6 +2,7 @@ import type { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import { Layout } from '@/components/layout';
 import { REVALIDATE } from '@/lib/isr';
+import { downloadUrl } from '@/lib/project-page';
 import { SITE_NAME, softwareJsonLd } from '@/lib/seo';
 import type { Subject } from '@/lib/subjects';
 import { getAuthorName, getProjectPage, getProjectSlugs, getSubjects } from '@/server/data/public';
@@ -48,7 +49,7 @@ export default function ProjectRoute({ author, ...page }: Props) {
                 description: page.tagline || p.description,
                 platforms: p.platforms,
                 version: page.version,
-                downloadUrl: page.downloads[0]?.url ?? null,
+                downloadUrl: page.downloads[0] ? downloadUrl(page.downloads[0]) : null,
               },
               { author },
             ),

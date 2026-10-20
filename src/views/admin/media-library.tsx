@@ -129,9 +129,10 @@ function FilterBar({
           value={filters.kind}
           onChange={(e) => onChange({ ...filters, q, kind: e.target.value as Filters['kind'] })}
         >
-          <option value="">Images and files</option>
+          <option value="">All</option>
           <option value="image">Images</option>
           <option value="file">Files</option>
+          <option value="app">Apps (downloads)</option>
         </select>
       </label>
       <label className="adm-check">
@@ -531,7 +532,7 @@ function MediaDetails({
   }
 
   if (!detail) return <p aria-live="polite">{note || 'Loading…'}</p>;
-  const address = detail.kind === 'file' ? mediaUrl(fileKey(detail.id)) : null;
+  const address = detail.kind !== 'image' ? mediaUrl(fileKey(detail.id)) : null;
 
   return (
     <section className="adm-media-detail" aria-label={`Details of ${detail.original_name}`}>

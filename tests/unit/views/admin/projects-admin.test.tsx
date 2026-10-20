@@ -192,8 +192,8 @@ describe('projects admin (03 ADM-13)', () => {
     // The second reason stays blank: it is dropped, not refused.
 
     await user.click(part(form, 'Download'));
-    await user.click(within(form).getByRole('button', { name: 'Add a download' }));
-    await user.type(within(form).getByRole('textbox', { name: /For \(e.g. Windows/ }), 'Windows');
+    await user.click(within(form).getByRole('button', { name: 'Add a link' }));
+    await user.type(within(form).getByRole('textbox', { name: /^Label/ }), 'Windows');
     const link = within(form).getByRole('textbox', { name: 'Link' });
     await user.type(link, 'http://example.com/quiz.exe');
     await user.click(within(form).getByRole('button', { name: 'Save' }));
@@ -223,12 +223,70 @@ describe('projects admin (03 ADM-13)', () => {
           { title: 'Free', text: 'No ads.' },
           { title: '', text: '' },
         ],
-        downloads: [{ label: 'Windows', url: 'https://github.com/x/quiz/releases/download/v1/quiz.exe' }],
+        downloads: [
+          { label: 'Windows', note: '', platform: '', url: 'https://github.com/x/quiz/releases/download/v1/quiz.exe' },
+        ],
         screenshots: [{ media_id: '40000000-0000-4000-8000-000000000009', caption: 'A quiz' }],
       },
     });
     expect(upload).toHaveBeenCalledWith(expect.any(File), 'image');
   }, 20_000); // many keystrokes: slow when the whole suite runs at once
+
+  it('uploads installers as download buttons, guessing the label, and waits for them before saving', async () => {
+    const calls = mockApi();
+    let finish: () => void = () => {};
+    const uploadApp = vi.fn(
+      (file: File, o: { onProgress?: (p: { sent: number; total: number }) => void; signal?: AbortSignal }) =>
+        new Promise<never>((done, fail) => {
+          o.onProgress?.({ sent: 10 * 1024 * 1024, total: 25 * 1024 * 1024 });
+          o.signal?.addEventListener('abort', () => fail(new Error('cancelled')));
+          if (file.name.endsWith('.exe'))
+            finish = () =>
+              done({
+                id: '41000000-0000-4000-8000-000000000001',
+                kind: 'app',
+                mime: 'application/vnd.microsoft.portable-executable',
+                bytes: 25 * 1024 * 1024,
+                width: null,
+                height: null,
+                widths: [],
+                alt: '',
+                original_name: 'Quiz-Setup.exe',
+              } as never);
+        }),
+    );
+    render(<ProjectsAdmin uploadApp={uploadApp} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    const form = screen.getByRole('form', { name: 'Edit Quiz' });
+    await user.click(part(form, 'Download'));
+    await user.upload(within(form).getByLabelText('Upload installers'), [
+      new File(['MZ'], 'Quiz-Setup.exe'),
+      new File(['x'], 'Quiz-mac-arm64.dmg'),
+    ]);
+
+    const rows = within(within(form).getByRole('list', { name: 'Downloads' })).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByRole('textbox', { name: /^Label/ })).toHaveValue('Windows');
+    expect(within(rows[0]!).getByRole('textbox', { name: /^Note/ })).toHaveValue('Installer');
+    expect(within(rows[1]!).getByRole('combobox', { name: 'For' })).toHaveValue('mac-arm');
+    expect(rows[0]).toHaveTextContent('10.0 MB of 25.0 MB');
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent('Wait for the uploads to finish (or cancel them).');
+    await user.click(within(rows[1]!).getByRole('button', { name: 'Cancel download 2' }));
+    finish();
+    expect(await within(form).findByText(/“Quiz-Setup.exe” uploaded/)).toBeInTheDocument();
+    expect(within(form).getByText('Quiz-Setup.exe')).toBeInTheDocument();
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]!.body).toMatchObject({
+      downloads: [
+        { label: 'Windows', note: 'Installer', platform: 'windows', media: '41000000-0000-4000-8000-000000000001' },
+      ],
+    });
+  }, 20_000);
 
   it('asks for a title on a reason that has text', async () => {
     const calls = mockApi();
