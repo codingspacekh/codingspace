@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { audioAllowed, useAudioAllowed } from '../audio-gate';
 import { getPrefs, getServerPrefs, setPref, SERVER_PREFS, subscribe, type Prefs } from '../prefs-store';
 import type { BleepName } from './bleeps';
 
@@ -34,6 +35,7 @@ export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode
   const toggleSound = useCallback(() => setPref('sound', !getPrefs().sound), []);
   const toggleMotion = useCallback(() => setPref('motion', !getPrefs().motion), []);
   const toggleReading = useCallback(() => setPref('reading', !getPrefs().reading), []);
+  useSoundEngine(sound);
 
   useEffect(() => {
     const root = document.documentElement.dataset;
@@ -53,16 +55,38 @@ export function UiRoot({ children, motion: forcedMotion }: { children: ReactNode
 export const usePrefs = () => useContext(PrefsContext);
 
 type Bleeps = ReturnType<typeof import('./bleeps').createSiteBleeps>;
+let bleepsModule: Promise<typeof import('./bleeps')> | undefined;
 let bleeps: Promise<Bleeps> | undefined;
-/** Downloads the sound module once, on first use. */
-const loadBleeps = () => (bleeps ??= import('./bleeps').then((m) => m.createSiteBleeps()));
+/** Downloads the sound module once. */
+const loadModule = () => (bleepsModule ??= import('./bleeps'));
+/**
+ * Starts the sound engine once. Only called once the page may play sound (../audio-gate.ts):
+ * started any earlier, the browser would keep it suspended.
+ */
+const loadBleeps = () => (bleeps ??= loadModule().then((m) => m.createSiteBleeps()));
 
-/** Plays a bleep only when the visitor has turned sound on (or when forced by the sound toggle itself). */
+/**
+ * With sound on, the module downloads straight away and the engine starts with the visitor's first
+ * click, tap or key press, so even the sound of that first click plays.
+ */
+function useSoundEngine(sound: boolean) {
+  const allowed = useAudioAllowed();
+  useEffect(() => {
+    if (!sound) return;
+    void loadModule();
+    if (allowed) void loadBleeps();
+  }, [sound, allowed]);
+}
+
+/**
+ * Plays a bleep only when the visitor has turned sound on (or when forced by the sound toggle
+ * itself), and only once the browser lets the page play sound: before that it would be lost.
+ */
 export function useSound() {
   const { sound } = usePrefs();
   return useCallback(
     (name: BleepName, force = false) => {
-      if (sound || force) void loadBleeps().then((b) => b.bleeps[name]?.play());
+      if ((sound || force) && audioAllowed()) void loadBleeps().then((b) => b.bleeps[name]?.play());
     },
     [sound],
   );
