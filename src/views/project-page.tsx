@@ -1,6 +1,8 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { formatBytes } from '@/lib/media-rules';
 import { imageKey, mediaUrl, srcset } from '@/lib/media-urls';
+import { downloadUrl, isFileDownload } from '@/lib/project-page';
 import { useSubjects } from '@/lib/subjects';
 import type { ProjectPageData, ProjectScreenshot } from '@/server/data/types';
 
@@ -33,8 +35,9 @@ function Downloads({ page, primary = false }: { page: ProjectPageData; primary?:
   return (
     <>
       {page.downloads.map((d, i) => (
-        <a key={d.url} href={d.url} className={`btn${primary && i === 0 ? ' pri' : ''}`} rel="noopener">
+        <a key={i} href={downloadUrl(d)} className={`btn${primary && i === 0 ? ' pri' : ''}`} rel="noopener">
           Download for {d.label}
+          {isFileDownload(d) && <span className="meta"> · {formatBytes(d.bytes)}</span>}
         </a>
       ))}
     </>

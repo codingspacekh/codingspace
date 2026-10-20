@@ -3,11 +3,15 @@ import { localMediaStore } from '@/server/media/store';
 
 /**
  * Stands in for R2 when MEDIA_STORE=local (local runs and E2E tests; refused on Vercel):
- * PUT with a presigned query, like R2's; GET serves what was stored, with its headers.
+ * PUT with a presigned query, like R2's (a whole file, or one part of an app upload); GET
+ * serves what was stored, with its headers.
  * Without MEDIA_STORE=local this route doesn't exist (404).
  */
 
 export const config = { api: { bodyParser: false } };
+
+/** A part is 10 MB (APP_PART_BYTES); a little room over that. */
+const PART_LIMIT = 16 * 1024 * 1024;
 
 async function readBody(req: NextApiRequest, limit: number): Promise<Buffer | null> {
   const chunks: Buffer[] = [];
@@ -24,6 +28,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const store = localMediaStore();
   if (!store) return res.status(404).end();
   const key = ([] as string[]).concat(req.query.key ?? []).join('/');
+
+  if (req.method === 'PUT' && req.query.uploadId) {
+    const problem = store.verifyPart(key, req.query);
+    if (problem) return res.status(403).json({ error: problem });
+    const body = await readBody(req, PART_LIMIT);
+    if (!body) return res.status(400).json({ error: 'part too big' });
+    const stored = await store.writePart(key, String(req.query.uploadId), Number(req.query.partNumber), body);
+    return res.status(stored ? 200 : 404).end();
+  }
 
   if (req.method === 'PUT') {
     const length = Number(req.headers['content-length']);

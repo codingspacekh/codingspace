@@ -43,12 +43,22 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await form.getByRole('button', { name: 'Add a reason' }).click();
     await form.getByRole('textbox', { name: 'Title' }).fill('Tested end to end');
     await form.locator('summary', { hasText: 'Download' }).click();
-    await form.getByRole('button', { name: 'Add a download' }).click();
-    await form.getByRole('textbox', { name: /^For/ }).fill('Windows');
+    await form.getByRole('button', { name: 'Add a link' }).click();
+    await form.getByRole('textbox', { name: /^Label/ }).fill('Mirror');
     await form.getByRole('textbox', { name: 'Link' }).fill('http://insecure.example/app.exe');
     await form.getByRole('button', { name: 'Add project' }).click();
     await expect(form.getByRole('alert')).toContainText('https://');
     await form.getByRole('textbox', { name: 'Link' }).fill('https://example.com/e2e-project.exe');
+    // 2026-10-20: an installer uploaded here, in 10 MB parts (12 MB: two of them).
+    const installer = Buffer.alloc(12 * 1024 * 1024);
+    installer.write('MZ');
+    installer.write(name, 64);
+    await form
+      .getByLabel('Upload installers')
+      .setInputFiles({ name: 'e2e-setup.exe', mimeType: '', buffer: installer });
+    await expect(form.getByText('“e2e-setup.exe” uploaded. Save to show it on the page.')).toBeVisible({
+      timeout: 30_000,
+    });
     await form.getByRole('button', { name: 'Add project' }).click();
     // The page's own message (the screenshot uploader has one too).
     const status = page.locator('.adm-main > .adm-live');
@@ -63,10 +73,16 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await student.locator('main a.proj').first().click();
     await expect(student.getByRole('heading', { level: 1 })).toContainText(name);
     await expect(student.getByRole('heading', { name: 'Tested end to end' })).toBeVisible();
-    await expect(student.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute(
+    await expect(student.getByRole('link', { name: 'Download for Mirror' }).first()).toHaveAttribute(
       'href',
       'https://example.com/e2e-project.exe',
     );
+    const file = student.getByRole('link', { name: 'Download for Windows · 12.0 MB' }).first();
+    const href = await file.getAttribute('href');
+    expect(href).toMatch(/\/f\/[0-9a-f-]{36}$/);
+    const served = await student.request.get(href!);
+    expect(served.headers()['content-disposition']).toContain('filename="e2e-setup.exe"');
+    expect(Buffer.from(await served.body()).equals(installer)).toBe(true);
     await student.goto('/');
     await expect(student.locator('main').getByRole('link', { name: new RegExp(name) })).toBeVisible();
 
@@ -77,6 +93,8 @@ test.describe('site content', { tag: '@single-account' }, () => {
     await page.getByRole('button', { name: `Delete ${name}` }).click();
     await page.getByRole('button', { name: 'Delete permanently' }).click();
     await expect(status).toHaveText(`Deleted “${name}”.`);
+    const deleted = await page.request.delete(`/api/admin/media/${href!.split('/').pop()}`, { headers: origin });
+    expect(deleted.status()).toBe(200);
     await student.goto('/projects');
     await expect(student.getByText(name)).toHaveCount(0);
     await student.context().close();

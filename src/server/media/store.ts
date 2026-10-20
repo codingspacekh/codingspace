@@ -1,13 +1,20 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { dirname, join, resolve } from 'node:path';
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListPartsCommand,
   PutObjectCommand,
   S3Client,
   S3ServiceException,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { MEDIA_BASE_URL, r2Endpoint } from '@/config/content-origins.mjs';
@@ -27,7 +34,23 @@ export interface MediaStore {
   get(key: string): Promise<Uint8Array>;
   put(key: string, body: Uint8Array, o: PutOptions): Promise<void>;
   delete(keys: string[]): Promise<void>;
+
+  // Big files (app downloads, up to 2 GB) go up in parts, straight to their final key; the
+  // object exists only once the server completes the upload (src/server/media/app-uploads.ts).
+  /** Starts an upload in parts; returns its upload id. The headers are the object's. */
+  createMultipart(key: string, o: PutOptions): Promise<string>;
+  /** A URL the browser can PUT part `part` (1, 2, …) to, for `expiresIn` seconds. */
+  presignPart(key: string, uploadId: string, part: number, expiresIn: number): Promise<string>;
+  /** Joins parts 1…`parts` into the object. False (and nothing joined) when any is missing or extra. */
+  completeMultipart(key: string, uploadId: string, parts: number): Promise<boolean>;
+  abortMultipart(key: string, uploadId: string): Promise<void>;
+  /** The object's bytes, read front to back without holding them all. */
+  stream(key: string): AsyncIterable<Uint8Array>;
 }
+
+/** Parts 1…n, each exactly once? */
+const isRun = (numbers: number[], n: number) =>
+  numbers.length === n && [...numbers].sort((a, b) => a - b).every((v, i) => v === i + 1);
 
 export const IMMUTABLE = 'public, max-age=31536000, immutable';
 
@@ -89,6 +112,70 @@ export function r2Store(config: R2Config, client?: Pick<S3Client, 'send'>): Medi
       // One request per key: DeleteObjects needs a checksum header R2 handles differently.
       await Promise.all(keys.map((Key) => s3.send(new DeleteObjectCommand({ Bucket, Key }))));
     },
+    async createMultipart(key, o) {
+      const out = await s3.send(
+        new CreateMultipartUploadCommand({
+          Bucket,
+          Key: key,
+          ContentType: o.contentType,
+          CacheControl: o.cacheControl,
+          ContentDisposition: o.contentDisposition,
+        }),
+      );
+      if (!out.UploadId) throw new Error(`R2 returned no upload id for ${key}`);
+      return out.UploadId;
+    },
+    presignPart(key, uploadId, part, expiresIn) {
+      return getSignedUrl(
+        s3 as S3Client,
+        new UploadPartCommand({ Bucket, Key: key, UploadId: uploadId, PartNumber: part }),
+        {
+          expiresIn,
+        },
+      );
+    },
+    async completeMultipart(key, uploadId, parts) {
+      // The server asks R2 which parts arrived (and their ETags), so the browser never has to
+      // read response headers (R2's CORS would have to expose ETag).
+      const found: { PartNumber: number; ETag: string }[] = [];
+      let marker: string | undefined;
+      try {
+        do {
+          const out = await s3.send(
+            new ListPartsCommand({ Bucket, Key: key, UploadId: uploadId, PartNumberMarker: marker }),
+          );
+          for (const p of out.Parts ?? []) found.push({ PartNumber: p.PartNumber!, ETag: p.ETag! });
+          marker = out.IsTruncated ? out.NextPartNumberMarker : undefined;
+        } while (marker);
+      } catch (e) {
+        if (e instanceof S3ServiceException && e.$metadata.httpStatusCode === 404) return false;
+        throw e;
+      }
+      if (
+        !isRun(
+          found.map((p) => p.PartNumber),
+          parts,
+        )
+      )
+        return false;
+      found.sort((a, b) => a.PartNumber - b.PartNumber);
+      await s3.send(
+        new CompleteMultipartUploadCommand({ Bucket, Key: key, UploadId: uploadId, MultipartUpload: { Parts: found } }),
+      );
+      return true;
+    },
+    async abortMultipart(key, uploadId) {
+      try {
+        await s3.send(new AbortMultipartUploadCommand({ Bucket, Key: key, UploadId: uploadId }));
+      } catch (e) {
+        if (!(e instanceof S3ServiceException && e.$metadata.httpStatusCode === 404)) throw e;
+      }
+    },
+    async *stream(key) {
+      const out = await s3.send(new GetObjectCommand({ Bucket, Key: key }));
+      if (!out.Body) throw new Error(`R2 returned no body for ${key}`);
+      yield* out.Body as unknown as AsyncIterable<Uint8Array>;
+    },
   };
 }
 
@@ -100,6 +187,8 @@ export const isStoreKey = (key: string) => KEY.test(key);
 
 type LocalMeta = PutOptions;
 
+const UPLOAD_ID = /^[0-9a-f]{32}$/;
+
 export type LocalStore = MediaStore & {
   read(key: string): Promise<{ body: Buffer; meta: LocalMeta } | null>;
   /** Checks a presigned local upload URL's query; null when it is valid for this request. */
@@ -110,6 +199,10 @@ export type LocalStore = MediaStore & {
     length: number,
   ): string | null;
   write(key: string, body: Uint8Array, meta: LocalMeta): Promise<void>;
+  /** Checks a presigned local part URL's query; null when it is valid for this key. */
+  verifyPart(key: string, query: Record<string, string | string[] | undefined>): string | null;
+  /** Stores one part of an upload started for this key; false if there is no such upload. */
+  writePart(key: string, uploadId: string, part: number, body: Uint8Array): Promise<boolean>;
 };
 
 export function localStore(root: string, secret: string, now = () => Date.now()): LocalStore {
@@ -120,6 +213,25 @@ export function localStore(root: string, secret: string, now = () => Date.now())
   };
   const sign = (key: string, expires: number, type: string, length: number) =>
     createHmac('sha256', secret).update(`${key}\n${expires}\n${type}\n${length}`).digest('hex');
+
+  const signPart = (key: string, uploadId: string, part: number, expires: number) =>
+    createHmac('sha256', secret).update(`part\n${key}\n${uploadId}\n${part}\n${expires}`).digest('hex');
+  /** An upload's parts wait in parts/<upload id>/, with upload.json naming its key and headers. */
+  const partsDir = (uploadId: string) => {
+    if (!UPLOAD_ID.test(uploadId)) throw new Error(`bad upload id: ${uploadId}`);
+    return join(base, 'parts', uploadId);
+  };
+  const upload = async (key: string, uploadId: string): Promise<LocalMeta | null> => {
+    try {
+      const saved = JSON.parse(await readFile(join(partsDir(uploadId), 'upload.json'), 'utf8')) as {
+        key: string;
+        meta: LocalMeta;
+      };
+      return saved.key === key ? saved.meta : null;
+    } catch {
+      return null;
+    }
+  };
 
   const write = async (key: string, body: Uint8Array, meta: LocalMeta) => {
     const file = path(key);
@@ -178,6 +290,65 @@ export function localStore(root: string, secret: string, now = () => Date.now())
       await Promise.all(
         keys.flatMap((k) => [rm(path(k), { force: true }), rm(`${path(k)}.meta.json`, { force: true })]),
       );
+    },
+    async createMultipart(key, o) {
+      path(key);
+      const uploadId = randomBytes(16).toString('hex');
+      await mkdir(partsDir(uploadId), { recursive: true });
+      await writeFile(join(partsDir(uploadId), 'upload.json'), JSON.stringify({ key, meta: o }));
+      return uploadId;
+    },
+    async presignPart(key, uploadId, part, expiresIn) {
+      path(key);
+      partsDir(uploadId);
+      const expires = Math.floor(now() / 1000) + expiresIn;
+      const q = new URLSearchParams({
+        uploadId,
+        partNumber: String(part),
+        expires: String(expires),
+        sig: signPart(key, uploadId, part, expires),
+      });
+      return `${MEDIA_BASE_URL}/${key}?${q}`;
+    },
+    verifyPart(key, query) {
+      const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '');
+      const uploadId = one(query.uploadId);
+      const part = Number(one(query.partNumber));
+      const expires = Number(one(query.expires));
+      const given = Buffer.from(one(query.sig), 'hex');
+      if (!isStoreKey(key) || !UPLOAD_ID.test(uploadId) || !Number.isInteger(part) || part < 1 || part > 10000) {
+        return 'bad signature';
+      }
+      const expected = Buffer.from(signPart(key, uploadId, part, expires), 'hex');
+      if (given.length !== 32 || !timingSafeEqual(given, expected)) return 'bad signature';
+      if (!(expires * 1000 > now())) return 'expired';
+      return null;
+    },
+    async writePart(key, uploadId, part, body) {
+      if (!(await upload(key, uploadId))) return false;
+      await writeFile(join(partsDir(uploadId), String(part)), body);
+      return true;
+    },
+    async completeMultipart(key, uploadId, parts) {
+      const meta = await upload(key, uploadId);
+      if (!meta) return false;
+      const dir = partsDir(uploadId);
+      const numbers = (await readdir(dir)).filter((f) => /^\d+$/.test(f)).map(Number);
+      if (!isRun(numbers, parts)) return false;
+      const file = path(key);
+      await mkdir(dirname(file), { recursive: true });
+      const out = createWriteStream(file);
+      for (let n = 1; n <= parts; n++) await pipeline(createReadStream(join(dir, String(n))), out, { end: false });
+      await new Promise<void>((done, fail) => out.end((e?: Error | null) => (e ? fail(e) : done())));
+      await writeFile(`${file}.meta.json`, JSON.stringify(meta));
+      await rm(dir, { recursive: true, force: true });
+      return true;
+    },
+    async abortMultipart(_key, uploadId) {
+      await rm(partsDir(uploadId), { recursive: true, force: true });
+    },
+    async *stream(key) {
+      yield* createReadStream(path(key)) as AsyncIterable<Uint8Array>;
     },
   };
 }

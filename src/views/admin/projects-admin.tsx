@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
-import { uploadMedia } from '@/lib/media-upload';
+import { uploadApp as sendApp, uploadMedia } from '@/lib/media-upload';
 import { optionalUrlProblem } from '@/lib/site-rules';
 import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { AdminProject } from '@/server/admin/site';
+import { downloadBody, keptDownloads, toAdminDownload, type AppUpload } from './download-fields';
 import { EMPTY_PAGE, pageProblem, ProjectPageFields, type PageFields, type Upload } from './project-page-fields';
 
 type Reply = { error?: string; failed?: string[] };
@@ -47,14 +48,15 @@ const toPage = (p: AdminProject): PageFields => ({
   features: p.features,
   steps: p.steps,
   faq: p.faq,
-  downloads: p.downloads,
+  downloads: p.downloads.map(toAdminDownload),
   version: p.version,
   source_url: p.source_url ?? '',
   screenshots: p.screenshots,
 });
 
-const toBody = ({ screenshots, ...f }: Fields) => ({
+const toBody = ({ screenshots, downloads, ...f }: Fields) => ({
   ...f,
+  downloads: keptDownloads(downloads).map(downloadBody),
   platforms: f.platforms
     .split(',')
     .map((s) => s.trim())
@@ -82,7 +84,13 @@ function pageSummary(p: AdminProject): string {
  * the one featured project (shown first, and on Home). Since v1.1 each card opens the
  * project's own landing page on this site, /projects/<slug>, filled in here.
  */
-export function ProjectsAdmin({ upload = uploadMedia }: { upload?: Upload }) {
+export function ProjectsAdmin({
+  upload = uploadMedia,
+  uploadApp = sendApp,
+}: {
+  upload?: Upload;
+  uploadApp?: AppUpload;
+}) {
   const [projects, setProjects] = useState<AdminProject[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
@@ -153,6 +161,7 @@ export function ProjectsAdmin({ upload = uploadMedia }: { upload?: Upload }) {
                   key={p.id}
                   project={p}
                   upload={upload}
+                  uploadApp={uploadApp}
                   first={i === 0}
                   last={i === projects.length - 1}
                   busy={busy}
@@ -182,6 +191,7 @@ export function ProjectsAdmin({ upload = uploadMedia }: { upload?: Upload }) {
               initial={EMPTY}
               page={EMPTY_PAGE}
               upload={upload}
+              uploadApp={uploadApp}
               label="Add a project"
               submit="Add project"
               busy={busy}
@@ -202,6 +212,7 @@ export function ProjectsAdmin({ upload = uploadMedia }: { upload?: Upload }) {
 function ProjectCard({
   project: p,
   upload,
+  uploadApp,
   first,
   last,
   busy,
@@ -212,6 +223,7 @@ function ProjectCard({
 }: {
   project: AdminProject;
   upload: Upload;
+  uploadApp: AppUpload;
   first: boolean;
   last: boolean;
   busy: boolean;
@@ -237,6 +249,7 @@ function ProjectCard({
           initial={toCard(p)}
           page={toPage(p)}
           upload={upload}
+          uploadApp={uploadApp}
           label={`Edit ${p.name}`}
           submit="Save"
           busy={busy}
@@ -325,6 +338,7 @@ function ProjectForm({
   initial,
   page: initialPage,
   upload,
+  uploadApp,
   label,
   submit,
   busy,
@@ -334,6 +348,7 @@ function ProjectForm({
   initial: CardFields;
   page: PageFields;
   upload: Upload;
+  uploadApp: AppUpload;
   label: string;
   submit: string;
   busy: boolean;
@@ -426,7 +441,7 @@ function ProjectForm({
         Icon: up to 4 characters or an emoji
         <input value={f.glyph} maxLength={4} onChange={(e) => set('glyph', e.target.value)} />
       </label>
-      <ProjectPageFields value={page} upload={upload} onChange={setPage} />
+      <ProjectPageFields value={page} upload={upload} uploadApp={uploadApp} onChange={setPage} />
       {touched && problem && (
         <p role="alert" className="adm-error">
           {problem}

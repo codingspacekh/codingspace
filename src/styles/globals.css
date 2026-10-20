@@ -3459,6 +3459,44 @@ img.ProseMirror-separator {
   height: auto;
   border: 1px solid var(--line);
 }
+/* a project's downloads (2026-10-20): uploaded files or links */
+.adm-dl-list li {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.adm-dl-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  margin: 0;
+}
+.adm-dl-file b {
+  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.adm-dl-file progress {
+  flex: 1 1 160px;
+  accent-color: var(--cyan);
+}
+.adm-dl-drop {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px dashed rgba(24, 228, 236, 0.45);
+  background: rgba(24, 228, 236, 0.03);
+}
+.adm-dl-drop.over {
+  border-color: var(--cyan);
+  background: rgba(24, 228, 236, 0.1);
+}
+.adm-dl-drop p {
+  margin: 0;
+  color: var(--fg2);
+}
 .adm-lessons {
   display: grid;
   gap: 6px;

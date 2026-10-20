@@ -1,7 +1,7 @@
 // @vitest-environment node
 import sharp from 'sharp';
 import { classifyUpload, type UploadType } from '@/lib/media-rules';
-import { checkContent, sniffImage } from '@/server/media/sniff';
+import { checkApp, checkContent, sniffImage } from '@/server/media/sniff';
 
 const type = (kind: 'image' | 'file', name: string): UploadType => {
   const out = classifyUpload(kind, name, 1);
@@ -59,5 +59,39 @@ describe('magic bytes (03 §8.4)', () => {
     ['a.csv', bytes([0xff, 0xfe, 0x41, 0x00])],
   ])('refuses %s whose content is something else', (name, content) => {
     expect(checkContent(type('file', name), content)).toMatch(/doesn’t look like/);
+  });
+});
+
+describe('app downloads: first and last bytes (2026-10-20)', () => {
+  const app = (name: string): UploadType => {
+    const out = classifyUpload('app', name, 1);
+    if (!out.ok) throw new Error(out.error);
+    return out.type;
+  };
+  const koly = bytes('koly', new Array(508).fill(0));
+
+  it.each([
+    ['setup.exe', bytes('MZ\x90\x00'), new Uint8Array()],
+    ['setup.msi', bytes([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), new Uint8Array()],
+    ['app.zip', bytes('PK\x03\x04'), new Uint8Array()],
+    ['app.apk', bytes('PK\x03\x04'), new Uint8Array()],
+    ['app.pkg', bytes('xar!'), new Uint8Array()],
+    ['app.dmg', bytes([0x78, 0x01]), koly],
+  ])('accepts a real %s', (name, head, tail) => {
+    expect(checkApp(app(name), head, tail)).toBeNull();
+  });
+
+  it.each([
+    ['a script renamed to .exe', 'setup.exe', bytes('#!/bin/sh'), new Uint8Array()],
+    ['a ZIP renamed to .msi', 'setup.msi', bytes('PK\x03\x04'), new Uint8Array()],
+    ['a program renamed to .zip', 'app.zip', bytes('MZ'), new Uint8Array()],
+    ['a disk image without its trailer', 'app.dmg', bytes('koly'), bytes('x'.repeat(512))],
+    ['a disk image cut short', 'app.dmg', bytes('x'), bytes('koly')],
+  ])('refuses %s', (_, name, head, tail) => {
+    expect(checkApp(app(name), head, tail)).toMatch(/doesn’t look like/);
+  });
+
+  it('refuses an empty file', () => {
+    expect(checkApp(app('a.exe'), new Uint8Array(), new Uint8Array())).toBe('The file is empty.');
   });
 });

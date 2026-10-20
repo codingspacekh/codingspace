@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BUILT_IN, cleanItem, HEADER_PARTS, PHOTO_SHAPES, type AuthorItem, type AuthorSection } from '@/lib/author';
 import { postSlug } from '@/lib/post-rules';
 import {
+  DOWNLOAD_PLATFORMS,
   isBlank,
   PROJECT_LIMITS,
   PROJECT_TEXT,
@@ -45,25 +46,36 @@ const url = (optional: boolean) =>
       const problem = optional ? optionalUrlProblem(v) : landingUrlProblem(v);
       if (problem) ctx.addIssue({ code: 'custom', message: problem });
     });
-/** A list for the page; items with every field blank are dropped first. */
+/** Items with every field blank are dropped first: an "Add" pressed by mistake. */
+const dropBlank = (v: unknown) =>
+  Array.isArray(v)
+    ? v.filter(
+        (i) =>
+          !(
+            typeof i === 'object' &&
+            i !== null &&
+            Object.values(i).every((x) => typeof x === 'string') &&
+            isBlank(i as Record<string, string>)
+          ),
+      )
+    : v;
+/** A list for the page. */
 const list = <T extends z.ZodRawShape>(shape: T, max: number) =>
-  z.preprocess(
-    (v) =>
-      Array.isArray(v)
-        ? v.filter(
-            (i) =>
-              !(
-                typeof i === 'object' &&
-                i !== null &&
-                Object.values(i).every((x) => typeof x === 'string') &&
-                isBlank(i as Record<string, string>)
-              ),
-          )
-        : v,
-    z.array(z.object(shape)).max(max).default([]),
-  );
+  z.preprocess(dropBlank, z.array(z.object(shape)).max(max).default([]));
 const L = PROJECT_LIMITS;
 const T = PROJECT_TEXT;
+const download = {
+  label: z.string().trim().min(1, 'every download needs a label').max(T.label),
+  note: text(T.note),
+  platform: z
+    .enum(Object.keys(DOWNLOAD_PLATFORMS) as [keyof typeof DOWNLOAD_PLATFORMS])
+    .or(z.literal(''))
+    .default('')
+    .transform((v) => v || undefined),
+};
+/** A file uploaded here: the database copies its name, size and checksum from the library. */
+const fileDownload = z.object({ ...download, media: uuid });
+const linkDownload = z.object({ ...download, url: url(false) });
 const titled = { title: z.string().trim().min(1, 'every item needs a title').max(T.title), text: text(T.text) };
 
 export const projectInput = z.object({
@@ -85,9 +97,12 @@ export const projectInput = z.object({
     { question: z.string().trim().min(1, 'every question needs its text').max(T.question), answer: text(T.answer) },
     L.faq,
   ),
-  downloads: list(
-    { label: z.string().trim().min(1, 'every download needs a label').max(T.label), url: url(false) },
-    L.downloads,
+  downloads: z.preprocess(
+    dropBlank,
+    z
+      .array(z.union([fileDownload, linkDownload]))
+      .max(L.downloads)
+      .default([]),
   ),
   version: text(T.version),
   source_url: url(true).default(''),

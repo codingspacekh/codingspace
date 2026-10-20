@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { cleanFileName } from '@/lib/media-rules';
+import { cleanFileName, type MediaKind } from '@/lib/media-rules';
 import { fileKey, IMAGE_FORMATS, imageKey } from '@/lib/media-urls';
 import type { MediaStore } from './store';
 import type { MediaItem } from './uploads';
@@ -15,7 +15,7 @@ const SELECT = 'id, kind, mime, bytes, width, height, widths, alt, original_name
 export const PAGE_SIZE = 60;
 
 export const listQuery = z.object({
-  kind: z.enum(['image', 'file']).optional(),
+  kind: z.enum(['image', 'file', 'app']).optional(),
   q: z.string().max(100).optional(),
   unused: z.enum(['1']).optional(),
   /** A folder's id, or "none" for Unsorted; left out: every folder. */
@@ -94,7 +94,7 @@ export async function deleteMedia(supabase: SupabaseClient, store: MediaStore | 
   const mediaId = uuid.parse(id);
   const { data, error } = await supabase.rpc('admin_delete_media', { p_id: mediaId });
   if (error) dbError(error, 'admin_delete_media');
-  const { kind, widths } = data as { kind: 'image' | 'file'; widths: number[] };
+  const { kind, widths } = data as { kind: MediaKind; widths: number[] };
   const keys =
     kind === 'image' ? widths.flatMap((w) => IMAGE_FORMATS.map((f) => imageKey(mediaId, w, f))) : [fileKey(mediaId)];
   // Leftover objects are harmless (nothing links to them); a failure here isn't the owner's problem.
