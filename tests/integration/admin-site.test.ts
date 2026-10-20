@@ -126,6 +126,19 @@ describe('projects (ADM-13)', () => {
         version: '1.0.0',
         source_url: 'https://github.com/x/em',
         screenshots: [{ media_id: media, caption: 'Trimming' }],
+        // 2026-10-20 redesign
+        highlights: [{ value: '4 GB', label: 'of RAM is enough' }],
+        why_title: 'Five programs before',
+        replaces: [{ name: 'DaVinci Resolve', note: 'needs a strong GPU' }],
+        requirements: [{ part: 'Memory', minimum: '4 GB', recommended: '8 GB' }],
+        release_date: '2026-10-19',
+        release_notes: 'Learn mode\n\n 33 transitions ',
+        steps: [{ title: 'Open the installer', text: '', platform: 'windows' }],
+        section_order: ['download', 'why', 'download'],
+        hidden_sections: ['faq'],
+        showcase: [
+          { media_id: media, label: 'Video mode', title: 'Trim and join', points: [{ code: 'V4', text: 'Captions' }] },
+        ],
       }),
     );
     expect(paths).toContain('/projects/it-test-easy-media');
@@ -142,6 +155,31 @@ describe('projects (ADM-13)', () => {
       sourceUrl: 'https://github.com/x/em',
       project: { name: 'IT Test Easy Media', landingUrl: null, available: true },
       screenshots: [{ media, caption: 'Trimming', alt: 'The editor', widths: [640, 1280], width: 1280, height: 720 }],
+      highlights: [{ value: '4 GB', label: 'of RAM is enough' }],
+      whyTitle: 'Five programs before',
+      replaces: [{ name: 'DaVinci Resolve', note: 'needs a strong GPU' }],
+      requirements: [{ part: 'Memory', minimum: '4 GB', recommended: '8 GB' }],
+      releaseDate: '2026-10-19',
+      releaseNotes: ['Learn mode', '33 transitions'],
+      steps: [{ title: 'Open the installer', text: '', platform: 'windows' }],
+      sections: ['download', 'why', 'numbers', 'showcase', 'features', 'screenshots', 'requirements', 'install'],
+      showcase: [
+        {
+          media,
+          label: 'Video mode',
+          title: 'Trim and join',
+          text: '',
+          points: [{ code: 'V4', text: 'Captions' }],
+          color: '',
+          alt: 'The editor',
+          widths: [640, 1280],
+        },
+      ],
+    });
+    expect((await listProjects(owner)).find((p) => p.id === id)).toMatchObject({
+      section_order: ['download', 'why'],
+      hidden_sections: ['faq'],
+      showcase: [{ media_id: media, title: 'Trim and join', widths: [640, 1280] }],
     });
     expect(page.introHtml).toContain('<strong>students</strong>');
     expect(page.faq[0]!.answerHtml).toMatch(/<a href="https:\/\/example.com\/?"/);

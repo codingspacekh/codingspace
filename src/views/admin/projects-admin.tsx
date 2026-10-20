@@ -2,11 +2,20 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
 import { uploadApp as sendApp, uploadMedia } from '@/lib/media-upload';
+import { sectionOrder } from '@/lib/project-page';
 import { optionalUrlProblem } from '@/lib/site-rules';
 import { useSubjects, type SubjectId } from '@/lib/subjects';
 import type { AdminProject } from '@/server/admin/site';
 import { downloadBody, keptDownloads, toAdminDownload, type AppUpload } from './download-fields';
-import { EMPTY_PAGE, pageProblem, ProjectPageFields, type PageFields, type Upload } from './project-page-fields';
+import {
+  EMPTY_PAGE,
+  pageProblem,
+  parsePoints,
+  pointsText,
+  ProjectPageFields,
+  type PageFields,
+  type Upload,
+} from './project-page-fields';
 
 type Reply = { error?: string; failed?: string[] };
 /** The card's fields (Projects and Home); the page's are in PageFields. */
@@ -46,17 +55,36 @@ const toPage = (p: AdminProject): PageFields => ({
   intro: p.intro,
   reasons: p.reasons,
   features: p.features,
-  steps: p.steps,
+  steps: p.steps.map((s) => ({ title: s.title, text: s.text, platform: s.platform ?? '' })),
   faq: p.faq,
   downloads: p.downloads.map(toAdminDownload),
   version: p.version,
   source_url: p.source_url ?? '',
   screenshots: p.screenshots,
+  highlights: p.highlights,
+  why_title: p.why_title,
+  why_text: p.why_text,
+  replaces: p.replaces,
+  requirements: p.requirements,
+  requirements_note: p.requirements_note,
+  release_date: p.release_date ?? '',
+  release_notes: p.release_notes,
+  section_order: sectionOrder(p.section_order),
+  hidden_sections: p.hidden_sections,
+  showcase: p.showcase.map(({ points, ...r }) => ({ ...r, points: pointsText(points) })),
 });
 
-const toBody = ({ screenshots, downloads, ...f }: Fields) => ({
+const toBody = ({ screenshots, downloads, showcase, ...f }: Fields) => ({
   ...f,
   downloads: keptDownloads(downloads).map(downloadBody),
+  showcase: showcase.map((r) => ({
+    media_id: r.media_id,
+    label: r.label,
+    title: r.title,
+    text: r.text,
+    points: parsePoints(r.points),
+    color: r.color,
+  })),
   platforms: f.platforms
     .split(',')
     .map((s) => s.trim())

@@ -1,5 +1,16 @@
 import type { PhotoShape, SectionKind } from '@/lib/author';
-import type { ProjectDownload, ProjectFeature, ProjectReason, ProjectStep } from '@/lib/project-page';
+import type {
+  PageSection,
+  ProjectDownload,
+  ProjectFeature,
+  ProjectHighlight,
+  ProjectReason,
+  ProjectReplaced,
+  ProjectRequirement,
+  ProjectStep,
+  ShowcaseColor,
+  ShowcasePoint,
+} from '@/lib/project-page';
 import type { SubjectId } from '@/lib/subjects';
 
 // Shapes the pages receive (serialisable props). Read from the public_* views only.
@@ -141,7 +152,19 @@ export type ProjectScreenshot = {
   height: number;
 };
 
-/** /projects/<slug> (v1.1): a landing page in one fixed layout; empty sections don't show. */
+/** A big row on a project page: a screenshot with a label, title, text and points (2026-10-20). */
+export type ProjectShowcase = Omit<ProjectScreenshot, 'caption'> & {
+  label: string;
+  title: string;
+  text: string;
+  points: ShowcasePoint[];
+  color: ShowcaseColor | '';
+};
+
+/**
+ * /projects/<slug> (v1.1, redesigned 2026-10-20): hero, the sections in `sections` (the owner's
+ * order, hidden ones left out), then a closing call. Empty sections don't show.
+ */
 export type ProjectPageData = {
   project: Project;
   tagline: string;
@@ -155,6 +178,18 @@ export type ProjectPageData = {
   sourceUrl: string | null;
   screenshots: ProjectScreenshot[];
   hasMath: boolean;
+  sections: PageSection[];
+  highlights: ProjectHighlight[];
+  whyTitle: string;
+  whyText: string;
+  replaces: ProjectReplaced[];
+  requirements: ProjectRequirement[];
+  requirementsNote: string;
+  /** YYYY-MM-DD, or null. */
+  releaseDate: string | null;
+  /** One change per item. */
+  releaseNotes: string[];
+  showcase: ProjectShowcase[];
 };
 
 export type FeaturedProblem = {

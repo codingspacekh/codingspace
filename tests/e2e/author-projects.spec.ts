@@ -41,22 +41,30 @@ test('a project card opens its landing page here: intro, reasons, features, step
   await page.getByRole('link', { name: /Pseudocode Runner/ }).click();
   await expect(page).toHaveURL(/\/projects\/pseudocode-runner$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Pseudocode Runner/);
-  await expect(page.getByText('Write Cambridge 9618 pseudocode and watch it run')).toBeVisible();
+  // The tagline: under the name, and again in the closing call.
+  await expect(page.getByText('Write Cambridge 9618 pseudocode and watch it run').first()).toBeVisible();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Why Pseudocode Runner?',
     'Features',
-    'Get started',
-    'Questions',
     'Get Pseudocode Runner',
+    'Install',
+    'Questions',
+    'Ready to try Pseudocode Runner?',
   ]);
-  // Two downloads: the hero's button goes to them.
-  await page.getByRole('link', { name: 'Download', exact: true }).click();
-  await expect(page).toHaveURL(/#download$/);
-  const get = page.getByRole('region', { name: 'Get Pseudocode Runner' });
-  await expect(get.getByText('Free, version 0.9.0, for Windows, macOS.')).toBeVisible();
-  await expect(get.getByRole('link', { name: 'Download for Windows' })).toHaveAttribute(
+  // 2026-10-20: the hero downloads directly; the sub-navigation (on screen while scrolling) leads to all of them.
+  await expect(page.getByRole('link', { name: /^Download for Windows/ }).first()).toHaveAttribute(
     'href',
     'https://example.com/downloads/pseudocode-runner-setup.exe',
+  );
+  const nav = page.getByRole('navigation', { name: 'Pseudocode Runner: on this page' });
+  await nav.locator('a.btn').click();
+  await expect(page).toHaveURL(/#download$/);
+  await expect(nav).toBeInViewport();
+  const get = page.getByRole('region', { name: 'Get Pseudocode Runner' });
+  await expect(get.getByText('Version 0.9.0')).toBeVisible();
+  await expect(get.getByRole('link', { name: 'Download ↗ for macOS' })).toHaveAttribute(
+    'href',
+    'https://example.com/downloads/pseudocode-runner.dmg',
   );
   await page.getByText('Does it work without the internet?').click();
   await expect(page.getByText('Once installed, it never needs a connection.')).toBeVisible();
@@ -67,7 +75,10 @@ test('a project card opens its landing page here: intro, reasons, features, step
   await page.goto('/projects');
   await expect(page.getByRole('link', { name: /Inequality Drills/ })).toContainText('Coming soon');
   await page.getByRole('link', { name: /Inequality Drills/ }).click();
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Inequality Drills is coming soon']);
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+    'Inequality Drills is coming soon',
+    'Inequality Drills',
+  ]);
   expect((await page.goto('/projects/no-such-project'))!.status()).toBe(404);
   expect(
     problems.filter((p) => !p.includes('404')),

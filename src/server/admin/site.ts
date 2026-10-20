@@ -5,13 +5,22 @@ import { postSlug } from '@/lib/post-rules';
 import {
   DOWNLOAD_PLATFORMS,
   isBlank,
+  PAGE_SECTIONS,
   PROJECT_LIMITS,
   PROJECT_TEXT,
+  SHOWCASE_COLORS,
+  STEP_PLATFORMS,
+  type PageSection,
   type ProjectDownload,
   type ProjectFaq,
   type ProjectFeature,
+  type ProjectHighlight,
   type ProjectReason,
+  type ProjectReplaced,
+  type ProjectRequirement,
   type ProjectStep,
+  type ShowcaseColor,
+  type ShowcasePoint,
 } from '@/lib/project-page';
 import { EMAIL, landingUrlProblem, optionalUrlProblem } from '@/lib/site-rules';
 import { SUBJECT_ID, type SubjectId } from '@/lib/subjects';
@@ -76,6 +85,12 @@ const download = {
 /** A file uploaded here: the database copies its name, size and checksum from the library. */
 const fileDownload = z.object({ ...download, media: uuid });
 const linkDownload = z.object({ ...download, url: url(false) });
+/** Section names, each once. */
+const sections = z
+  .array(z.enum(PAGE_SECTIONS))
+  .max(PAGE_SECTIONS.length)
+  .default([])
+  .transform((v) => [...new Set(v)]);
 const titled = { title: z.string().trim().min(1, 'every item needs a title').max(T.title), text: text(T.text) };
 
 export const projectInput = z.object({
@@ -92,7 +107,17 @@ export const projectInput = z.object({
   intro: text(T.intro),
   reasons: list(titled, L.reasons),
   features: list({ glyph: text(T.glyph), ...titled }, L.features),
-  steps: list(titled, L.steps),
+  steps: list(
+    {
+      ...titled,
+      platform: z
+        .enum(Object.keys(STEP_PLATFORMS) as [keyof typeof STEP_PLATFORMS])
+        .or(z.literal(''))
+        .default('')
+        .transform((v) => v || undefined),
+    },
+    L.steps,
+  ),
   faq: list(
     { question: z.string().trim().min(1, 'every question needs its text').max(T.question), answer: text(T.answer) },
     L.faq,
@@ -110,9 +135,61 @@ export const projectInput = z.object({
     .array(z.object({ media_id: uuid, caption: text(T.caption) }))
     .max(L.screenshots)
     .default([]),
+  // 2026-10-20 redesign
+  highlights: list(
+    { value: z.string().trim().min(1, 'every number needs its value').max(T.value), label: text(T.highlight) },
+    L.highlights,
+  ),
+  why_title: text(T.whyTitle),
+  why_text: text(T.whyText),
+  replaces: list(
+    {
+      name: z.string().trim().min(1, 'every “Before” item needs a name').max(T.replacedName),
+      note: text(T.replacedName),
+    },
+    L.replaces,
+  ),
+  requirements: list(
+    {
+      part: z.string().trim().min(1, 'every requirement needs a name, like Memory').max(T.part),
+      minimum: text(T.requirement),
+      recommended: text(T.requirement),
+    },
+    L.requirements,
+  ),
+  requirements_note: text(T.requirementsNote),
+  release_date: z
+    .string()
+    .regex(/^(\d{4}-\d{2}-\d{2})?$/, 'the release date must be a date')
+    .default(''),
+  release_notes: text(T.releaseNotes),
+  section_order: sections,
+  hidden_sections: sections,
+  showcase: z
+    .array(
+      z.object({
+        media_id: uuid,
+        label: text(T.showcaseLabel),
+        title: z.string().trim().min(1, 'every showcase row needs a title').max(T.showcaseTitle),
+        text: text(T.showcaseText),
+        points: list({ code: text(T.code), text: z.string().trim().min(1).max(T.point) }, L.points),
+        color: z.enum(SHOWCASE_COLORS).or(z.literal('')).default(''),
+      }),
+    )
+    .max(L.showcase)
+    .default([]),
 });
 
 export type AdminScreenshot = { media_id: string; caption: string; widths: number[] };
+export type AdminShowcase = {
+  media_id: string;
+  label: string;
+  title: string;
+  text: string;
+  points: ShowcasePoint[];
+  color: ShowcaseColor | '';
+  widths: number[];
+};
 
 export type AdminProject = {
   id: string;
@@ -136,25 +213,54 @@ export type AdminProject = {
   version: string;
   source_url: string | null;
   screenshots: AdminScreenshot[];
+  highlights: ProjectHighlight[];
+  why_title: string;
+  why_text: string;
+  replaces: ProjectReplaced[];
+  requirements: ProjectRequirement[];
+  requirements_note: string;
+  release_date: string | null;
+  release_notes: string;
+  section_order: PageSection[];
+  hidden_sections: PageSection[];
+  showcase: AdminShowcase[];
 };
 
 const PROJECT_COLUMNS =
   'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, sort, ' +
-  'tagline, intro, reasons, features, steps, faq, downloads, version, source_url';
+  'tagline, intro, reasons, features, steps, faq, downloads, version, source_url, highlights, why_title, why_text, ' +
+  'replaces, requirements, requirements_note, release_date, release_notes, section_order, hidden_sections';
 
 export async function listProjects(supabase: SupabaseClient): Promise<AdminProject[]> {
-  const [projects, shots] = await Promise.all([
+  const [projects, shots, showcase] = await Promise.all([
     supabase.from('projects').select(PROJECT_COLUMNS).order('sort').order('name'),
     supabase.from('project_screenshots').select('project_id, media_id, caption, widths').order('position'),
+    supabase
+      .from('project_showcase')
+      .select('project_id, media_id, label, title, text, points, color, widths')
+      .order('position'),
   ]);
   if (projects.error) dbError(projects.error, 'projects');
   if (shots.error) dbError(shots.error, 'project_screenshots');
+  if (showcase.error) dbError(showcase.error, 'project_showcase');
   const rows = shots.data as (AdminScreenshot & { project_id: string })[];
-  return (projects.data as unknown as Omit<AdminProject, 'screenshots'>[]).map((p) => ({
+  const showRows = showcase.data as (AdminShowcase & { project_id: string })[];
+  return (projects.data as unknown as Omit<AdminProject, 'screenshots' | 'showcase'>[]).map((p) => ({
     ...p,
     screenshots: rows
       .filter((s) => s.project_id === p.id)
       .map((s) => ({ media_id: s.media_id, caption: s.caption, widths: s.widths })),
+    showcase: showRows
+      .filter((s) => s.project_id === p.id)
+      .map((s) => ({
+        media_id: s.media_id,
+        label: s.label,
+        title: s.title,
+        text: s.text,
+        points: s.points,
+        color: s.color,
+        widths: s.widths,
+      })),
   }));
 }
 

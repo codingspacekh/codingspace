@@ -25,6 +25,17 @@ const project = (id: string, name: string, extra = {}) => ({
   version: '',
   source_url: null,
   screenshots: [],
+  highlights: [],
+  why_title: '',
+  why_text: '',
+  replaces: [],
+  requirements: [],
+  requirements_note: '',
+  release_date: null,
+  release_notes: '',
+  section_order: [],
+  hidden_sections: [],
+  showcase: [],
   ...extra,
 });
 const projects = () => [
@@ -116,6 +127,27 @@ describe('projects admin (03 ADM-13)', () => {
           version: '',
           source_url: '',
           screenshots: [],
+          highlights: [],
+          why_title: '',
+          why_text: '',
+          replaces: [],
+          requirements: [],
+          requirements_note: '',
+          release_date: '',
+          release_notes: '',
+          section_order: [
+            'numbers',
+            'why',
+            'showcase',
+            'features',
+            'screenshots',
+            'requirements',
+            'download',
+            'install',
+            'faq',
+          ],
+          hidden_sections: [],
+          showcase: [],
         },
       }),
     );
@@ -183,7 +215,7 @@ describe('projects admin (03 ADM-13)', () => {
     await user.click(part(form, 'Hero'));
     await user.type(within(form).getByRole('textbox', { name: /Tagline/ }), 'Quizzes in a minute.');
 
-    await user.click(part(form, 'Why use it'));
+    await user.click(part(form, 'Why'));
     await user.click(within(form).getByRole('button', { name: 'Add a reason' }));
     await user.click(within(form).getByRole('button', { name: 'Add a reason' }));
     const reasons = within(form).getByRole('list', { name: 'Reasons' });
@@ -287,6 +319,104 @@ describe('projects admin (03 ADM-13)', () => {
       ],
     });
   }, 20_000);
+
+  it('the redesigned page (2026-10-20): numbers, a showcase row, install steps per computer; hide and move sections', async () => {
+    const calls = mockApi();
+    const upload = vi.fn(async () => ({
+      id: '42000000-0000-4000-8000-000000000001',
+      kind: 'image' as const,
+      mime: 'image/png',
+      bytes: 3,
+      width: 1440,
+      height: 900,
+      widths: [480, 1440],
+      alt: '',
+      original_name: 'video.png',
+    }));
+    render(<ProjectsAdmin upload={upload} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    const form = screen.getByRole('form', { name: 'Edit Quiz' });
+    const summaries = () =>
+      [...form.querySelectorAll('.adm-pj-part > summary')].map((s) => s.firstChild?.textContent?.trim());
+    expect(summaries()).toEqual([
+      'Hero',
+      'Numbers',
+      'Why',
+      'Showcase',
+      'Features',
+      'Screenshots',
+      'Requirements',
+      'Download',
+      'Install',
+      'Questions',
+    ]);
+
+    await user.click(part(form, 'Numbers'));
+    await user.click(within(form).getByRole('button', { name: 'Add a number' }));
+    await user.type(within(form).getByRole('textbox', { name: 'Value' }), '4 GB');
+    await user.type(within(form).getByRole('textbox', { name: 'Line' }), 'of RAM is enough');
+    // Questions first, Numbers hidden.
+    await user.click(
+      within(part(form, 'Numbers').closest('details')!).getByRole('checkbox', { name: 'Show on the page' }),
+    );
+    expect(part(form, 'Numbers')).toHaveTextContent('hidden ·');
+    await user.click(part(form, 'Questions'));
+    for (let i = 0; i < 8; i++) await user.click(within(form).getByRole('button', { name: 'Move up Questions' }));
+    expect(summaries()[1]).toBe('Questions');
+
+    await user.click(part(form, 'Showcase'));
+    await user.click(within(form).getByRole('button', { name: 'Add a row: upload its image' }));
+    await user.upload(
+      within(form).getByLabelText('Upload a showcase image'),
+      new File(['png'], 'video.png', { type: 'image/png' }),
+    );
+    expect(await within(form).findByText('Row added with “video.png”: give it a title.')).toBeInTheDocument();
+    const rows = within(form).getByRole('list', { name: 'Showcase rows' });
+    await user.type(within(rows).getByRole('textbox', { name: 'Title' }), 'Trim and join');
+    await user.type(within(rows).getByRole('textbox', { name: /^Points/ }), 'V4: Captions{Enter}Snapshots');
+    await user.selectOptions(within(rows).getByRole('combobox', { name: 'Colour' }), 'lime');
+
+    await user.click(part(form, 'Install'));
+    await user.click(within(form).getByRole('button', { name: 'Add a step' }));
+    const steps = within(form).getByRole('list', { name: 'Steps' });
+    await user.type(within(steps).getByRole('textbox', { name: 'Title' }), 'Open the installer');
+    await user.selectOptions(within(steps).getByRole('combobox', { name: 'For' }), 'windows');
+
+    await user.click(part(form, 'Download'));
+    await user.type(within(form).getByLabelText('Release date (optional)'), '2026-10-19');
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]!.body).toMatchObject({
+      highlights: [{ value: '4 GB', label: 'of RAM is enough' }],
+      hidden_sections: ['numbers'],
+      section_order: [
+        'faq',
+        'numbers',
+        'why',
+        'showcase',
+        'features',
+        'screenshots',
+        'requirements',
+        'download',
+        'install',
+      ],
+      showcase: [
+        {
+          media_id: '42000000-0000-4000-8000-000000000001',
+          title: 'Trim and join',
+          points: [
+            { code: 'V4', text: 'Captions' },
+            { code: '', text: 'Snapshots' },
+          ],
+          color: 'lime',
+        },
+      ],
+      steps: [{ title: 'Open the installer', text: '', platform: 'windows' }],
+      release_date: '2026-10-19',
+    });
+  }, 30_000);
 
   it('asks for a title on a reason that has text', async () => {
     const calls = mockApi();
