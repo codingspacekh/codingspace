@@ -1,7 +1,8 @@
 import { useRouter } from 'next/router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ARRIVE_MS } from '@/config/boot-script.mjs';
 import { usePrefs, useSound } from './arwes/prefs';
+import { audioAllowed, useAudioAllowed } from './audio-gate';
 import { setPref } from './prefs-store';
 
 /**
@@ -116,7 +117,12 @@ export function PageEffects() {
     };
   }, [router.events]);
 
-  return <SoundInvite />;
+  return (
+    <>
+      <SoundInvite />
+      <SoundReminder />
+    </>
+  );
 }
 
 /**
@@ -156,6 +162,71 @@ function SoundInvite() {
         </button>
         <button type="button" className="btn" onClick={() => setPref('invited', true)}>
           No thanks
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Sound is on, but after a fresh load the browser keeps the page silent until the visitor clicks,
+ * taps or presses a key (./audio-gate.ts). Rather than leave them wondering, a small panel says so
+ * after a moment. Once shown it stays until answered or until the visitor uses the page elsewhere:
+ * it can't simply go at the first press, or its own buttons would vanish under the pointer.
+ */
+function SoundReminder() {
+  const router = useRouter();
+  const { sound } = usePrefs();
+  const allowed = useAudioAllowed();
+  const play = useSound();
+  const panel = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const wanted = sound && !inAdmin(router.pathname);
+
+  useEffect(() => {
+    if (!wanted || allowed) return;
+    const t = window.setTimeout(() => setOpen(true), 1500);
+    return () => window.clearTimeout(t);
+  }, [wanted, allowed]);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => {
+      if (audioAllowed() && !panel.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', away, true);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', away, true);
+    };
+  }, [open]);
+
+  if (!wanted || !open) return null;
+  return (
+    // data-no-sound: the start chime answers these buttons, not the click on top of it.
+    <div ref={panel} className="sound-invite" role="region" aria-label="Sound" data-no-sound>
+      <p>Sound is on. Your browser waits for a click or tap to play it.</p>
+      <div className="sound-invite-actions">
+        <button
+          type="button"
+          className="btn pri"
+          onClick={() => {
+            setOpen(false);
+            play('start');
+          }}
+        >
+          Start sound
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setOpen(false);
+            setPref('sound', false);
+          }}
+        >
+          Turn off
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { collectProblems } from './helpers';
 
 // M6 (03 PUB-11, NFR-A11Y-1): motion, sound, reading mode and print, as visitors meet them.
@@ -132,6 +132,26 @@ test('print shows only the lesson, black on white', async ({ page }) => {
   expect(colours).toEqual(['rgb(255, 255, 255)', 'rgb(0, 0, 0)']);
 });
 
+/**
+ * A browser lets a fresh page play sound only after a click, tap or key press. Playwright runs its own
+ * scripts as a user gesture, which Chromium counts like one, so the page would look clicked from the
+ * start: this puts the browser's rule back (navigator.userActivation, set only by real input).
+ */
+async function browserSoundRule(page: Page) {
+  await page.addInitScript(() => {
+    const activation = { hasBeenActive: false, isActive: false };
+    Object.defineProperty(Navigator.prototype, 'userActivation', { get: () => activation, configurable: true });
+    for (const t of ['pointerdown', 'mousedown', 'touchend', 'keydown'])
+      window.addEventListener(
+        t,
+        (e) => {
+          if (e.isTrusted && (e as KeyboardEvent).key !== 'Escape') activation.hasBeenActive = true;
+        },
+        true,
+      );
+  });
+}
+
 test.describe('page changes and the sound offer (after soulextract.com)', () => {
   test('moving between pages animates the arrival, then leaves the page alone', async ({ page, isMobile }) => {
     test.skip(isMobile, 'same code; the desktop bar has the link in view');
@@ -235,10 +255,32 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
     });
   });
 
+  test('sound on, a fresh page: nothing plays before the first click; the reminder starts it', async ({ page }) => {
+    const problems = await collectProblems(page);
+    await browserSoundRule(page);
+    await page.addInitScript(() => localStorage.setItem('cs-prefs', JSON.stringify({ invited: true, sound: true })));
+    const sounds: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('/sounds/')) sounds.push(r.url());
+    });
+    await page.goto('/');
+    // Pointing at a link is not a click: the browser would drop the tick, so none is tried.
+    await page.getByRole('link', { name: /^Math/ }).first().hover();
+    const reminder = page.getByRole('region', { name: 'Sound' });
+    await expect(reminder).toContainText('Sound is on');
+    expect(sounds).toEqual([]);
+    const chime = page.waitForResponse((r) => r.url().endsWith('/sounds/intro.mp3') && r.ok());
+    await reminder.getByRole('button', { name: 'Start sound' }).click();
+    await chime;
+    await expect(reminder).toHaveCount(0);
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+
   test.describe('a first visit', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test('the page is never held back; a small offer turns sound on with a chime, once', async ({ page }) => {
+      await browserSoundRule(page);
       await page.goto('/');
       // Content first: the heading is there before any offer.
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -249,8 +291,12 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
       await chime;
       await expect(offer).toHaveCount(0);
       await page.reload();
-      await page.waitForTimeout(2000);
-      await expect(page.getByRole('region', { name: 'Sound' })).toHaveCount(0);
+      // Not asked again. Sound stays on, and this fresh page says it waits for a click to play it.
+      const reminder = page.getByRole('region', { name: 'Sound' });
+      await expect(reminder).toContainText('Sound is on');
+      await expect(page.getByRole('button', { name: 'Turn on sound' })).toHaveCount(0);
+      await reminder.getByRole('button', { name: 'Start sound' }).click();
+      await expect(reminder).toHaveCount(0);
       const burger = page.getByRole('button', { name: 'Menu' });
       if (await burger.isVisible()) await burger.click();
       await expect(page.getByRole('button', { name: /sound on/i })).toBeVisible();

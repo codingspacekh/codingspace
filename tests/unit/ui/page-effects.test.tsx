@@ -12,6 +12,13 @@ vi.mock('next/router', () => ({ useRouter: () => ({ events, pathname }) }));
 import { PageEffects, UiRoot } from '@/ui';
 import { ARRIVE_MS, LOADER_MS } from '@/ui/page-effects';
 
+// Like a browser: a fresh page may not play sound until the first click, tap or key press.
+const activation = { hasBeenActive: true };
+Object.defineProperty(navigator, 'userActivation', { value: activation, configurable: true });
+for (const t of ['pointerdown', 'mousedown', 'touchend', 'keydown'])
+  window.addEventListener(t, () => (activation.hasBeenActive = true), true);
+const fresh = () => (activation.hasBeenActive = false);
+
 const html = document.documentElement;
 const route = (name: string, url: string, shallow = false) => act(() => events.emit(name, url, { shallow }));
 
@@ -31,6 +38,7 @@ function setup({ motion = true, sound = false } = {}) {
 }
 
 beforeEach(() => {
+  activation.hasBeenActive = true;
   Object.values(play).forEach((f) => f.mockClear());
   pathname = '/';
   delete html.dataset.transition;
@@ -186,5 +194,71 @@ describe('the one-time sound offer', () => {
     pathname = '/admin/posts';
     setup();
     expect(document.querySelector('.sound-invite')).toBeNull();
+  });
+});
+
+describe('sound after a fresh load (the browser waits for a click)', () => {
+  it('nothing is played before the first click, tap or key press: the browser would drop it', async () => {
+    fresh();
+    setup({ sound: true });
+    fireEvent.pointerOver(screen.getByRole('link', { name: 'A link' }), { pointerType: 'mouse' });
+    route('routeChangeStart', '/projects');
+    route('routeChangeComplete', '/projects');
+    await new Promise((r) => setTimeout(r, 100));
+    expect(Object.values(play).every((f) => f.mock.calls.length === 0)).toBe(true);
+    // The first press starts it: that very click is heard.
+    await userEvent.click(screen.getByRole('button', { name: 'A button' }));
+    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
+  });
+
+  it('with sound on, a reminder says so after a moment; "Start sound" plays the chime and closes it', async () => {
+    fresh();
+    setup({ sound: true });
+    expect(screen.queryByRole('region', { name: 'Sound' })).toBeNull();
+    const reminder = await screen.findByRole('region', { name: 'Sound' }, { timeout: 2500 });
+    expect(reminder).toHaveTextContent('Sound is on');
+    await userEvent.click(screen.getByRole('button', { name: 'Start sound' }));
+    await waitFor(() => expect(play.start).toHaveBeenCalledTimes(1));
+    // The chime answers the button, not the click sound on top of it.
+    expect(play.click).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: 'Sound' })).toBeNull();
+  });
+
+  it('a click anywhere else closes the reminder, and that click is heard', async () => {
+    fresh();
+    setup({ sound: true });
+    await screen.findByRole('region', { name: 'Sound' }, { timeout: 2500 });
+    await userEvent.click(screen.getByRole('button', { name: 'A button' }));
+    expect(screen.queryByRole('region', { name: 'Sound' })).toBeNull();
+    await waitFor(() => expect(play.click).toHaveBeenCalledTimes(1));
+  });
+
+  it('"Turn off" turns sound off', async () => {
+    fresh();
+    setup({ sound: true });
+    await screen.findByRole('region', { name: 'Sound' }, { timeout: 2500 });
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+    expect(JSON.parse(window.localStorage.getItem('cs-prefs')!)).toEqual({ invited: true, sound: false });
+    expect(screen.queryByRole('region', { name: 'Sound' })).toBeNull();
+    expect(play.start).not.toHaveBeenCalled();
+  });
+
+  it('no reminder once the visitor has pressed something, with sound off, or in the admin', () => {
+    vi.useFakeTimers();
+    const after = (view: ReturnType<typeof render>) => {
+      act(() => vi.advanceTimersByTime(3000));
+      const shown = document.querySelector('.sound-invite:not([hidden])');
+      view.unmount();
+      window.localStorage.clear();
+      return shown;
+    };
+    expect(after(setup({ sound: true }))).toBeNull();
+    fresh();
+    pathname = '/admin/posts';
+    expect(after(setup({ sound: true }))).toBeNull();
+    pathname = '/';
+    window.localStorage.setItem('cs-prefs', JSON.stringify({ invited: true }));
+    expect(after(setup())).toBeNull();
+    vi.useRealTimers();
   });
 });
