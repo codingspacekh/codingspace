@@ -74,8 +74,8 @@ export function ShowcaseEditor({
     <fieldset className="adm-fieldset">
       <legend>Showcase rows</legend>
       <p className="adm-hint">
-        Up to {PROJECT_LIMITS.showcase} big rows, a screenshot and its text, alternating left and right. Good for each
-        mode or main feature. Points: one per line; a short code before a colon (V4: Captions) shows as a tag.
+        Up to {PROJECT_LIMITS.showcase} rows. Points: one per line; a short code before a colon (V4: Captions) shows as
+        a tag.
       </p>
       {rows.length > 0 && (
         <ol className="adm-pj-list adm-show-list" aria-label="Showcase rows">

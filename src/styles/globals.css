@@ -3955,56 +3955,309 @@ img.ProseMirror-separator {
 .adm-syl-pick summary {
   cursor: pointer;
 }
-/* Project page fields in the Projects admin (v1.1). */
-.adm-pj-page {
+/* Project editor in the Projects admin (redesigned 2026-10-20): a bar with the name and Save,
+   the page's parts on the left (sections dragged to reorder), the chosen part's panel on the right. */
+.adm-pj-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.adm-pj-title {
   display: grid;
-  gap: 10px;
+  gap: 4px;
+  min-width: 0;
 }
-.adm-pj-page h3 {
-  margin: 8px 0 0;
+.adm-pj-title p {
+  margin: 0;
 }
-.adm-pj-part {
-  border: 1px solid var(--line);
-  padding: 10px 14px;
+.adm-pj-title .adm-status {
+  margin-left: 10px;
+  vertical-align: middle;
 }
-.adm-pj-part > summary {
+.adm-pj-back {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   cursor: pointer;
-  font-weight: 600;
 }
-.adm-pj-part[open] > summary {
-  margin-bottom: 12px;
+.adm-pj-back:hover {
+  color: var(--cyan);
 }
-.adm-pj-part > label,
-.adm-pj-part > .adm-fieldset,
-.adm-pj-part > .adm-pj-controls,
-.adm-pj-part > .adm-hint {
-  margin-top: 12px;
+.adm-pj {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.adm-pj-nav {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+.adm-pj-nav ul,
+.adm-pj-nav ol {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-pj-nav li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+.adm-pj-nav ul li > button {
+  grid-column: 2;
+}
+.adm-pj-nav .meta {
+  margin: 10px 0 2px 20px;
+}
+.adm-pj-nav .adm-hint {
+  margin: 8px 0 2px 20px;
+}
+.adm-pj-nav button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--fg2);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.adm-pj-nav button:hover {
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
+  color: var(--fg);
+}
+.adm-pj-nav button[aria-current='true'] {
+  border-left-color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  color: var(--cyan);
+}
+.adm-pj-grip {
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+.adm-pj-dragging {
+  opacity: 0.55;
+  outline: 1px dashed var(--cyan);
+}
+.adm-pj-state {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+.adm-pj-state--off,
+.adm-pj-state--empty {
+  color: var(--muted);
+}
+.adm-pj-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.adm-pj-panel[hidden] {
+  display: none;
+}
+.adm-pj-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+  padding: 22px;
+}
+.adm-pj-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--line);
+}
+.adm-pj-panel-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.adm-pj-panel-head h2 .meta {
+  margin-left: 6px;
+  font-weight: 400;
+}
+.adm-pj-panel-head p {
+  max-width: 62ch;
+  margin: 4px 0 0;
+  color: var(--fg2);
+  font-size: 15px;
+}
+.adm-pj-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+}
+.adm-pj-controls .btn {
+  padding: 6px 10px;
+}
+/* an on/off switch drawn over a checkbox, as in the prototype */
+.adm-form label.adm-switch {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--fg2);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.adm-form .adm-switch input {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  appearance: none;
+  cursor: pointer;
+}
+.adm-switch input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  background: var(--muted);
+  transition: left 0.2s;
+}
+.adm-switch input:checked {
+  border-color: var(--lime);
+}
+.adm-switch input:checked::after {
+  left: 21px;
+  background: var(--lime);
+}
+.adm-pj-fields {
+  display: grid;
+  gap: 16px;
+}
+/* a fieldset is as wide as its content unless told otherwise */
+.adm-pj-panel .adm-fieldset {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.adm-pj-panel .adm-pj-list li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.adm-pj-stack {
+  display: grid;
+  gap: 16px;
 }
 .adm-pj-list,
 .adm-pj-shots {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   margin: 0;
   padding-left: 1.6em;
 }
 .adm-pj-list li,
 .adm-pj-shots li {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+/* an item's fields side by side when there is room, its buttons on a row of their own */
+.adm-pj-items li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.adm-pj-items li > label {
+  flex: 1 1 200px;
+}
+.adm-pj-items li > label:has(textarea) {
+  flex-grow: 2;
+}
+.adm-pj-items li > .adm-quick {
+  flex-basis: 100%;
+}
+.adm-pj-list .adm-quick .btn,
+.adm-pj-shots .adm-quick .btn {
+  padding: 6px 10px;
 }
 .adm-pj-shots img {
   height: auto;
   border: 1px solid var(--line);
 }
-/* a page section's controls (2026-10-20): show it, move it */
-.adm-pj-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed var(--line);
+@container (min-width: 820px) {
+  .adm-pj {
+    grid-template-columns: 236px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .adm-pj-nav {
+    position: sticky;
+    top: 16px;
+  }
+  .adm-pj-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .adm-pj-wide {
+    grid-column: 1 / -1;
+  }
+}
+/* narrow: the parts as a row of chips above the panel */
+@container (max-width: 819px) {
+  .adm-pj-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .adm-pj-nav ul,
+  .adm-pj-nav ol {
+    display: contents;
+  }
+  .adm-pj-nav li {
+    display: block;
+  }
+  .adm-pj-grip,
+  .adm-pj-nav .meta,
+  .adm-pj-nav .adm-hint {
+    display: none;
+  }
+  .adm-pj-nav button {
+    width: auto;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .adm-pj-nav button[aria-current='true'] {
+    border-color: var(--cyan);
+  }
 }
 .adm-show-list li {
   padding: 12px 14px;
@@ -4050,6 +4303,9 @@ img.ProseMirror-separator {
   padding: 16px;
   border: 1px dashed rgba(24, 228, 236, 0.45);
   background: rgba(24, 228, 236, 0.03);
+}
+.adm-dl-drop .btn {
+  white-space: normal;
 }
 .adm-dl-drop.over {
   border-color: var(--cyan);

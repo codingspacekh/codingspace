@@ -1,4 +1,4 @@
-import { Fragment, useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { IMAGE_ACCEPT, type MediaKind } from '@/lib/media-rules';
 import type { UploadedMedia } from '@/lib/media-upload';
 import { thumbnailUrl } from '@/lib/media-urls';
@@ -109,25 +109,30 @@ export const EMPTY_PAGE: PageFields = {
   showcase: [],
 };
 
-/** What stops saving in the page part, if anything (the server checks the same). */
-export function pageProblem(p: PageFields): string | null {
+/** What stops saving in the page part, if anything, and the part to fix it in (the server checks the same). */
+export function pageProblem(p: PageFields): { part: PageSection | 'hero'; message: string } | null {
   const kept = <T extends Record<string, string>>(items: T[]) => items.filter((i) => !isBlank(i));
-  for (const [items, name] of [
-    [p.reasons, 'reason'],
-    [p.features, 'feature'],
-    [p.steps, 'step'],
+  for (const [items, name, part] of [
+    [p.reasons, 'reason', 'why'],
+    [p.features, 'feature', 'features'],
+    [p.steps, 'step', 'install'],
   ] as const)
-    if (kept(items).some((i) => !i.title.trim())) return `Every ${name} needs a title (or remove the empty one).`;
-  if (kept(p.highlights).some((h) => !h.value.trim())) return 'Every number needs its value, like 4 GB (or remove it).';
-  if (kept(p.replaces).some((r) => !r.name.trim())) return 'Every “Before” item needs a name (or remove it).';
+    if (kept(items).some((i) => !i.title.trim()))
+      return { part, message: `Every ${name} needs a title (or remove the empty one).` };
+  if (kept(p.highlights).some((h) => !h.value.trim()))
+    return { part: 'numbers', message: 'Every number needs its value, like 4 GB (or remove it).' };
+  if (kept(p.replaces).some((r) => !r.name.trim()))
+    return { part: 'why', message: 'Every “Before” item needs a name (or remove it).' };
   if (kept(p.requirements).some((r) => !r.part.trim()))
-    return 'Every requirement needs a name, like Memory (or remove it).';
-  if (p.showcase.some((r) => !r.title.trim())) return 'Every showcase row needs a title (or remove it).';
-  if (kept(p.faq).some((q) => !q.question.trim())) return 'Every question needs its text (or remove it).';
+    return { part: 'requirements', message: 'Every requirement needs a name, like Memory (or remove it).' };
+  if (p.showcase.some((r) => !r.title.trim()))
+    return { part: 'showcase', message: 'Every showcase row needs a title (or remove it).' };
+  if (kept(p.faq).some((q) => !q.question.trim()))
+    return { part: 'faq', message: 'Every question needs its text (or remove it).' };
   const downloads = downloadsProblem(p.downloads);
-  if (downloads) return downloads;
+  if (downloads) return { part: 'download', message: downloads };
   const source = optionalUrlProblem(p.source_url);
-  return source ? `Source code: ${source}` : null;
+  return source ? { part: 'download', message: `Source code: ${source}` } : null;
 }
 
 type Field<T> = {
@@ -152,7 +157,7 @@ function ListEditor<T extends Record<string, string>>({
   onChange,
 }: {
   legend: string;
-  hint: string;
+  hint?: string;
   /** "reason" → "Add a reason", "Remove reason 2". */
   noun: string;
   items: T[];
@@ -167,9 +172,9 @@ function ListEditor<T extends Record<string, string>>({
   return (
     <fieldset className="adm-fieldset">
       <legend>{legend}</legend>
-      <p className="adm-hint">{hint}</p>
+      {hint && <p className="adm-hint">{hint}</p>}
       {items.length > 0 && (
-        <ol className="adm-pj-list" aria-label={legend}>
+        <ol className="adm-pj-list adm-pj-items" aria-label={legend}>
           {items.map((item, i) => (
             <li key={i}>
               {fields.map((f) => (
@@ -190,7 +195,7 @@ function ListEditor<T extends Record<string, string>>({
                   ) : f.long ? (
                     <textarea
                       id={`${id}-${i}-${f.key}`}
-                      rows={2}
+                      rows={3}
                       maxLength={f.max}
                       value={item[f.key]}
                       onChange={(e) => set(i, f.key, e.target.value)}
@@ -289,10 +294,6 @@ function ScreenshotsEditor({
   return (
     <fieldset className="adm-fieldset">
       <legend>Screenshots</legend>
-      <p className="adm-hint">
-        Up to 8 images. The first one goes in the hero, next to the name; with two or more, all of them show in a
-        Screenshots section too.
-      </p>
       {shots.length > 0 && (
         <ol className="adm-pj-shots" aria-label="Screenshots">
           {shots.map((s, i) => (
@@ -381,15 +382,48 @@ function ScreenshotsEditor({
   );
 }
 
-/** A part of the form that opens on demand: the page has many sections. */
-function Part({
+/** A part of the editor: the card, the hero, or one of the page's sections. */
+export type PagePart = 'card' | 'hero' | PageSection;
+
+const count = (n: number, one: string) => (n ? `${n} ${one}${n === 1 ? '' : 's'}` : 'none yet');
+
+/** Whether a section has anything to show; an empty one is left out of the page (as in project-page.tsx). */
+function filled(p: PageFields, s: PageSection): boolean {
+  switch (s) {
+    case 'numbers':
+      return p.highlights.length > 0;
+    case 'why':
+      return p.reasons.length > 0 || p.replaces.length > 0;
+    case 'showcase':
+      return p.showcase.length > 0;
+    case 'features':
+      return p.features.length > 0;
+    case 'screenshots':
+      return p.screenshots.length > 1;
+    case 'requirements':
+      return p.requirements.length > 0;
+    case 'download':
+      return true; // says "Coming soon" with no downloads yet
+    case 'install':
+      return p.steps.length > 0;
+    case 'faq':
+      return p.faq.length > 0;
+  }
+}
+
+/** One part's panel: only the chosen one shows, but all stay mounted so uploads keep running. */
+function Panel({
   title,
+  lead,
   summary,
+  current,
   children,
   section,
 }: {
   title: string;
-  summary: string;
+  lead: string;
+  summary?: string;
+  current: boolean;
   children: ReactNode;
   /** A page section: shown or hidden, and moved up or down among the others. */
   section?: {
@@ -400,56 +434,65 @@ function Part({
     onMove: (delta: -1 | 1) => void;
   };
 }) {
+  const id = useId();
   return (
-    <details className="adm-pj-part">
-      <summary>
-        {title}{' '}
-        <span className="meta">
-          {section && !section.shown ? 'hidden · ' : ''}
-          {summary}
-        </span>
-      </summary>
-      {section && (
-        <div className="adm-pj-controls">
-          <label className="adm-check">
-            <input type="checkbox" checked={section.shown} onChange={(e) => section.onShow(e.target.checked)} />
-            Show on the page
-          </label>
-          <span className="adm-quick">
-            <button type="button" className="btn" disabled={section.first} onClick={() => section.onMove(-1)}>
-              Move up <span className="sr-only">{title}</span>
-            </button>
-            <button type="button" className="btn" disabled={section.last} onClick={() => section.onMove(1)}>
-              Move down <span className="sr-only">{title}</span>
-            </button>
-          </span>
+    <section className="frame adm-pj-panel" hidden={!current} aria-labelledby={`${id}-h`}>
+      <div className="adm-pj-panel-head">
+        <div>
+          <h2 id={`${id}-h`}>
+            {title} {summary && <span className="meta">{summary}</span>}
+          </h2>
+          <p>{lead}</p>
         </div>
-      )}
+        {section && (
+          <div className="adm-pj-controls">
+            <label className="adm-switch">
+              <input type="checkbox" checked={section.shown} onChange={(e) => section.onShow(e.target.checked)} />
+              Show on the page
+            </label>
+            <span className="adm-quick">
+              <button type="button" className="btn" disabled={section.first} onClick={() => section.onMove(-1)}>
+                Move up <span className="sr-only">{title}</span>
+              </button>
+              <button type="button" className="btn" disabled={section.last} onClick={() => section.onMove(1)}>
+                Move down <span className="sr-only">{title}</span>
+              </button>
+            </span>
+          </div>
+        )}
+      </div>
       {children}
-    </details>
+    </section>
   );
 }
-
-const count = (n: number, one: string) => (n ? `${n} ${one}${n === 1 ? '' : 's'}` : 'none yet');
 
 const STEP_OPTIONS = { '': 'Any computer', ...STEP_PLATFORMS };
 
 /**
- * The landing page's parts: the hero first, then the sections in the page's order, each of which
- * can be hidden or moved. A section left empty doesn't show on the page either.
+ * The project editor (redesigned 2026-10-20, from the prototype): a list of the page's parts on the
+ * left (the card, the hero, then the sections in the page's order, dragged or moved to reorder) and
+ * the chosen part's panel on the right. A section can be hidden; an empty one doesn't show either.
  */
 export function ProjectPageFields({
   value: p,
   upload,
   uploadApp,
   onChange,
+  card,
+  current,
+  onCurrent,
 }: {
   value: PageFields;
   upload: Upload;
   uploadApp: AppUpload;
   onChange: Dispatch<SetStateAction<PageFields>>;
+  /** The card's own fields (name, description…), the first panel. */
+  card: ReactNode;
+  current: PagePart;
+  onCurrent: (part: PagePart) => void;
 }) {
   const set = <K extends keyof PageFields>(k: K, v: PageFields[K]) => onChange((prev) => ({ ...prev, [k]: v }));
+  const [dragging, setDragging] = useState<number | null>(null);
   const L = PROJECT_LIMITS;
   const T = PROJECT_TEXT;
   const titled = [
@@ -457,6 +500,15 @@ export function ProjectPageFields({
     { key: 'text', label: 'Text', max: T.text, long: true },
   ] as const;
   const order = sectionOrder(p.section_order);
+
+  /** Puts the section at `from` in place `to` (drag and drop, or one step with the buttons). */
+  const place = (from: number, to: number) =>
+    onChange((prev) => {
+      const next = sectionOrder(prev.section_order);
+      const [s] = next.splice(from, 1);
+      next.splice(to, 0, s!);
+      return { ...prev, section_order: next };
+    });
 
   const control = (s: PageSection, i: number) => ({
     shown: !p.hidden_sections.includes(s),
@@ -467,16 +519,16 @@ export function ProjectPageFields({
         ...prev,
         hidden_sections: on ? prev.hidden_sections.filter((h) => h !== s) : [...prev.hidden_sections, s],
       })),
-    onMove: (delta: -1 | 1) =>
-      onChange((prev) => ({ ...prev, section_order: moveItem(sectionOrder(prev.section_order), i, delta) })),
+    onMove: (delta: -1 | 1) => place(i, i + delta),
   });
 
-  const parts: Record<PageSection, (section: ReturnType<typeof control>) => ReactNode> = {
-    numbers: (section) => (
-      <Part title={SECTION_NAMES.numbers} summary={count(p.highlights.length, 'number')} section={section}>
+  const sections: Record<PageSection, { lead: string; summary: string; body: ReactNode }> = {
+    numbers: {
+      lead: 'Up to 4 big facts in a strip under the hero: a short value and one line, e.g. “4 GB” · “of RAM is enough”.',
+      summary: count(p.highlights.length, 'number'),
+      body: (
         <ListEditor<ProjectHighlight>
           legend="Numbers"
-          hint="Up to 4 big facts in a strip under the hero: a short value and one line, e.g. “4 GB” · “of RAM is enough”."
           noun="number"
           items={p.highlights}
           fields={[
@@ -487,62 +539,71 @@ export function ProjectPageFields({
           max={L.highlights}
           onChange={(v) => set('highlights', v)}
         />
-      </Part>
-    ),
-    why: (section) => (
-      <Part title={SECTION_NAMES.why} summary={count(p.reasons.length, 'reason')} section={section}>
-        <label>
-          Heading (otherwise “Why {'<name>'}?”)
-          <input maxLength={T.whyTitle} value={p.why_title} onChange={(e) => set('why_title', e.target.value)} />
-        </label>
-        <label>
-          Text under the heading (optional)
-          <textarea
-            rows={2}
-            maxLength={T.whyText}
-            value={p.why_text}
-            onChange={(e) => set('why_text', e.target.value)}
+      ),
+    },
+    why: {
+      lead: 'Why students (or teachers) should use it. With a Before list, the reasons show beside it as “Now”.',
+      summary: count(p.reasons.length, 'reason'),
+      body: (
+        <>
+          <div className="adm-pj-fields">
+            <label>
+              Heading (otherwise “Why {'<name>'}?”)
+              <input maxLength={T.whyTitle} value={p.why_title} onChange={(e) => set('why_title', e.target.value)} />
+            </label>
+            <label className="adm-pj-wide">
+              Text under the heading (optional)
+              <textarea
+                rows={2}
+                maxLength={T.whyText}
+                value={p.why_text}
+                onChange={(e) => set('why_text', e.target.value)}
+              />
+            </label>
+          </div>
+          <ListEditor<ProjectReplaced>
+            legend="Before"
+            hint="What students had to use before (optional)."
+            noun="“Before” item"
+            items={p.replaces}
+            fields={[
+              { key: 'name', label: 'Name', max: T.replacedName },
+              { key: 'note', label: 'Note (e.g. needs a strong GPU)', max: T.replacedName },
+            ]}
+            blank={{ name: '', note: '' }}
+            max={L.replaces}
+            onChange={(v) => set('replaces', v)}
           />
-        </label>
-        <ListEditor<ProjectReplaced>
-          legend="Before"
-          hint="What students had to use before (optional). With these, the reasons show beside them as “Now”."
-          noun="“Before” item"
-          items={p.replaces}
-          fields={[
-            { key: 'name', label: 'Name', max: T.replacedName },
-            { key: 'note', label: 'Note (e.g. needs a strong GPU)', max: T.replacedName },
-          ]}
-          blank={{ name: '', note: '' }}
-          max={L.replaces}
-          onChange={(v) => set('replaces', v)}
-        />
-        <ListEditor<ProjectReason>
-          legend="Reasons"
-          hint="Why students (or teachers) should use it, e.g. “Free, no account”."
-          noun="reason"
-          items={p.reasons}
-          fields={[...titled]}
-          blank={{ title: '', text: '' }}
-          max={L.reasons}
-          onChange={(v) => set('reasons', v)}
-        />
-      </Part>
-    ),
-    showcase: (section) => (
-      <Part title={SECTION_NAMES.showcase} summary={count(p.showcase.length, 'row')} section={section}>
+          <ListEditor<ProjectReason>
+            legend="Reasons"
+            hint="E.g. “Free, no account”."
+            noun="reason"
+            items={p.reasons}
+            fields={[...titled]}
+            blank={{ title: '', text: '' }}
+            max={L.reasons}
+            onChange={(v) => set('reasons', v)}
+          />
+        </>
+      ),
+    },
+    showcase: {
+      lead: 'Big rows, each a screenshot and its text, alternating left and right. Good for each mode or main feature.',
+      summary: count(p.showcase.length, 'row'),
+      body: (
         <ShowcaseEditor
           rows={p.showcase}
           upload={upload}
           onChange={(update) => onChange((prev) => ({ ...prev, showcase: update(prev.showcase) }))}
         />
-      </Part>
-    ),
-    features: (section) => (
-      <Part title={SECTION_NAMES.features} summary={count(p.features.length, 'feature')} section={section}>
+      ),
+    },
+    features: {
+      lead: 'What it does, in a grid. The symbol (optional, up to 4 characters) shows above each one.',
+      summary: count(p.features.length, 'feature'),
+      body: (
         <ListEditor<ProjectFeature>
           legend="Features"
-          hint="What it does. The symbol (optional, up to 4 characters) shows above each one."
           noun="feature"
           items={p.features}
           fields={[{ key: 'glyph', label: 'Symbol', max: T.glyph }, ...titled]}
@@ -550,92 +611,98 @@ export function ProjectPageFields({
           max={L.features}
           onChange={(v) => set('features', v)}
         />
-      </Part>
-    ),
-    screenshots: (section) => (
-      <Part title={SECTION_NAMES.screenshots} summary={count(p.screenshots.length, 'image')} section={section}>
+      ),
+    },
+    screenshots: {
+      lead: 'Up to 8 images. The first one goes in the hero, next to the name; with two or more, all of them show in this section too.',
+      summary: count(p.screenshots.length, 'image'),
+      body: (
         <ScreenshotsEditor
           shots={p.screenshots}
           upload={upload}
           onChange={(update) => onChange((prev) => ({ ...prev, screenshots: update(prev.screenshots) }))}
         />
-      </Part>
-    ),
-    requirements: (section) => (
-      <Part title={SECTION_NAMES.requirements} summary={count(p.requirements.length, 'row')} section={section}>
-        <label>
-          Note above the table (optional, e.g. “If it runs Windows 11, it meets the minimum.”)
-          <input
-            maxLength={T.requirementsNote}
-            value={p.requirements_note}
-            onChange={(e) => set('requirements_note', e.target.value)}
+      ),
+    },
+    requirements: {
+      lead: 'A table with a row per part of the computer. Leave Recommended empty everywhere to show one column.',
+      summary: count(p.requirements.length, 'row'),
+      body: (
+        <>
+          <label>
+            Note above the table (optional, e.g. “If it runs Windows 11, it meets the minimum.”)
+            <input
+              maxLength={T.requirementsNote}
+              value={p.requirements_note}
+              onChange={(e) => set('requirements_note', e.target.value)}
+            />
+          </label>
+          <ListEditor<ProjectRequirement>
+            legend="System requirements"
+            noun="requirement"
+            items={p.requirements}
+            fields={[
+              { key: 'part', label: 'Part (e.g. Memory)', max: T.part },
+              { key: 'minimum', label: 'Minimum', max: T.requirement },
+              { key: 'recommended', label: 'Recommended', max: T.requirement },
+            ]}
+            blank={{ part: '', minimum: '', recommended: '' }}
+            max={L.requirements}
+            onChange={(v) => set('requirements', v)}
           />
-        </label>
-        <ListEditor<ProjectRequirement>
-          legend="System requirements"
-          hint="A row per part of the computer. Leave Recommended empty everywhere to show one column."
-          noun="requirement"
-          items={p.requirements}
-          fields={[
-            { key: 'part', label: 'Part (e.g. Memory)', max: T.part },
-            { key: 'minimum', label: 'Minimum', max: T.requirement },
-            { key: 'recommended', label: 'Recommended', max: T.requirement },
-          ]}
-          blank={{ part: '', minimum: '', recommended: '' }}
-          max={L.requirements}
-          onChange={(v) => set('requirements', v)}
-        />
-      </Part>
-    ),
-    download: (section) => (
-      <Part
-        title={SECTION_NAMES.download}
-        summary={
-          p.downloads.length
-            ? `${count(p.downloads.length, 'download')}${p.version ? `, version ${p.version}` : ''}`
-            : 'Coming soon'
-        }
-        section={section}
-      >
-        <label>
-          Version (optional, e.g. 1.2.0)
-          <input maxLength={T.version} value={p.version} onChange={(e) => set('version', e.target.value)} />
-        </label>
-        <label>
-          Release date (optional)
-          <input type="date" value={p.release_date} onChange={(e) => set('release_date', e.target.value)} />
-        </label>
-        <label>
-          What’s new (optional, one change per line)
-          <textarea
-            rows={3}
-            maxLength={T.releaseNotes}
-            value={p.release_notes}
-            onChange={(e) => set('release_notes', e.target.value)}
+        </>
+      ),
+    },
+    download: {
+      lead: 'The release and its download buttons. The hero’s button picks the one for the visitor’s computer.',
+      summary: p.downloads.length
+        ? `${count(p.downloads.length, 'download')}${p.version ? `, version ${p.version}` : ''}`
+        : 'Coming soon',
+      body: (
+        <>
+          <div className="adm-pj-fields">
+            <label>
+              Version (optional, e.g. 1.2.0)
+              <input maxLength={T.version} value={p.version} onChange={(e) => set('version', e.target.value)} />
+            </label>
+            <label>
+              Release date (optional)
+              <input type="date" value={p.release_date} onChange={(e) => set('release_date', e.target.value)} />
+            </label>
+            <label className="adm-pj-wide">
+              What’s new (optional, one change per line)
+              <textarea
+                rows={3}
+                maxLength={T.releaseNotes}
+                value={p.release_notes}
+                onChange={(e) => set('release_notes', e.target.value)}
+              />
+            </label>
+          </div>
+          <DownloadsEditor
+            downloads={p.downloads}
+            uploadApp={uploadApp}
+            onChange={(update) => onChange((prev) => ({ ...prev, downloads: update(prev.downloads) }))}
           />
-        </label>
-        <DownloadsEditor
-          downloads={p.downloads}
-          uploadApp={uploadApp}
-          onChange={(update) => onChange((prev) => ({ ...prev, downloads: update(prev.downloads) }))}
-        />
-        <label>
-          Source code (optional, e.g. the GitHub repository)
-          <input
-            type="url"
-            inputMode="url"
-            maxLength={500}
-            value={p.source_url}
-            onChange={(e) => set('source_url', e.target.value)}
-          />
-        </label>
-      </Part>
-    ),
-    install: (section) => (
-      <Part title={SECTION_NAMES.install} summary={count(p.steps.length, 'step')} section={section}>
+          <label>
+            Source code (optional, e.g. the GitHub repository)
+            <input
+              type="url"
+              inputMode="url"
+              maxLength={500}
+              value={p.source_url}
+              onChange={(e) => set('source_url', e.target.value)}
+            />
+          </label>
+        </>
+      ),
+    },
+    install: {
+      lead: 'How to install it, in order. Give steps a computer to show them as tabs (Windows, macOS…); a step for any computer shows in every tab.',
+      summary: count(p.steps.length, 'step'),
+      body: (
         <ListEditor<AdminStep>
           legend="Steps"
-          hint="How to install it, in order. Give steps a computer to show them as tabs (Windows, macOS…); a step for any computer shows in every tab."
           noun="step"
           items={p.steps}
           fields={[...titled, { key: 'platform', label: 'For', max: 20, options: STEP_OPTIONS }]}
@@ -643,13 +710,14 @@ export function ProjectPageFields({
           max={L.steps}
           onChange={(v) => set('steps', v)}
         />
-      </Part>
-    ),
-    faq: (section) => (
-      <Part title={SECTION_NAMES.faq} summary={count(p.faq.length, 'question')} section={section}>
+      ),
+    },
+    faq: {
+      lead: 'Shown closed; a visitor opens one to read the answer (Markdown).',
+      summary: count(p.faq.length, 'question'),
+      body: (
         <ListEditor<ProjectFaq>
           legend="Questions"
-          hint="Shown closed; a visitor opens one to read the answer (Markdown)."
           noun="question"
           items={p.faq}
           fields={[
@@ -660,34 +728,96 @@ export function ProjectPageFields({
           max={L.faq}
           onChange={(v) => set('faq', v)}
         />
-      </Part>
-    ),
+      ),
+    },
   };
 
+  const navItem = (part: PagePart, name: string, state?: string) => (
+    <button type="button" aria-current={current === part} onClick={() => onCurrent(part)}>
+      <span>{name}</span>
+      {state && (
+        <span className={`adm-pj-state adm-pj-state--${state}`}>
+          <span className="sr-only">, </span>
+          {state}
+        </span>
+      )}
+    </button>
+  );
+
   return (
-    <div className="adm-pj-page">
-      <h3>The project’s page</h3>
-      <p className="adm-hint">
-        Its own landing page at /projects/…: the hero, then these sections in this order. Hide or move any of them; an
-        empty section doesn’t show either.
-      </p>
-      <Part title="Hero" summary={p.tagline ? 'tagline set' : 'tagline and introduction'}>
-        <label>
-          Tagline: one sentence under the name (otherwise the short description)
-          <input maxLength={T.tagline} value={p.tagline} onChange={(e) => set('tagline', e.target.value)} />
-        </label>
-        <label>
-          Introduction (Markdown: **bold**, [links](https://…), lists)
-          <textarea rows={5} maxLength={T.intro} value={p.intro} onChange={(e) => set('intro', e.target.value)} />
-        </label>
-        <p className="adm-hint">
-          The hero’s picture is the first screenshot (Screenshots), and its button the download for the visitor’s
-          computer (Download).
-        </p>
-      </Part>
-      {order.map((s, i) => (
-        <Fragment key={s}>{parts[s](control(s, i))}</Fragment>
-      ))}
+    <div className="adm-pj">
+      <nav className="frame adm-pj-nav" aria-label="Page parts">
+        <ul>
+          <li>{navItem('card', 'Card')}</li>
+          <li>{navItem('hero', 'Hero')}</li>
+        </ul>
+        <p className="meta">Sections · drag to reorder</p>
+        <ol aria-label="Sections, in the page’s order">
+          {order.map((s, i) => (
+            <li
+              key={s}
+              draggable
+              className={dragging === i ? 'adm-pj-dragging' : undefined}
+              onDragStart={(e) => {
+                setDragging(i);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', s);
+              }}
+              onDragOver={(e) => {
+                if (dragging === null) return;
+                e.preventDefault();
+                if (dragging !== i) {
+                  place(dragging, i);
+                  setDragging(i);
+                }
+              }}
+              onDrop={(e) => e.preventDefault()}
+              onDragEnd={() => setDragging(null)}
+            >
+              <span className="adm-pj-grip" aria-hidden="true">
+                ⋮⋮
+              </span>
+              {navItem(s, SECTION_NAMES[s], p.hidden_sections.includes(s) ? 'off' : filled(p, s) ? 'on' : 'empty')}
+            </li>
+          ))}
+        </ol>
+        <p className="adm-hint">An empty section doesn’t show on the page.</p>
+      </nav>
+      <div className="adm-pj-panels">
+        <Panel
+          title="Card"
+          lead="The card on Projects and Home. The name and icon head the page too."
+          current={current === 'card'}
+        >
+          {card}
+        </Panel>
+        <Panel
+          title="Hero"
+          lead="The top of the page. Its picture is the first screenshot, and its button the download for the visitor’s computer."
+          current={current === 'hero'}
+        >
+          <label>
+            Tagline: one sentence under the name (otherwise the short description)
+            <input maxLength={T.tagline} value={p.tagline} onChange={(e) => set('tagline', e.target.value)} />
+          </label>
+          <label>
+            Introduction (Markdown: **bold**, [links](https://…), lists)
+            <textarea rows={6} maxLength={T.intro} value={p.intro} onChange={(e) => set('intro', e.target.value)} />
+          </label>
+        </Panel>
+        {order.map((s, i) => (
+          <Panel
+            key={s}
+            title={SECTION_NAMES[s]}
+            lead={sections[s].lead}
+            summary={sections[s].summary}
+            current={current === s}
+            section={control(s, i)}
+          >
+            {sections[s].body}
+          </Panel>
+        ))}
+      </div>
     </div>
   );
 }

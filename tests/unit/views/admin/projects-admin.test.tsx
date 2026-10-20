@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectsAdmin } from '@/views/admin/projects-admin';
 import { render } from '../../../support/subjects';
@@ -66,9 +66,16 @@ function mockApi(reply: (c: Call) => [number, unknown] = () => [200, { ok: true 
 }
 afterEach(() => vi.unstubAllGlobals());
 
-/** A closed part of the page fields, by its title. */
-const part = (form: HTMLElement, title: string) =>
-  [...form.querySelectorAll('summary')].find((s) => s.firstChild?.textContent?.trim() === title)!;
+/** The editor's list of the page's parts. */
+const nav = (form: HTMLElement) => within(form).getByRole('navigation', { name: 'Page parts' });
+/** A part's button in that list, by its name (its state, like "on", follows the name). */
+const part = (form: HTMLElement, name: string) =>
+  within(nav(form)).getByRole('button', { name: new RegExp(`^${name}\\b`) });
+/** The sections' names, in the page's order. */
+const sections = (form: HTMLElement) =>
+  within(within(nav(form)).getByRole('list', { name: 'Sections, in the page’s order' }))
+    .getAllByRole('button')
+    .map((b) => b.firstChild?.textContent);
 
 describe('projects admin (03 ADM-13)', () => {
   it('lists projects in order with the featured one marked', async () => {
@@ -90,8 +97,10 @@ describe('projects admin (03 ADM-13)', () => {
   it('adds a project, refusing an http website with the reason', async () => {
     const calls = mockApi(() => [201, { id: 'new' }]);
     render(<ProjectsAdmin />);
-    const form = await screen.findByRole('form', { name: 'Add a project' });
     const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ New project' }));
+    const form = screen.getByRole('form', { name: 'Add a project' });
+    expect(screen.getByRole('heading', { level: 1, name: 'New project' })).toHaveFocus();
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'Graph lab');
     await user.type(within(form).getByRole('textbox', { name: /Short description/ }), 'Plot functions.');
     const url = within(form).getByRole('textbox', { name: /Website/ });
@@ -152,7 +161,9 @@ describe('projects admin (03 ADM-13)', () => {
       }),
     );
     expect(await screen.findByText('Added “Graph lab” at the end.')).toBeInTheDocument();
-    expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('');
+    // Back to the list.
+    expect(screen.queryByRole('form', { name: 'Add a project' })).toBeNull();
+    expect(screen.getByRole('list', { name: 'Projects, in order' })).toBeInTheDocument();
   });
 
   it('features another project, moves one and deletes after confirming', async () => {
@@ -171,20 +182,29 @@ describe('projects admin (03 ADM-13)', () => {
     ]);
   });
 
-  it('edits a project in place', async () => {
+  it('edits a project in its own editor, which stays open after saving (2026-10-20)', async () => {
     const calls = mockApi();
     render(<ProjectsAdmin />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    // The editor replaces the list.
+    expect(screen.queryByRole('list', { name: 'Projects, in order' })).toBeNull();
     const form = screen.getByRole('form', { name: 'Edit Quiz' });
+    expect(within(form).getByRole('heading', { level: 1 })).toHaveTextContent(/Quiz\s*Featured/);
+    expect(within(form).getByRole('link', { name: /View page/ })).toHaveAttribute('href', '/projects/quiz');
+    expect(part(form, 'Card')).toHaveAttribute('aria-current', 'true');
     expect(within(form).getByRole('textbox', { name: /Platforms/ })).toHaveValue('Web');
     await user.clear(within(form).getByRole('textbox', { name: 'Name' }));
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'Quiz 2');
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(within(form).getByRole('heading', { level: 1 })).toHaveTextContent('Quiz 2');
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     await waitFor(() =>
       expect(calls[0]).toMatchObject({ method: 'PUT', url: '/api/admin/projects/quiz', body: { name: 'Quiz 2' } }),
     );
-    expect(screen.queryByRole('form', { name: 'Edit Quiz' })).toBeNull();
+    expect(await screen.findByText('Saved “Quiz 2”.')).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Edit Quiz' })).toBeInTheDocument();
+    await user.click(within(form).getByRole('button', { name: '← Projects' }));
+    expect(screen.getByRole('list', { name: 'Projects, in order' })).toBeInTheDocument();
   });
 
   it('says why a change was refused', async () => {
@@ -228,7 +248,7 @@ describe('projects admin (03 ADM-13)', () => {
     await user.type(within(form).getByRole('textbox', { name: /^Label/ }), 'Windows');
     const link = within(form).getByRole('textbox', { name: 'Link' });
     await user.type(link, 'http://example.com/quiz.exe');
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     expect(within(form).getByRole('alert')).toHaveTextContent(
       'Download “Windows”: The address must start with https://',
     );
@@ -244,7 +264,7 @@ describe('projects admin (03 ADM-13)', () => {
     expect(await within(form).findByText('“quiz.png” added. Save to show it on the page.')).toBeInTheDocument();
     await user.type(within(form).getByRole('textbox', { name: 'Caption (optional)' }), 'A quiz');
 
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toMatchObject({
       method: 'PUT',
@@ -304,14 +324,14 @@ describe('projects admin (03 ADM-13)', () => {
     expect(within(rows[1]!).getByRole('combobox', { name: 'For' })).toHaveValue('mac-arm');
     expect(rows[0]).toHaveTextContent('10.0 MB of 25.0 MB');
 
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('Wait for the uploads to finish (or cancel them).');
     await user.click(within(rows[1]!).getByRole('button', { name: 'Cancel download 2' }));
     finish();
     expect(await within(form).findByText(/“Quiz-Setup.exe” uploaded/)).toBeInTheDocument();
     expect(within(form).getByText('Quiz-Setup.exe')).toBeInTheDocument();
 
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.body).toMatchObject({
       downloads: [
@@ -337,10 +357,7 @@ describe('projects admin (03 ADM-13)', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
     const form = screen.getByRole('form', { name: 'Edit Quiz' });
-    const summaries = () =>
-      [...form.querySelectorAll('.adm-pj-part > summary')].map((s) => s.firstChild?.textContent?.trim());
-    expect(summaries()).toEqual([
-      'Hero',
+    expect(sections(form)).toEqual([
       'Numbers',
       'Why',
       'Showcase',
@@ -356,14 +373,15 @@ describe('projects admin (03 ADM-13)', () => {
     await user.click(within(form).getByRole('button', { name: 'Add a number' }));
     await user.type(within(form).getByRole('textbox', { name: 'Value' }), '4 GB');
     await user.type(within(form).getByRole('textbox', { name: 'Line' }), 'of RAM is enough');
+    expect(part(form, 'Numbers')).toHaveTextContent(/^Numbers\W*on$/);
     // Questions first, Numbers hidden.
-    await user.click(
-      within(part(form, 'Numbers').closest('details')!).getByRole('checkbox', { name: 'Show on the page' }),
-    );
-    expect(part(form, 'Numbers')).toHaveTextContent('hidden ·');
+    await user.click(within(form).getByRole('checkbox', { name: 'Show on the page' }));
+    expect(part(form, 'Numbers')).toHaveTextContent(/off$/);
+    expect(part(form, 'Features')).toHaveTextContent(/empty$/);
     await user.click(part(form, 'Questions'));
     for (let i = 0; i < 8; i++) await user.click(within(form).getByRole('button', { name: 'Move up Questions' }));
-    expect(summaries()[1]).toBe('Questions');
+    expect(sections(form)[0]).toBe('Questions');
+    expect(within(form).getByRole('button', { name: 'Move up Questions' })).toBeDisabled();
 
     await user.click(part(form, 'Showcase'));
     await user.click(within(form).getByRole('button', { name: 'Add a row: upload its image' }));
@@ -386,7 +404,7 @@ describe('projects admin (03 ADM-13)', () => {
     await user.click(part(form, 'Download'));
     await user.type(within(form).getByLabelText('Release date (optional)'), '2026-10-19');
 
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.body).toMatchObject({
       highlights: [{ value: '4 GB', label: 'of RAM is enough' }],
@@ -427,9 +445,35 @@ describe('projects admin (03 ADM-13)', () => {
     await user.click(part(form, 'Features'));
     await user.click(within(form).getByRole('button', { name: 'Add a feature' }));
     await user.type(within(form).getByRole('textbox', { name: 'Text' }), 'Works offline.');
-    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await user.click(part(form, 'Card'));
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('Every feature needs a title');
+    // The editor opens the part to fix.
+    expect(part(form, 'Features')).toHaveAttribute('aria-current', 'true');
+    expect(within(form).getByRole('textbox', { name: 'Text' })).toHaveValue('Works offline.');
     expect(calls).toEqual([]);
+  });
+
+  it('reorders the sections by dragging them in the list (2026-10-20)', async () => {
+    const calls = mockApi();
+    render(<ProjectsAdmin />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Quiz' }));
+    const form = screen.getByRole('form', { name: 'Edit Quiz' });
+    const item = (name: string) => part(form, name).closest('li')!;
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '' };
+    fireEvent.dragStart(item('Download'), { dataTransfer });
+    fireEvent.dragOver(item('Why'), { dataTransfer });
+    fireEvent.drop(item('Download'), { dataTransfer });
+    fireEvent.dragEnd(item('Download'), { dataTransfer });
+    expect(sections(form).slice(0, 3)).toEqual(['Numbers', 'Download', 'Why']);
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect((calls[0]!.body as { section_order: string[] }).section_order.slice(0, 3)).toEqual([
+      'numbers',
+      'download',
+      'why',
+    ]);
   });
 
   it('shows an error when the list cannot load', async () => {
