@@ -13,10 +13,7 @@ export function AuthorSections({ sections, lifePosts }: { sections: AuthorPageSe
         return (
           <section key={s.id} className={`section author-${s.kind}`} aria-labelledby={id}>
             <div className="shead">
-              <div>
-                {s.kind === 'life_posts' && <span className="eyebrow">Notes from outside class</span>}
-                <h2 id={id}>{s.title}</h2>
-              </div>
+              <h2 id={id}>{s.title}</h2>
             </div>
             <Body section={s} lifePosts={lifePosts} />
           </section>
