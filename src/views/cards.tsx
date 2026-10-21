@@ -8,35 +8,74 @@ const color = (subject: Subject | undefined) => (subject ? `c-${subject.color}` 
 
 export function SubjectTrack({ subject: s, lessons }: { subject: Subject; lessons: number }) {
   return (
-    <Link href={`/study/${s.id}`} className={`frame track ${color(s)}`}>
+    <Link href={`/study/${s.id}`} className={`track ${color(s)}`}>
       <span className="g" aria-hidden="true">
         {s.glyph}
       </span>
       <h3>{s.name}</h3>
       <p>{s.blurb}</p>
-      <span className="meta">
-        {lessons} lesson{lessons === 1 ? '' : 's'}
+      <span className="track-count">
+        {lessons > 0 ? `${lessons} lesson${lessons === 1 ? '' : 's'}` : 'No lessons yet'}
+        <span aria-hidden="true"> →</span>
       </span>
     </Link>
   );
 }
 
-export function PostTile({ post }: { post: PostCard }) {
+export function PostTile({ post, featured = false }: { post: PostCard; featured?: boolean }) {
   const s = useSubjects().subject(post.subject);
   return (
-    <Link href={`/posts/${post.slug}`} className={`frame post ${color(s)}`} lang={post.lang}>
+    <Link href={`/posts/${post.slug}`} className={`post ${featured ? 'post-big ' : ''}${color(s)}`} lang={post.lang}>
       <div className="cover" aria-hidden="true">
         <b>{s?.glyph ?? '✦'}</b>
       </div>
       <div className="body">
-        <span className="tag">{s?.name ?? 'Life'}</span>
+        <span className="post-subject">{s?.name ?? 'Life'}</span>
         <h3>{post.title}</h3>
         {post.summary && <p>{post.summary}</p>}
-        <span className="meta">
+        <span className="post-meta">
           {formatDate(post.publishedAt)} · {post.minutes} min read
         </span>
       </div>
     </Link>
+  );
+}
+
+/** One line in the list beside the newest lesson on Home. */
+export function PostLine({ post }: { post: PostCard }) {
+  const s = useSubjects().subject(post.subject);
+  return (
+    <Link href={`/posts/${post.slug}`} className={`post-line ${color(s)}`} lang={post.lang}>
+      <span className="g" aria-hidden="true">
+        {s?.glyph ?? '✦'}
+      </span>
+      <span className="txt">
+        <strong>{post.title}</strong>
+        <span className="post-meta">
+          {s?.name ?? 'Life'} · {formatDate(post.publishedAt)} · {post.minutes} min read
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/** Home's latest lessons: the newest one large, the rest as a list beside it. */
+export function LatestLessons({ posts }: { posts: PostCard[] }) {
+  const [first, ...rest] = posts;
+  if (!first) return null;
+  return (
+    <div className={`latest${rest.length ? '' : ' solo'}`}>
+      <PostTile post={first} featured />
+      {rest.length > 0 && (
+        <ul className="latest-list">
+          {rest.map((p) => (
+            <li key={p.slug}>
+              <PostLine post={p} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -62,7 +101,7 @@ export function LessonRow({ lesson }: { lesson: PostCard }) {
 export function ProjectCard({ project }: { project: Project }) {
   const s = useSubjects().subject(project.subject);
   return (
-    <Link href={`/projects/${project.slug}`} className={`frame proj ${color(s)}`}>
+    <Link href={`/projects/${project.slug}`} className={`proj ${color(s)}`}>
       <span className="ico" aria-hidden="true">
         {project.glyph || '◆'}
       </span>
@@ -73,8 +112,8 @@ export function ProjectCard({ project }: { project: Project }) {
           {!project.available && <span className="tag tag-soon">Coming soon</span>}
         </span>
         <span className="desc">{project.description}</span>
-        {project.platforms.length > 0 && <span className="meta">{project.platforms.join(' · ')}</span>}
-        <span className="more">{project.available ? 'Details and download →' : 'See the project →'}</span>
+        {project.platforms.length > 0 && <span className="post-meta">{project.platforms.join(' · ')}</span>}
+        <span className="proj-more">{project.available ? 'Details and download →' : 'See the project →'}</span>
       </span>
     </Link>
   );

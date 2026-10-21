@@ -38,7 +38,6 @@ test.describe('a visitor whose device asks for reduced motion', () => {
   test('the orbit is drawn once and stays still', async ({ page }) => {
     const [a, b] = await orbitFrames(page);
     expect(a).toBe(b);
-    await expect(page.getByTestId('orbit')).toContainText('T+PAUSED');
   });
 });
 

@@ -20,7 +20,7 @@ export function ProblemOfTheWeek({ problem }: { problem: FeaturedProblem }) {
         </div>
         <span className="tag">{[s?.name, problem.sectionTitle].filter(Boolean).join(' · ')}</span>
       </div>
-      <div className="frame potw">
+      <div className="potw">
         <div className="q prose" dangerouslySetInnerHTML={{ __html: problem.statementHtml }} />
         <div className="side">
           {/* <details> works without JavaScript and keeps the answer hidden until asked for. */}

@@ -6,7 +6,7 @@ import type { Subject, SubjectId } from '@/lib/subjects';
 import { getFeaturedProblem, getLatestLessons, getLessonCounts, getProjects, getSubjects } from '@/server/data/public';
 import type { FeaturedProblem, PostCard, Project } from '@/server/data/types';
 import { Decipher, OrbitHero, Stagger } from '@/ui';
-import { PostTile, ProjectCard, SubjectTrack } from '@/views/cards';
+import { LatestLessons, ProjectCard, SubjectTrack } from '@/views/cards';
 import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 
 type Props = {
@@ -38,7 +38,6 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
     >
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">Link established · student terminal</span>
           <h1 className="headline" aria-label="Love math. Crush physics. Live code.">
             <Stagger>
               <Decipher className="w1">Love math.</Decipher>
@@ -58,19 +57,13 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
               Meet the author →
             </Link>
           </div>
-          <p className="hint" aria-hidden="true">
-            ↘ The orbit is live: tap a subject to open it
-          </p>
         </div>
         <OrbitHero />
       </section>
 
       <section className="section" aria-labelledby="study">
         <div className="shead">
-          <div>
-            <span className="eyebrow">Choose a track</span>
-            <h2 id="study">Study</h2>
-          </div>
+          <h2 id="study">Study</h2>
           <span className="more">
             {subjects.length} subject{subjects.length === 1 ? '' : 's'}
           </span>
@@ -87,26 +80,16 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
       {latest.length > 0 && (
         <section className="section" aria-labelledby="latest">
           <div className="shead">
-            <div>
-              <span className="eyebrow">Fresh from class</span>
-              <h2 id="latest">Latest lessons</h2>
-            </div>
+            <h2 id="latest">Latest lessons</h2>
           </div>
-          <div className="grid3">
-            {latest.map((p) => (
-              <PostTile key={p.slug} post={p} />
-            ))}
-          </div>
+          <LatestLessons posts={latest} />
         </section>
       )}
 
       {projects.length > 0 && (
         <section className="section" aria-labelledby="projects">
           <div className="shead">
-            <div>
-              <span className="eyebrow">Built for students</span>
-              <h2 id="projects">Projects</h2>
-            </div>
+            <h2 id="projects">Projects</h2>
             <Link className="more" href="/projects">
               All projects →
             </Link>
