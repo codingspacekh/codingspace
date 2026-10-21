@@ -6,6 +6,8 @@
   --surface: #071820;
   --raised: #0b2530;
   --line: #123a44;
+  /* Cards are see-through, so the page's grid backdrop shows behind them. */
+  --card: rgba(7, 24, 32, 0.72);
   --fg: #d9fbfc;
   --fg2: #8fc3c8;
   --muted: #6f9da3;
@@ -629,6 +631,12 @@ html {
   display: block;
   margin-bottom: 6px;
 }
+.shead .more {
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
 .grid3,
 .grid2 {
   display: grid;
@@ -667,13 +675,6 @@ html {
   position: relative;
   z-index: 1;
 }
-.hint {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 /* The orbit (src/ui/orbit): a square box reserved up front, so nothing moves when it starts. */
 .orbit {
   position: relative;
@@ -687,26 +688,17 @@ html {
   height: 100%;
   cursor: crosshair;
 }
+/* The name of the subject under the pointer, below the core. */
 .orbit .hud {
   position: absolute;
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  color: var(--muted);
+  left: 0;
+  right: 0;
+  bottom: 5%;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg2);
   pointer-events: none;
-}
-.orbit .hud-tl {
-  top: 4%;
-  left: 2%;
-}
-.orbit .hud-br {
-  right: 2%;
-  bottom: 4%;
-  text-align: right;
-}
-.orbit .hud b {
-  color: var(--cyan);
-  font-weight: 500;
 }
 @media (max-width: 900px) {
   .hero {
@@ -718,8 +710,7 @@ html {
   }
 }
 @media print {
-  .orbit,
-  .hint {
+  .orbit {
     display: none !important;
   }
 }
@@ -760,40 +751,94 @@ html {
   gap: 14px;
   flex-wrap: wrap;
 }
+/* Subject cards: tinted in the subject's colour, its glyph large in the corner. Flex, not a grid,
+   so a lone card on the last row widens instead of leaving a gap. */
 .tracks {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 .track {
-  padding: 24px;
-  display: grid;
-  gap: 12px;
-  align-content: start;
+  flex: 1 1 210px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 190px;
+  padding: 22px 22px 20px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--c) 22%, transparent);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 15%, transparent), transparent 65%), var(--card);
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.track:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
 }
 .track .g {
+  position: absolute;
+  right: -4px;
+  bottom: -26px;
   font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 34px;
-  color: var(--c);
+  font-size: 132px;
   line-height: 1;
+  color: var(--c);
+  opacity: 0.13;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.3s;
+}
+.track:hover .g {
+  opacity: 0.22;
+  transform: rotate(-6deg);
+}
+.track h3 {
+  font-size: 22px;
+  color: var(--c);
 }
 .track p {
+  position: relative;
+  max-width: 34ch;
   color: var(--fg2);
   font-size: 15px;
 }
-@media (max-width: 900px) {
-  .tracks {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.track-count {
+  position: relative;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 @media (max-width: 520px) {
-  .tracks {
-    grid-template-columns: 1fr;
+  .track {
+    flex-basis: 150px;
+    min-height: 0;
+    padding: 18px 16px 16px;
+  }
+  .track .g {
+    font-size: 96px;
+    bottom: -20px;
+  }
+  .track h3 {
+    font-size: 19px;
+  }
+  .track p {
+    font-size: 14px;
   }
 }
 .potw {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
 }
 .potw > div {
   padding: 28px;
@@ -810,7 +855,8 @@ html {
   align-content: start;
 }
 .reveal {
-  border: 1px dashed var(--line);
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 12px 16px;
   font-size: 15px;
   color: var(--fg2);
@@ -818,10 +864,8 @@ html {
 }
 .reveal summary {
   cursor: pointer;
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--c, var(--cyan));
 }
 .reveal[open] summary {
@@ -836,33 +880,49 @@ html {
     border-top: 1px solid rgba(24, 228, 236, 0.16);
   }
 }
+/* Lesson cards: rounded, the cover a grid washed in the subject's colour, its glyph cropped at the edge. */
 .post {
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.post:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--c) 50%, transparent);
 }
 .cover {
   height: 130px;
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
   background:
     linear-gradient(rgba(24, 228, 236, 0.08) 1px, transparent 1px) 0 0 / 22px 22px,
     linear-gradient(90deg, rgba(24, 228, 236, 0.08) 1px, transparent 1px) 0 0 / 22px 22px,
-    linear-gradient(160deg, color-mix(in srgb, var(--c) 22%, #03080c), #03080c 75%);
+    radial-gradient(120% 140% at 90% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--c) 14%, #03080c), #03080c 75%);
 }
 .cover b {
   position: absolute;
-  left: 22px;
-  bottom: 12px;
+  right: 20px;
+  bottom: -22px;
   font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 30px;
+  font-size: 104px;
+  line-height: 1;
   font-weight: 500;
   color: var(--c);
+  opacity: 0.55;
 }
 .post .body {
   padding: 20px 22px 22px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-content: start;
 }
 .post p {
@@ -870,22 +930,139 @@ html {
   font-size: 15px;
   line-height: 1.55;
 }
+.post-subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c);
+}
+.post-subject::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.post-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.post .post-meta {
+  margin-top: 4px;
+}
+/* Home: the newest lesson large, the others listed beside it. */
+.latest {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.latest.solo {
+  grid-template-columns: minmax(0, 640px);
+}
+.post-big .cover {
+  height: 220px;
+}
+.post-big .cover b {
+  font-size: 190px;
+  bottom: -44px;
+}
+.post-big .body {
+  padding: 24px 26px 26px;
+  gap: 10px;
+}
+.post-big h3 {
+  font-size: clamp(24px, 2.4vw, 30px);
+}
+.post-big p {
+  font-size: 17px;
+}
+.latest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.latest-list li + li {
+  border-top: 1px solid var(--line);
+}
+.post-line {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 10px;
+  border-radius: 10px;
+  color: var(--fg);
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.post-line:hover {
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+}
+.post-line .g {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  color: var(--c);
+  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-size: 18px;
+}
+.post-line .txt {
+  display: grid;
+  gap: 2px;
+}
+.post-line strong {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.post-line:hover strong {
+  color: var(--c);
+}
+@media (max-width: 900px) {
+  .latest {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .post-big .cover {
+    height: 150px;
+  }
+  .post-big .cover b {
+    font-size: 140px;
+    bottom: -34px;
+  }
+}
 .proj {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 20px;
   padding: 24px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--c) 22%, transparent);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--c) 9%, transparent), transparent 55%), var(--card);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+.proj:hover {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
 }
 .proj .ico {
   width: 72px;
   height: 72px;
   display: grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
-  background: color-mix(in srgb, var(--c) 7%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--c) 16%, transparent);
   color: var(--c);
   font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 24px;
+  font-size: 26px;
 }
 .proj .info {
   display: grid;
@@ -894,6 +1071,24 @@ html {
 }
 .proj-name {
   font-size: 20px;
+}
+/* Softer labels than the site-wide tags: these cards are read, not scanned. */
+.proj .tag {
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.proj .tag::before {
+  border-radius: 50%;
+}
+.proj-more {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c);
 }
 .proj .desc {
   color: var(--fg2);
@@ -4791,7 +4986,20 @@ html[data-motion='on'][data-transition='in'] #main :is(.eyebrow, .crumbs, .tag, 
 html[data-motion='on'][data-transition='in']
   #main
   :is(
-    :is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > *,
+    :is(
+        .lessons,
+        .grid3,
+        .grid2,
+        .tracks,
+        .search-results,
+        .chips,
+        .facts,
+        .timeline,
+        .skill-groups,
+        .latest,
+        .latest-list
+      )
+      > *,
     .profile,
     .toc,
     .art,
@@ -4800,24 +5008,30 @@ html[data-motion='on'][data-transition='in']
   animation: card-in 0.5s ease-out both;
   animation-delay: calc(0.1s + var(--i, 0) * 0.09s);
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(2),
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(2),
 .art {
   --i: 1;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(3),
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(3),
 .rail > * {
   --i: 2;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(4) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(4) {
   --i: 3;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(5) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(5) {
   --i: 4;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(6) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(6) {
   --i: 5;
 }
-:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups) > :nth-child(n + 7) {
+:is(.lessons, .grid3, .grid2, .tracks, .search-results, .chips, .facts, .timeline, .skill-groups, .latest, .latest-list)
+  > :nth-child(n + 7) {
   --i: 6;
 }
 @keyframes card-in {

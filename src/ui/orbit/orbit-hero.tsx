@@ -7,9 +7,6 @@ import type { Orbit } from './engine';
 /** The engine has eight rings; later subjects are only in Study below. */
 const MAX_NODES = 8;
 
-const clock = (s: number) =>
-  'T+' + [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
-
 /** Waits until the browser is idle and the element is (nearly) on screen: the orbit never delays first paint. */
 function whenIdleAndVisible(el: Element, run: () => void): () => void {
   let cancelled = false;
@@ -58,7 +55,6 @@ export function OrbitHero() {
   const animateRef = useRef(animate);
   const shownRef = useRef(shown);
   const [target, setTarget] = useState<string | null>(null);
-  const [seconds, setSeconds] = useState(0);
   const [ready, setReady] = useState(false);
 
   // Callbacks the engine keeps: read the latest values through refs.
@@ -99,7 +95,6 @@ export function OrbitHero() {
             playRef.current('click');
             void routerRef.current.push(`/study/${id}`);
           },
-          onTick: setSeconds,
         });
         setReady(true);
       });
@@ -117,16 +112,8 @@ export function OrbitHero() {
   return (
     <div ref={box} className={`orbit${ready ? ' is-ready' : ''}`} aria-hidden="true" data-testid="orbit">
       <canvas ref={canvas} />
-      <div className="hud hud-tl">
-        SYS // ORBITAL INDEX
-        <br />
-        <b>{animate ? clock(seconds) : 'T+PAUSED'}</b>
-      </div>
-      <div className="hud hud-br">
-        TARGET <b>{subject(target)?.name.toUpperCase() ?? '—'}</b>
-        <br />
-        {shown.length} TRACKS
-      </div>
+      {/* The subject under the pointer, named in words. */}
+      <div className="hud">{subject(target)?.name}</div>
     </div>
   );
 }

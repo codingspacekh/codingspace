@@ -62,7 +62,7 @@ describe('<OrbitHero> (04 M6)', () => {
     expect(startOrbit.mock.calls[0]![1].nodes.map((n) => n.id)).toEqual(['math', 'physics', 'coding', 'it']);
   });
 
-  it('with motion off it starts still, and the clock says so', async () => {
+  it('with motion off it starts still', async () => {
     render(
       <UiRoot motion={false}>
         <OrbitHero />
@@ -72,7 +72,6 @@ describe('<OrbitHero> (04 M6)', () => {
     act(() => idle!());
     await waitFor(() => expect(startOrbit).toHaveBeenCalled());
     expect(startOrbit.mock.calls[0]![1]).toMatchObject({ motion: false });
-    expect(screen.getByTestId('orbit')).toHaveTextContent('T+PAUSED');
   });
 
   it('stops the engine when the page goes away', async () => {
