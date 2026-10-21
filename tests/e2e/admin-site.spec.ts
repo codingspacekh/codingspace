@@ -387,7 +387,7 @@ test.describe('site content', { tag: '@single-account' }, () => {
       await expect(page.getByRole('status')).toHaveText(`Saved “${name}”.`);
 
       await student.goto('/');
-      await expect(student.getByRole('link', { name: new RegExp(`^${name} Atoms, bonds.* 0 lessons$`) })).toBeVisible();
+      await expect(student.getByRole('link', { name: new RegExp(`^${name} Atoms, bonds.* No lessons yet$`) })).toBeVisible();
       await openStudyMenu(student);
       await student
         .getByRole('link', { name: new RegExp(`${name} Atoms, bonds and reactions\\.`) })
