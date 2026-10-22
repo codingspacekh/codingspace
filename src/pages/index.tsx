@@ -38,11 +38,11 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
     >
       <section className="hero">
         <div className="hero-copy">
-          <h1 className="headline" aria-label="Love math. Crush physics. Live code.">
+          <h1 className="headline" aria-label="My Love, Math. My Crush, Physics. My Life, Code.">
             <Stagger>
-              <Decipher className="w1">Love math.</Decipher>
-              <Decipher className="w2">Crush physics.</Decipher>
-              <Decipher className="w3">Live code.</Decipher>
+              <Decipher className="w1">My Love, Math.</Decipher>
+              <Decipher className="w2">My Crush, Physics.</Decipher>
+              <Decipher className="w3">My Life, Code.</Decipher>
             </Stagger>
           </h1>
           {/* Body copy is never wrapped in an animator: readable on first paint. */}
