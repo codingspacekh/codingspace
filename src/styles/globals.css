@@ -738,6 +738,31 @@ html {
   gap: 14px;
   flex-wrap: wrap;
 }
+/* A subject's icon where its symbol would be (src/ui/subject-mark.tsx): a little bigger than a
+   character, as the outline is lighter than a letter. Small ones get a heavier line. */
+.subject-icon {
+  display: block;
+  width: 1.2em;
+  height: 1.2em;
+}
+.mi .g .subject-icon,
+.post-line .g .subject-icon,
+.adm-glyph .subject-icon,
+.adm-swatch .subject-icon,
+.adm-icon-prev .subject-icon {
+  stroke-width: 3.4;
+}
+.mi .g .subject-icon,
+.post-line .g .subject-icon,
+.adm-swatch .subject-icon,
+.adm-icon-prev .subject-icon {
+  width: 1.45em;
+  height: 1.45em;
+}
+.adm-glyph .subject-icon {
+  display: inline-block;
+  vertical-align: -0.2em;
+}
 /* Subject cards: tinted in the subject's colour, its glyph large in the corner. Flex, not a grid,
    so a lone card on the last row widens instead of leaving a gap. */
 .tracks {
@@ -4077,6 +4102,34 @@ img.ProseMirror-separator {
   height: 46px;
   border: 1px solid var(--c);
   font-size: 22px;
+}
+/* Show: the symbol or one of the icons, each with a preview in the subject's colour. */
+.adm-icon-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.adm-icon-pick legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+.adm-icon-pick label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adm-icon-prev {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  color: var(--c);
+  font-size: 17px;
 }
 .adm-prefix {
   display: flex;

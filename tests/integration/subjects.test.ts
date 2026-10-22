@@ -15,7 +15,14 @@ import { ownerSession, serviceClient } from '../support/admin-users';
 // owner adds a subject, builds it while hidden, then shows it; visitors see nothing of it before.
 
 const ID = 'itchemistry';
-const FIELDS = { name: 'IT Chemistry', glyph: '⚗', color: 'orange', blurb: 'Atoms up.', intro: 'From atoms.' };
+const FIELDS = {
+  name: 'IT Chemistry',
+  glyph: '⚗',
+  icon: 'robotics',
+  color: 'orange',
+  blurb: 'Atoms up.',
+  intro: 'From atoms.',
+};
 
 let owner: SupabaseClient;
 let service: SupabaseClient;

@@ -6,6 +6,7 @@ import { SUBJECT_ID, type Subject } from '@/lib/subjects';
 import { getFeaturedProblem, getSubjects, getSubjectSections } from '@/server/data/public';
 import type { FeaturedProblem, SectionWithLessons } from '@/server/data/types';
 import { LessonRow } from '@/views/cards';
+import { SubjectMark } from '@/ui/subject-mark';
 import { ProblemOfTheWeek } from '@/views/problem-of-the-week';
 import { Progress } from '@/views/progress';
 
@@ -44,7 +45,7 @@ export default function StudySubject({ subject: s, sections, problem }: Props) {
             />
           </div>
           <div className="big" aria-hidden="true">
-            {s.glyph}
+            <SubjectMark subject={s} />
           </div>
         </header>
 

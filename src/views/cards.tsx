@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { formatDate, levelLabel } from '@/lib/format';
 import { useSubjects, type Subject } from '@/lib/subjects';
 import type { PostCard, Project } from '@/server/data/types';
+import { SubjectMark } from '@/ui/subject-mark';
 import { DoneTick } from './progress';
 
 const color = (subject: Subject | undefined) => (subject ? `c-${subject.color}` : 'c-pink');
@@ -10,7 +11,7 @@ export function SubjectTrack({ subject: s, lessons }: { subject: Subject; lesson
   return (
     <Link href={`/study/${s.id}`} className={`track ${color(s)}`}>
       <span className="g" aria-hidden="true">
-        {s.glyph}
+        <SubjectMark subject={s} />
       </span>
       <h3>{s.name}</h3>
       <p>{s.blurb}</p>
@@ -26,7 +27,9 @@ export function PostTile({ post, featured = false }: { post: PostCard; featured?
   return (
     <Link href={`/posts/${post.slug}`} className={`post ${featured ? 'post-big ' : ''}${color(s)}`} lang={post.lang}>
       <div className="cover" aria-hidden="true">
-        <b>{s?.glyph ?? '✦'}</b>
+        <b>
+          <SubjectMark subject={s} />
+        </b>
       </div>
       <div className="body">
         <span className="post-subject">{s?.name ?? 'Life'}</span>
@@ -46,7 +49,7 @@ export function PostLine({ post }: { post: PostCard }) {
   return (
     <Link href={`/posts/${post.slug}`} className={`post-line ${color(s)}`} lang={post.lang}>
       <span className="g" aria-hidden="true">
-        {s?.glyph ?? '✦'}
+        <SubjectMark subject={s} />
       </span>
       <span className="txt">
         <strong>{post.title}</strong>

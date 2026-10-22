@@ -44,6 +44,7 @@ describe('<TopBar>', () => {
       id: 'chemistry',
       name: 'Chemistry',
       glyph: '⚗',
+      icon: '',
       color: 'orange',
       blurb: 'Atoms up.',
       intro: '',

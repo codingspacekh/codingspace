@@ -90,7 +90,7 @@ const toCard = (r: CardRow): PostCard => ({
 /** The visible subjects in site order (RLS hides the others from the anon key). */
 export async function getSubjects(): Promise<Subject[]> {
   return must<Subject[]>(
-    await db().from('subjects').select('id, name, glyph, color, blurb, intro').order('sort').order('id'),
+    await db().from('subjects').select('id, name, glyph, icon, color, blurb, intro').order('sort').order('id'),
     'subjects',
   );
 }
