@@ -180,15 +180,14 @@ export function TopBar({ active }: { active?: NavItem }) {
           <Link className="nl" href="/author" aria-current={current('author')}>
             Author
           </Link>
-          {/* An icon in the bar; the open Menu on small screens shows the word too. */}
-          <Link className="nl nl-icon" href="/search" aria-current={current('search')} title="Search">
-            <SearchIcon />
-            <span className="nl-label">Search</span>
-          </Link>
           <Link className="nl" href="/saved" aria-current={current('saved')}>
             Saved
           </Link>
           <div className="tools">
+            <Link className="ui-toggle ui-icon" href="/search" aria-current={current('search')} title="Search">
+              <SearchIcon />
+              <span className="sr-only">Search</span>
+            </Link>
             {/* Icon toggles: the name stays put and aria-pressed says on or off; the tooltip says it in words. */}
             <button
               type="button"
