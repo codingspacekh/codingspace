@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from './arwes/prefs';
 
@@ -16,6 +16,48 @@ function Logo() {
     </svg>
   );
 }
+
+/** 18px line icons for the bar, drawn like the logo. */
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+const SearchIcon = () => (
+  <Icon>
+    <circle cx="7.5" cy="7.5" r="5" />
+    <path d="M11.5 11.5 16 16" />
+  </Icon>
+);
+
+const SoundIcon = ({ on }: { on: boolean }) => (
+  <Icon>
+    <path d="M2.5 6.5h3l4-3.5v12l-4-3.5h-3z" />
+    {on ? <path d="M12.5 6.5a3.5 3.5 0 0 1 0 5M14.5 4a7 7 0 0 1 0 10" /> : <path d="m12.5 7 4 4m0-4-4 4" />}
+  </Icon>
+);
+
+/** A ball with speed lines; crossed out when motion is off. */
+const MotionIcon = ({ on }: { on: boolean }) => (
+  <Icon>
+    <circle cx="12.5" cy="9" r="3" />
+    <path d="M2 6h5M1.5 9h5M2 12h5" />
+    {!on && <path d="m2 2 14 14" />}
+  </Icon>
+);
 
 /** Study ▾ disclosure: a button that shows a list of links (not an ARIA menu; plain Tab order works). */
 function StudyMenu({ active }: { active: boolean }) {
@@ -138,27 +180,39 @@ export function TopBar({ active }: { active?: NavItem }) {
           <Link className="nl" href="/author" aria-current={current('author')}>
             Author
           </Link>
-          <Link className="nl" href="/search" aria-current={current('search')}>
-            Search
+          {/* An icon in the bar; the open Menu on small screens shows the word too. */}
+          <Link className="nl nl-icon" href="/search" aria-current={current('search')} title="Search">
+            <SearchIcon />
+            <span className="nl-label">Search</span>
           </Link>
           <Link className="nl" href="/saved" aria-current={current('saved')}>
             Saved
           </Link>
           <div className="tools">
+            {/* Icon toggles: the name stays put and aria-pressed says on or off; the tooltip says it in words. */}
             <button
               type="button"
-              className="ui-toggle"
+              className="ui-toggle ui-icon"
+              aria-label="Sound"
               aria-pressed={sound}
+              title={sound ? 'Sound on' : 'Sound off'}
               onClick={() => {
                 toggleSound();
                 // Turning sound on is the user gesture that unlocks audio; confirm with the start chime.
                 if (!sound) play('start', true);
               }}
             >
-              Sound {sound ? 'on' : 'off'}
+              <SoundIcon on={sound} />
             </button>
-            <button type="button" className="ui-toggle" aria-pressed={motion} onClick={toggleMotion}>
-              Motion {motion ? 'on' : 'off'}
+            <button
+              type="button"
+              className="ui-toggle ui-icon"
+              aria-label="Motion"
+              aria-pressed={motion}
+              title={motion ? 'Motion on' : 'Motion off'}
+              onClick={toggleMotion}
+            >
+              <MotionIcon on={motion} />
             </button>
           </div>
         </nav>

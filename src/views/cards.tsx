@@ -16,7 +16,6 @@ export function SubjectTrack({ subject: s, lessons }: { subject: Subject; lesson
       <p>{s.blurb}</p>
       <span className="track-count">
         {lessons > 0 ? `${lessons} lesson${lessons === 1 ? '' : 's'}` : 'No lessons yet'}
-        <span aria-hidden="true"> →</span>
       </span>
     </Link>
   );
@@ -113,7 +112,7 @@ export function ProjectCard({ project }: { project: Project }) {
         </span>
         <span className="desc">{project.description}</span>
         {project.platforms.length > 0 && <span className="post-meta">{project.platforms.join(' · ')}</span>}
-        <span className="proj-more">{project.available ? 'Details and download →' : 'See the project →'}</span>
+        <span className="proj-more">{project.available ? 'Details and download' : 'See the project'}</span>
       </span>
     </Link>
   );

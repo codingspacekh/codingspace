@@ -51,10 +51,10 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
           </p>
           <div className="cta">
             <Link className="btn pri" href="/study/math">
-              Start studying →
+              Start studying
             </Link>
             <Link className="btn" href="/author">
-              Meet the author →
+              Meet the author
             </Link>
           </div>
         </div>
@@ -91,7 +91,7 @@ export default function Home({ counts, latest, problem, projects, subjects }: Pr
           <div className="shead">
             <h2 id="projects">Projects</h2>
             <Link className="more" href="/projects">
-              All projects →
+              All projects
             </Link>
           </div>
           <div className="grid2">

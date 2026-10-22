@@ -102,7 +102,7 @@ function SeriesStep({ lesson, dir }: { lesson: SeriesLink; dir: 'prev' | 'next' 
   return (
     <Link href={`/posts/${lesson.slug}`} className={`frame c-${subject?.color ?? 'pink'}`}>
       <span className="meta">
-        {dir === 'prev' ? '← Previous' : 'Next →'}
+        {dir === 'prev' ? 'Previous' : 'Next'}
         {subject && ` · ${subject.name}`}
       </span>{' '}
       <strong>{lesson.title}</strong>
@@ -263,14 +263,14 @@ export function PostView({
             <nav aria-label="More lessons in this section" className="pn">
               {prev ? (
                 <Link href={`/posts/${prev.slug}`} className="frame">
-                  <span className="meta">← Previous</span> <strong>{prev.title}</strong>
+                  <span className="meta">Previous</span> <strong>{prev.title}</strong>
                 </Link>
               ) : (
                 <span />
               )}
               {next && (
                 <Link href={`/posts/${next.slug}`} className="frame">
-                  <span className="meta">Next →</span> <strong>{next.title}</strong>
+                  <span className="meta">Next</span> <strong>{next.title}</strong>
                 </Link>
               )}
             </nav>

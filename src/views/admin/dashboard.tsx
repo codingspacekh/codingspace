@@ -119,7 +119,7 @@ export function Dashboard({ request }: { request?: Request }) {
                 </ul>
               )}
               <p className="adm-more">
-                <Link href="/admin/posts">All posts →</Link>
+                <Link href="/admin/posts">All posts</Link>
               </p>
             </section>
             <section className="frame adm-panel" aria-labelledby="dash-activity">
@@ -130,7 +130,7 @@ export function Dashboard({ request }: { request?: Request }) {
                 <ActivityList events={data.activity} />
               )}
               <p className="adm-more">
-                <Link href="/admin/activity">All activity →</Link>
+                <Link href="/admin/activity">All activity</Link>
               </p>
             </section>
             <section className="frame adm-panel adm-panel--wide" aria-labelledby="dash-backup">
