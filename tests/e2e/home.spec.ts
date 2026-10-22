@@ -39,7 +39,7 @@ test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
   test('content is readable from the server HTML', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Live code.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('My Life, Code.');
     await expect(page.getByTestId('intro')).toBeVisible();
   });
 });
