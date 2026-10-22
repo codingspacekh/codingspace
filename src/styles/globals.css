@@ -5024,8 +5024,10 @@ html[data-motion='on'][data-transition='loading'] .page-skeleton {
   align-content: start;
   height: 150px;
   padding: 20px;
-  border: 1px solid rgba(24, 228, 236, 0.14);
-  background: rgba(7, 24, 32, 0.6);
+  /* Shaped like the cards it stands in for (.track, .post, .proj). */
+  border: 1px solid rgba(24, 228, 236, 0.16);
+  border-radius: 14px;
+  background: var(--card);
 }
 /* Bars with a light sweeping across them. */
 .sk-line {
@@ -5038,6 +5040,7 @@ html[data-motion='on'][data-transition='loading'] .page-skeleton {
   background-size:
     40% 100%,
     auto;
+  border-radius: 6px;
   animation: shimmer 1.1s ease-in-out infinite;
 }
 .sk-eyebrow {
@@ -5047,6 +5050,7 @@ html[data-motion='on'][data-transition='loading'] .page-skeleton {
 .sk-title {
   width: min(420px, 70%);
   height: 38px;
+  border-radius: 10px;
 }
 .sk-lead {
   width: min(640px, 90%);
@@ -5083,6 +5087,7 @@ html[data-motion='on'][data-transition='loading'] .page-skeleton {
   max-width: min(340px, calc(100vw - 32px));
   padding: 16px 18px;
   border: 1px solid rgba(24, 228, 236, 0.5);
+  border-radius: 12px;
   background: rgba(7, 24, 32, 0.96);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   color: var(--fg);
