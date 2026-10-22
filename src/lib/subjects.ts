@@ -15,6 +15,8 @@ export type Subject = {
   id: SubjectId;
   name: string;
   glyph: string;
+  /** One of the built-in icons (src/lib/subject-icons.ts), shown instead of the symbol; '' for the symbol. */
+  icon: string;
   color: SubjectColor;
   /** One line for the Study menu and the Home card. */
   blurb: string;

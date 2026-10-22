@@ -10,6 +10,7 @@ const LIST = [
     id: 'chemistry',
     name: 'Chemistry',
     glyph: '⚗',
+    icon: '',
     color: 'orange',
     blurb: '',
     intro: '',
@@ -91,6 +92,7 @@ describe('SubjectsAdmin (v1.1)', () => {
         id: 'furthermaths',
         name: 'Further Maths',
         glyph: '∫',
+        icon: '',
         color: 'gold',
         blurb: '',
         intro: '',
@@ -100,6 +102,22 @@ describe('SubjectsAdmin (v1.1)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Added “Further Maths” at the end, hidden. Show it once it has lessons.',
     );
+  });
+
+  it('shows an icon instead of the symbol when one is picked (2026-10-23)', async () => {
+    const calls = mockApi();
+    const user = userEvent.setup();
+    render(<SubjectsAdmin />);
+    await user.click(await screen.findByRole('button', { name: 'Edit Physics' }));
+    const form = screen.getByRole('form', { name: 'Edit Physics' });
+    const show = within(form).getByRole('group', { name: 'On the site, show' });
+    expect(within(show).getByRole('radio', { name: 'The symbol' })).toBeChecked();
+    await user.click(within(show).getByRole('radio', { name: 'Physics icon' }));
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(calls.find((c) => c.method === 'PUT')).toMatchObject({
+      url: '/api/admin/subjects/physics',
+      body: { glyph: 'Ψ', icon: 'physics' },
+    });
   });
 
   it('keeps an address typed by hand, letters only, and refuses one in use', async () => {
@@ -135,6 +153,7 @@ describe('SubjectsAdmin (v1.1)', () => {
         id: 'chemistry',
         name: 'Chemistry',
         glyph: '⚗',
+        icon: '',
         color: 'orange',
         blurb: 'Atoms up.',
         intro: '',

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { SUBJECT_ICON_NAMES } from '@/lib/subject-icons';
 import { SUBJECT_COLORS, SUBJECT_ID, subjectAddress, type Subject } from '@/lib/subjects';
 import { ApiError, dbError } from './errors';
 import { allRows } from '@/server/db-rows';
@@ -18,6 +19,8 @@ export const subjectInput = z.object({
   id: subjectId.optional(),
   name: z.string().trim().min(1).max(40),
   glyph: z.string().trim().max(4).default(''),
+  /** Shown instead of the symbol: a built-in icon's name, or '' for the symbol. */
+  icon: z.enum(['', ...SUBJECT_ICON_NAMES]).default(''),
   color: z.enum(SUBJECT_COLORS),
   blurb: z.string().trim().max(200).default(''),
   intro: z.string().trim().max(600).default(''),
@@ -30,7 +33,7 @@ export type AdminSubject = Subject & { visible: boolean; sections: number; lesso
 export async function listSubjects(supabase: SupabaseClient): Promise<(Subject & { visible: boolean })[]> {
   const { data, error } = await supabase
     .from('subjects')
-    .select('id, name, glyph, color, blurb, intro, visible')
+    .select('id, name, glyph, icon, color, blurb, intro, visible')
     .order('sort')
     .order('id');
   if (error) dbError(error, 'subjects');

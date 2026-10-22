@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api } from '@/lib/admin-api';
 import { moveItem } from '@/lib/post-rules';
+import { SUBJECT_ICON_NAMES, SUBJECT_ICONS } from '@/lib/subject-icons';
 import { SUBJECT_COLORS, SUBJECT_ID, subjectAddress, type SubjectColor } from '@/lib/subjects';
+import { SubjectMark } from '@/ui/subject-mark';
 import type { AdminSubject } from '@/server/admin/subjects';
 
 type Reply = { error?: string; failed?: string[] };
@@ -10,13 +12,14 @@ type Fields = {
   id: string;
   name: string;
   glyph: string;
+  icon: string;
   color: SubjectColor;
   blurb: string;
   intro: string;
   visible: boolean;
 };
 
-const EMPTY: Fields = { id: '', name: '', glyph: '', color: 'cyan', blurb: '', intro: '', visible: false };
+const EMPTY: Fields = { id: '', name: '', glyph: '', icon: '', color: 'cyan', blurb: '', intro: '', visible: false };
 const COLOR_NAMES: Record<SubjectColor, string> = {
   cyan: 'Cyan',
   violet: 'Violet',
@@ -169,7 +172,7 @@ function SubjectCard({
     <li className={`frame adm-section c-${s.color}`} aria-labelledby={`${id}-t`}>
       <h2 id={`${id}-t`}>
         <span className="adm-glyph" aria-hidden="true">
-          {s.glyph}
+          <SubjectMark subject={s} />
         </span>{' '}
         {s.name} {!s.visible && <span className="adm-status">Hidden</span>}
       </h2>
@@ -179,6 +182,7 @@ function SubjectCard({
             id: s.id,
             name: s.name,
             glyph: s.glyph,
+            icon: s.icon,
             color: s.color,
             blurb: s.blurb,
             intro: s.intro,
@@ -364,9 +368,28 @@ function SubjectForm({
           </select>
         </label>
         <span className={`adm-swatch c-${f.color}`} aria-hidden="true">
-          {f.glyph || '◆'}
+          <SubjectMark subject={{ glyph: f.glyph || '◆', icon: f.icon }} />
         </span>
       </div>
+      <fieldset className={`adm-icon-pick c-${f.color}`}>
+        <legend>On the site, show</legend>
+        <label>
+          <input type="radio" name={`${id}-icon`} checked={!f.icon} onChange={() => set('icon', '')} />
+          <span className="adm-icon-prev" aria-hidden="true">
+            {f.glyph || '◆'}
+          </span>
+          The symbol
+        </label>
+        {SUBJECT_ICON_NAMES.map((k) => (
+          <label key={k}>
+            <input type="radio" name={`${id}-icon`} checked={f.icon === k} onChange={() => set('icon', k)} />
+            <span className="adm-icon-prev" aria-hidden="true">
+              <SubjectMark subject={{ glyph: '', icon: k }} />
+            </span>
+            {SUBJECT_ICONS[k].name} icon
+          </label>
+        ))}
+      </fieldset>
       <label>
         One line for the Study menu and Home (optional)
         <input value={f.blurb} maxLength={200} onChange={(e) => set('blurb', e.target.value)} />

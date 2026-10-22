@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
+import { iconPath } from '@/lib/subject-icons';
 import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from '../arwes/prefs';
 import type { Orbit } from './engine';
@@ -83,6 +84,7 @@ export function OrbitHero() {
             id: s.id,
             name: s.name,
             glyph: s.glyph,
+            icon: iconPath(s.icon),
             color: style.getPropertyValue(`--${s.color}`).trim() || '#18e4ec',
           })),
           motion: animateRef.current,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from './arwes/prefs';
+import { SubjectMark } from './subject-mark';
 
 function Logo() {
   return (
@@ -106,7 +107,7 @@ function StudyMenu({ active }: { active: boolean }) {
           <li key={s.id}>
             <Link href={`/study/${s.id}`} className={`mi c-${s.color}`} onClick={() => setOpen(false)}>
               <span className="g" aria-hidden="true">
-                {s.glyph}
+                <SubjectMark subject={s} />
               </span>
               <span>
                 <strong>{s.name}</strong>

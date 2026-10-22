@@ -8,7 +8,8 @@
  * hover).
  */
 
-export type OrbitNode = { id: string; name: string; glyph: string; color: string };
+/** icon: an icon's path (src/lib/subject-icons.ts), drawn instead of the glyph when set. */
+export type OrbitNode = { id: string; name: string; glyph: string; icon?: string | null; color: string };
 export type OrbitOptions = {
   nodes: OrbitNode[];
   motion: boolean;
@@ -112,6 +113,10 @@ export function startOrbit(canvas: HTMLCanvasElement, opts: OrbitOptions): Orbit
   const ctx = canvas.getContext('2d');
   if (!ctx) return { setMotion: () => {}, stop: () => {} };
   const ico = icosahedron();
+  // Each icon's path, made once (jsdom has no Path2D: the glyph stands in).
+  const paths = new Map(
+    opts.nodes.flatMap((n) => (n.icon && typeof Path2D !== 'undefined' ? [[n.id, new Path2D(n.icon)] as const] : [])),
+  );
   let motion = opts.motion;
   let w = 0,
     h = 0,
@@ -224,8 +229,23 @@ export function startOrbit(canvas: HTMLCanvasElement, opts: OrbitOptions): Orbit
       c.fillStyle = n.color;
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.font = `500 ${Math.round(15 * p.f * (n.glyph.length > 1 ? 0.85 : 1.15))}px ${opts.font}`;
-      c.fillText(n.glyph, 0, 1);
+      const icon = paths.get(n.id);
+      if (icon) {
+        // The icon's 48-unit drawing fills most of the hexagon.
+        const k = (size * 1.2) / 48;
+        c.save();
+        c.scale(k, k);
+        c.translate(-24, -24);
+        c.strokeStyle = n.color;
+        c.lineWidth = (1.6 * p.f) / k;
+        c.lineCap = 'round';
+        c.lineJoin = 'round';
+        c.stroke(icon);
+        c.restore();
+      } else {
+        c.font = `500 ${Math.round(15 * p.f * (n.glyph.length > 1 ? 0.85 : 1.15))}px ${opts.font}`;
+        c.fillText(n.glyph, 0, 1);
+      }
       c.font = `600 ${Math.round(11 * p.f)}px ${opts.font}`;
       c.fillStyle = on ? '#d9fbfc' : 'rgba(143,195,200,.9)';
       c.fillText(n.name.toUpperCase(), 0, size + 14 * p.f);
