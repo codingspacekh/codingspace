@@ -51,6 +51,8 @@ export type LoadedProject = {
   platforms: string[];
   landingUrl: string | null;
   featured: boolean;
+  /** Says "Coming soon" while it has no download. */
+  comingSoon: boolean;
   sort: number;
   /** The project's landing page (v1.1); every part is optional. */
   page: {
@@ -205,6 +207,7 @@ function loadProjects(json: Obj | null, problems: Problems): LoadedProject[] {
       platforms: Array.isArray(p.platforms) ? p.platforms.filter((x): x is string => typeof x === 'string') : [],
       landingUrl,
       featured: p.featured === true,
+      comingSoon: p.comingSoon === true,
       sort: int(p.sort, i) ?? i,
       page: {
         tagline: str(page.tagline),

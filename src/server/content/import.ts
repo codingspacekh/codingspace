@@ -56,6 +56,7 @@ export type ProjectRow = {
   platforms: string[];
   landing_url: string | null;
   is_featured: boolean;
+  coming_soon: boolean;
   sort: number;
   tagline: string;
   intro: string;
@@ -211,6 +212,7 @@ async function importSiteContent(
       platforms: p.platforms,
       landing_url: p.landingUrl,
       is_featured: p.featured,
+      coming_soon: p.comingSoon,
       sort: p.sort,
       tagline: p.page.tagline,
       intro: p.page.intro,

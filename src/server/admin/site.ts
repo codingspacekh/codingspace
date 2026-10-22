@@ -103,6 +103,8 @@ export const projectInput = z.object({
   platforms: z.array(z.string().trim().max(30)).max(8).default([]),
   /** The project's own website, if it has one (optional since v1.1). */
   landing_url: url(true).default(''),
+  /** Says "Coming soon" on its card and page while it has no download (owner's choice since 2026-10-23). */
+  coming_soon: z.boolean().default(false),
   tagline: text(T.tagline),
   intro: text(T.intro),
   reasons: list(titled, L.reasons),
@@ -201,6 +203,7 @@ export type AdminProject = {
   description: string;
   platforms: string[];
   landing_url: string | null;
+  coming_soon: boolean;
   is_featured: boolean;
   sort: number;
   tagline: string;
@@ -227,7 +230,7 @@ export type AdminProject = {
 };
 
 const PROJECT_COLUMNS =
-  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, sort, ' +
+  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, coming_soon, is_featured, sort, ' +
   'tagline, intro, reasons, features, steps, faq, downloads, version, source_url, highlights, why_title, why_text, ' +
   'replaces, requirements, requirements_note, release_date, release_notes, section_order, hidden_sections';
 

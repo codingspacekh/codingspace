@@ -138,8 +138,10 @@ export type Project = {
   /** The project's own website, if it has one. */
   landingUrl: string | null;
   featured: boolean;
-  /** Has at least one download link (otherwise "Coming soon"). */
+  /** Has at least one download link. */
   available: boolean;
+  /** The owner marked it "Coming soon", and it has no download yet. */
+  comingSoon: boolean;
 };
 
 /** An image on a project page, from the media library (widths copied when the project is saved). */

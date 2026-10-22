@@ -539,9 +539,10 @@ type ProjectRow = {
   landing_url: string | null;
   is_featured: boolean;
   downloads: ProjectDownload[];
+  coming_soon: boolean;
 };
 const PROJECT_CARD =
-  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, downloads';
+  'id, slug, name, glyph, subject_id, tag, description, platforms, landing_url, is_featured, downloads, coming_soon';
 
 const toProject = (r: ProjectRow): Project => ({
   slug: r.slug,
@@ -554,6 +555,7 @@ const toProject = (r: ProjectRow): Project => ({
   landingUrl: r.landing_url,
   featured: r.is_featured,
   available: r.downloads.length > 0,
+  comingSoon: r.coming_soon && r.downloads.length === 0,
 });
 
 export async function getProjects(): Promise<Project[]> {

@@ -4,7 +4,7 @@ import { useSubjects } from '@/lib/subjects';
 import { usePrefs, useSound } from '../arwes/prefs';
 import type { Orbit } from './engine';
 
-/** The engine has eight rings; later subjects are only in Study below. */
+/** The engine has room for eight; later subjects are only in Study below. */
 const MAX_NODES = 8;
 
 /** Waits until the browser is idle and the element is (nearly) on screen: the orbit never delays first paint. */

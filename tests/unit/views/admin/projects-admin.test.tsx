@@ -13,6 +13,7 @@ const project = (id: string, name: string, extra = {}) => ({
   description: `${name} description`,
   platforms: [],
   landing_url: null,
+  coming_soon: false,
   is_featured: false,
   sort: 1,
   tagline: '',
@@ -39,7 +40,13 @@ const project = (id: string, name: string, extra = {}) => ({
   ...extra,
 });
 const projects = () => [
-  project('quiz', 'Quiz', { is_featured: true, subject_id: 'coding', tag: 'Web app', platforms: ['Web'] }),
+  project('quiz', 'Quiz', {
+    is_featured: true,
+    coming_soon: true,
+    subject_id: 'coding',
+    tag: 'Web app',
+    platforms: ['Web'],
+  }),
   project('sim', 'Simulator', {
     landing_url: 'https://sim.example',
     features: [{ glyph: '⚡', title: 'Fast', text: '' }],
@@ -144,6 +151,8 @@ describe('projects admin (03 ADM-13)', () => {
           requirements_note: '',
           release_date: '',
           release_notes: '',
+          // A new project isn't "Coming soon" unless the owner says so (2026-10-23).
+          coming_soon: false,
           section_order: [
             'numbers',
             'why',
@@ -205,6 +214,22 @@ describe('projects admin (03 ADM-13)', () => {
     expect(screen.getByRole('form', { name: 'Edit Quiz' })).toBeInTheDocument();
     await user.click(within(form).getByRole('button', { name: '← Projects' }));
     expect(screen.getByRole('list', { name: 'Projects, in order' })).toBeInTheDocument();
+  });
+
+  it('“Coming soon” is a choice in the Download part, shown as the part’s status (2026-10-23)', async () => {
+    const calls = mockApi();
+    render(<ProjectsAdmin />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit Simulator' }));
+    const form = screen.getByRole('form', { name: 'Edit Simulator' });
+    await user.click(part(form, 'Download'));
+    const soon = within(form).getByRole('checkbox', { name: /^Coming soon/ });
+    expect(soon).not.toBeChecked();
+    await user.click(soon);
+    await user.click(within(form).getByRole('button', { name: 'Save & update' }));
+    await waitFor(() =>
+      expect(calls[0]).toMatchObject({ method: 'PUT', url: '/api/admin/projects/sim', body: { coming_soon: true } }),
+    );
   });
 
   it('says why a change was refused', async () => {

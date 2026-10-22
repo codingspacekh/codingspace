@@ -98,6 +98,7 @@
       "platforms": ["Web", "Android"],
       "landingUrl": "https://example.com/inequality-drills",
       "featured": false,
+      "comingSoon": true,
       "sort": 2,
       "page": {
         "tagline": "A short inequality to solve every day, with a hint when you're stuck."

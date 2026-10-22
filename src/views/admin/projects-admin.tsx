@@ -70,6 +70,7 @@ const toPage = (p: AdminProject): PageFields => ({
   requirements_note: p.requirements_note,
   release_date: p.release_date ?? '',
   release_notes: p.release_notes,
+  coming_soon: p.coming_soon,
   section_order: sectionOrder(p.section_order),
   hidden_sections: p.hidden_sections,
   showcase: p.showcase.map(({ points, ...r }) => ({ ...r, points: pointsText(points) })),
@@ -104,7 +105,9 @@ function pageSummary(p: AdminProject): string {
   ].filter(Boolean);
   const download = p.downloads.length
     ? `${p.downloads.length} download${p.downloads.length === 1 ? '' : 's'}${p.version ? ` (version ${p.version})` : ''}`
-    : 'Coming soon (no download links yet)';
+    : p.coming_soon
+      ? 'Coming soon (no download links yet)'
+      : 'No download links';
   return [...parts, download].join(' · ');
 }
 

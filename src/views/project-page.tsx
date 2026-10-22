@@ -70,7 +70,7 @@ function hasContent(page: ProjectPageData, s: PageSection): boolean {
     case 'requirements':
       return page.requirements.length > 0;
     case 'download':
-      return true; // says "Coming soon" with no downloads yet
+      return page.downloads.length > 0 || page.project.comingSoon; // "Coming soon" with no downloads yet
     case 'install':
       return page.steps.length > 0;
     case 'faq':
@@ -465,7 +465,7 @@ export function ProjectPage(page: ProjectPageData) {
             </p>
           )}
           <div className="pj-cta">
-            <HeroDownload downloads={page.downloads} version={page.version} />
+            <HeroDownload downloads={page.downloads} version={page.version} comingSoon={p.comingSoon} />
             <p className="pj-more">
               {page.downloads.length > 1 && ids.includes('download') && <a href="#download">Other downloads</a>}
               {page.sourceUrl && (
