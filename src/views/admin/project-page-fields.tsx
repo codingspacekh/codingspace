@@ -79,6 +79,8 @@ export type PageFields = {
   requirements_note: string;
   release_date: string;
   release_notes: string;
+  /** Says "Coming soon" on the card and page while there is no download. */
+  coming_soon: boolean;
   /** Every section, in the page's order. */
   section_order: PageSection[];
   hidden_sections: PageSection[];
@@ -104,6 +106,7 @@ export const EMPTY_PAGE: PageFields = {
   requirements_note: '',
   release_date: '',
   release_notes: '',
+  coming_soon: false,
   section_order: [...PAGE_SECTIONS],
   hidden_sections: [],
   showcase: [],
@@ -403,7 +406,7 @@ function filled(p: PageFields, s: PageSection): boolean {
     case 'requirements':
       return p.requirements.length > 0;
     case 'download':
-      return true; // says "Coming soon" with no downloads yet
+      return p.downloads.length > 0 || p.coming_soon; // "Coming soon" with no downloads yet
     case 'install':
       return p.steps.length > 0;
     case 'faq':
@@ -657,9 +660,15 @@ export function ProjectPageFields({
       lead: 'The release and its download buttons. The hero’s button picks the one for the visitor’s computer.',
       summary: p.downloads.length
         ? `${count(p.downloads.length, 'download')}${p.version ? `, version ${p.version}` : ''}`
-        : 'Coming soon',
+        : p.coming_soon
+          ? 'Coming soon'
+          : 'none yet',
       body: (
         <>
+          <label className="adm-inline">
+            <input type="checkbox" checked={p.coming_soon} onChange={(e) => set('coming_soon', e.target.checked)} />
+            Coming soon: say so on its card and page until it has a download
+          </label>
           <div className="adm-pj-fields">
             <label>
               Version (optional, e.g. 1.2.0)

@@ -31,6 +31,19 @@ describe('orbit geometry', () => {
     expect(later[0]!.x).not.toBeCloseTo(now[0]!.x);
   });
 
+  it('never lets two subjects overlap, with up to six of them on a phone-sized orbit', () => {
+    const six = [...NODES, ...NODES].slice(0, 6).map((n, i) => ({ ...n, id: `${n.id}${i}` }));
+    for (let n = 2; n <= 6; n++)
+      for (let t = 0; t < 30; t += 0.1) {
+        const placed = place(six.slice(0, n), t, 380, 380);
+        for (const a of placed)
+          for (const b of placed) {
+            // A hexagon is 48px across, and its name sits under it.
+            if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(60 * Math.max(a.f, b.f));
+          }
+      }
+  });
+
   it('finds the subject under the pointer, the nearer one when two overlap', () => {
     const placed = [
       { id: 'far', x: 100, y: 100, f: 0.8 },

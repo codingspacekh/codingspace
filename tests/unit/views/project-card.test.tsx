@@ -13,6 +13,7 @@ const project = {
   landingUrl: 'https://example.com/runner',
   featured: true,
   available: true,
+  comingSoon: false,
 };
 
 describe('<ProjectCard>', () => {
@@ -26,9 +27,15 @@ describe('<ProjectCard>', () => {
     expect(screen.queryByText('Coming soon')).toBeNull();
   });
 
-  it('says “Coming soon” until there is something to download', () => {
-    render(<ProjectCard project={{ ...project, available: false }} />);
+  it('says “Coming soon” when the owner says so', () => {
+    render(<ProjectCard project={{ ...project, available: false, comingSoon: true }} />);
     expect(screen.getByText('Coming soon')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveTextContent('See the project');
+  });
+
+  it('nothing to download is not “Coming soon” by itself (a website, say)', () => {
+    render(<ProjectCard project={{ ...project, available: false }} />);
+    expect(screen.queryByText('Coming soon')).toBeNull();
     expect(screen.getByRole('link')).toHaveTextContent('See the project');
   });
 });

@@ -23,18 +23,15 @@ export type Orbit = { setMotion: (on: boolean) => void; stop: () => void };
 
 type Vec = [number, number, number];
 
-// Ring radius, tilt, roll and speed for each subject: the first four as in the prototype, then
-// four more between them (MAX_NODES in ./orbit-hero.tsx). Later subjects stay off the orbit.
-const RINGS = [
-  { r: 0.62, tilt: 0.35, roll: 0, speed: 0.42 },
-  { r: 0.78, tilt: -0.55, roll: 0.6, speed: 0.3 },
-  { r: 0.92, tilt: 0.75, roll: -0.4, speed: 0.22 },
-  { r: 0.7, tilt: -0.2, roll: 1.2, speed: 0.36 },
-  { r: 0.85, tilt: 0.1, roll: -1.0, speed: 0.26 },
-  { r: 0.66, tilt: -0.85, roll: -0.2, speed: 0.39 },
-  { r: 0.96, tilt: -0.35, roll: 0.9, speed: 0.19 },
-  { r: 0.74, tilt: 0.6, roll: 1.6, speed: 0.33 },
-];
+// Every subject rides the same tilted ring, turned about the middle of the screen by an equal step
+// (an atom's orbits), and they all move together: they stay evenly spread around the core at one
+// depth, so no two ever overlap. More subjects get rounder rings, to leave room between them.
+// Subjects after the eighth stay off the orbit (MAX_NODES in ./orbit-hero.tsx).
+const MAX_RINGS = 8;
+const SPEED = 0.3;
+function ring(i: number, n: number) {
+  return { r: 0.78, tilt: 0.2 + 0.06 * n, roll: 0.3 + (2 * Math.PI * i) / n };
+}
 
 /** The 12 vertices and 30 edges of an icosahedron (edge length 2). */
 export function icosahedron(): { v: Vec[]; e: [number, number][] } {
@@ -87,14 +84,11 @@ export type Placed = { id: string; x: number; y: number; f: number };
 
 /** Where each subject is at time t (seconds), with the pointer's parallax gx, gy. */
 export function place(nodes: OrbitNode[], t: number, w: number, h: number, gx = 0.25, gy = 0): Placed[] {
-  return nodes.slice(0, RINGS.length).map((n, i) => {
-    const ring = RINGS[i]!;
-    const a = t * ring.speed + i * 1.6;
-    const [x, y, f] = project(
-      rotate([Math.cos(a) * ring.r, 0, Math.sin(a) * ring.r], ring.tilt + gx, gy, ring.roll),
-      w,
-      h,
-    );
+  const shown = nodes.slice(0, MAX_RINGS);
+  const a = t * SPEED;
+  return shown.map((n, i) => {
+    const { r, tilt, roll } = ring(i, shown.length);
+    const [x, y, f] = project(rotate([Math.cos(a) * r, 0, Math.sin(a) * r], tilt + gx, gy, roll), w, h);
     return { id: n.id, x, y, f };
   });
 }
@@ -175,15 +169,16 @@ export function startOrbit(canvas: HTMLCanvasElement, opts: OrbitOptions): Orbit
     for (const p of iv) c.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3);
 
     // Rings, drawn back to front by depth.
-    opts.nodes.slice(0, RINGS.length).forEach((n, i) => {
-      const ring = RINGS[i]!;
+    const shown = opts.nodes.slice(0, MAX_RINGS);
+    shown.forEach((n, i) => {
+      const { r, tilt, roll } = ring(i, shown.length);
       const on = hover === n.id;
       c.strokeStyle = n.color;
       c.lineWidth = on ? 1.6 : 1;
       let prev: Vec | null = null;
       for (let k = 0; k <= 96; k++) {
         const a = (k / 96) * Math.PI * 2;
-        const p = project(rotate([Math.cos(a) * ring.r, 0, Math.sin(a) * ring.r], ring.tilt + gx, gy, ring.roll), w, h);
+        const p = project(rotate([Math.cos(a) * r, 0, Math.sin(a) * r], tilt + gx, gy, roll), w, h);
         if (prev) {
           c.globalAlpha = Math.max(0, (on ? 0.55 : 0.18) * (prev[2] * 1.2 - 0.4));
           c.beginPath();

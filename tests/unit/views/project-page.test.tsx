@@ -34,6 +34,7 @@ const full = (): ProjectPageData => ({
     landingUrl: 'https://easymedia.example',
     featured: false,
     available: true,
+    comingSoon: false,
   },
   tagline: 'One small editor for Chapter 11.',
   introHtml: '<p>Made for <strong>students</strong>.</p>',
@@ -233,12 +234,20 @@ describe('<ProjectPage> (v1.1, redesigned 2026-10-20)', () => {
     expect(screen.getByRole('region', { name: 'Install' })).toHaveTextContent('01Unzip it');
   });
 
-  it('a project with only a name and description: no empty sections, “Coming soon”', () => {
+  const bare = (comingSoon: boolean) => {
     const page = full();
     render(
       <ProjectPage
         {...page}
-        project={{ ...page.project, landingUrl: null, platforms: [], available: false, tag: '', subject: null }}
+        project={{
+          ...page.project,
+          landingUrl: null,
+          platforms: [],
+          available: false,
+          comingSoon,
+          tag: '',
+          subject: null,
+        }}
         tagline=""
         introHtml=""
         reasons={[]}
@@ -256,11 +265,21 @@ describe('<ProjectPage> (v1.1, redesigned 2026-10-20)', () => {
         showcase={[]}
       />,
     );
+  };
+
+  it('a project with only a name and description, marked “Coming soon”: no empty sections', () => {
+    bare(true);
     expect(screen.getByText('A video and audio editor.', { selector: '.lead' })).toBeInTheDocument();
     expect(h2s()).toEqual(['EasyMedia is coming soon', 'EasyMedia']);
     expect(screen.getByText('Coming soon')).toHaveClass('tag-soon');
     expect(screen.queryByRole('navigation', { name: /on this page/ })).toBeNull();
     expect(screen.queryByRole('link', { name: /Download/ })).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('nothing to download and not “Coming soon”: no download section and no tag', () => {
+    bare(false);
+    expect(h2s()).toEqual(['EasyMedia']);
+    expect(screen.queryByText('Coming soon')).toBeNull();
   });
 });

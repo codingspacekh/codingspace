@@ -108,7 +108,7 @@ export function ProjectCard({ project }: { project: Project }) {
         <span className="stack">
           <strong className="proj-name">{project.name}</strong>
           {project.tag && <span className="tag">{project.tag}</span>}
-          {!project.available && <span className="tag tag-soon">Coming soon</span>}
+          {project.comingSoon && <span className="tag tag-soon">Coming soon</span>}
         </span>
         <span className="desc">{project.description}</span>
         {project.platforms.length > 0 && <span className="post-meta">{project.platforms.join(' · ')}</span>}

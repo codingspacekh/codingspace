@@ -62,10 +62,18 @@ function details(d: ProjectDownload, version: string) {
   return [version && `v${version}`, d.note, isFileDownload(d) && formatBytes(d.bytes)].filter(Boolean).join(' · ');
 }
 
-/** The hero's big button: the visitor's download, else the first one; "Coming soon" with none. */
-export function HeroDownload({ downloads, version }: { downloads: ProjectDownload[]; version: string }) {
+/** The hero's big button: the visitor's download, else the first one; with none, "Coming soon" if the owner says so. */
+export function HeroDownload({
+  downloads,
+  version,
+  comingSoon,
+}: {
+  downloads: ProjectDownload[];
+  version: string;
+  comingSoon: boolean;
+}) {
   const best = useBestDownload(downloads) ?? downloads[0];
-  if (!best) return <span className="tag tag-soon">Coming soon</span>;
+  if (!best) return comingSoon ? <span className="tag tag-soon">Coming soon</span> : null;
   return (
     <a href={downloadUrl(best)} className="pj-big-dl" rel="noopener">
       <PlatformIcon />

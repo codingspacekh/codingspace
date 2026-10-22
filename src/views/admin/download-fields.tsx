@@ -160,7 +160,7 @@ export function DownloadsEditor({
       <legend>Downloads</legend>
       <p className="adm-hint">
         One button each. Upload the installer here (.exe, .msi, .dmg, .pkg, .zip or .apk, up to 2 GB), or add a link to
-        a file elsewhere. With none, the page says “Coming soon”.
+        a file elsewhere. With none, the page has no download section, unless it is “Coming soon”.
       </p>
       {downloads.length > 0 && (
         <ol className="adm-pj-list adm-dl-list" aria-label="Downloads">
