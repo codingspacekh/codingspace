@@ -69,7 +69,6 @@ export default function Author({ profile, description, sections, lifePosts, hasM
           </div>
         )}
         <div className="who">
-          <span className="eyebrow">Author</span>
           <h1 id="who">{name}</h1>
           {profile?.bioHtml && <div className="prose lead" dangerouslySetInnerHTML={{ __html: profile.bioHtml }} />}
           {(profile?.years != null || profile?.students != null || profile?.email) && (

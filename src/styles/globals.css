@@ -259,10 +259,8 @@ html[data-reading='on'] .ui-streak {
   margin-left: auto;
 }
 .nl {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 15px;
   color: var(--fg2);
   text-decoration: none;
   padding: 10px 14px;
@@ -270,6 +268,7 @@ html[data-reading='on'] .ui-streak {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 500;
 }
 .nl:hover,
 .nl.on,
@@ -327,6 +326,7 @@ html[data-reading='on'] .ui-streak {
   border-left-color: var(--c);
 }
 .mi .g {
+  border-radius: 10px;
   width: 44px;
   height: 44px;
   display: grid;
@@ -353,14 +353,13 @@ html[data-reading='on'] .ui-streak {
   margin-left: 8px;
 }
 .ui-toggle {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   border: 1px solid var(--line);
   padding: 8px 10px;
   color: var(--muted);
   white-space: nowrap;
+  border-radius: 8px;
 }
 .ui-toggle[aria-pressed='true'] {
   color: var(--cyan);
@@ -372,10 +371,10 @@ html[data-reading='on'] .ui-streak {
   border: 1px solid var(--line);
   padding: 8px 12px;
   color: var(--cyan);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 /* The Menu button takes over below 1000px, where the links and toggles no longer fit in one row. */
 @media (max-width: 1000px) {
@@ -420,52 +419,41 @@ html[data-reading='on'] .ui-streak {
   gap: 14px;
 }
 
-/* CSS frame: corner brackets for cards and panels (cheaper than an Arwes frame per card) */
+/* CSS frame for cards and panels: see-through (the grid shows behind it), rounded. */
 .frame {
   position: relative;
-  background: rgba(7, 24, 32, 0.72);
+  background: var(--card);
   border: 1px solid rgba(24, 228, 236, 0.16);
+  border-radius: 12px;
   color: var(--fg);
   text-decoration: none;
-}
-.frame::before,
-.frame::after {
-  content: '';
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--c, var(--cyan));
-  pointer-events: none;
-  transition: 0.25s;
-}
-.frame::before {
-  top: -1px;
-  left: -1px;
-  border-right: 0;
-  border-bottom: 0;
-}
-.frame::after {
-  bottom: -1px;
-  right: -1px;
-  border-left: 0;
-  border-top: 0;
+  transition: border-color 0.2s;
 }
 a.frame:hover {
   border-color: color-mix(in srgb, var(--c, var(--cyan)) 45%, transparent);
   background: rgba(11, 37, 48, 0.8);
 }
-a.frame:hover::before,
-a.frame:hover::after {
-  width: 24px;
-  height: 24px;
+
+/* Boxes inside pages are rounded like the cards; fields and small controls a little less. */
+:is(.menu, .empty, .math-block, .practice, figure.code, .table-wrap) {
+  border-radius: 12px;
+}
+/* Clips the code header's background to the corners; the code itself scrolls inside <pre>. */
+figure.code {
+  overflow: hidden;
+}
+.callout {
+  border-radius: 0 12px 12px 0;
+}
+:is(.q-form input, .q-form textarea, .practice-input, .practice-option, .search-form input) {
+  border-radius: 8px;
 }
 
 .eyebrow {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--c, var(--cyan));
+  font-weight: 600;
 }
 .btn {
   display: inline-flex;
@@ -475,12 +463,12 @@ a.frame:hover::after {
   padding: 12px 20px;
   border: 1px solid var(--line);
   color: var(--fg2);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 15px;
   text-decoration: none;
   white-space: nowrap;
+  font-weight: 600;
+  border-radius: 8px;
 }
 .btn:hover {
   border-color: var(--cyan);
@@ -493,10 +481,8 @@ a.frame:hover::after {
   background: rgba(24, 228, 236, 0.1);
 }
 .tag {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -506,19 +492,20 @@ a.frame:hover::after {
   background: color-mix(in srgb, var(--c, var(--cyan)) 9%, transparent);
   white-space: nowrap;
   justify-self: start;
+  font-weight: 600;
+  border-radius: 999px;
 }
 .tag::before {
   content: '';
   width: 6px;
   height: 6px;
+  border-radius: 50%;
   background: currentColor;
 }
 .meta {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--muted);
-  text-transform: uppercase;
 }
 .lead {
   font-size: clamp(17px, 1.6vw, 20px);
@@ -532,12 +519,11 @@ a.frame:hover::after {
   align-items: center;
 }
 .more {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   color: var(--fg2);
   text-decoration: none;
+  font-weight: 600;
 }
 a.more:hover {
   color: var(--cyan);
@@ -573,9 +559,8 @@ main:focus {
   border-top: 1px solid var(--line);
   background: rgba(3, 8, 12, 0.88);
   padding: 14px var(--gutter-r) calc(14px + env(safe-area-inset-bottom, 0px)) var(--gutter);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   color: var(--muted);
 }
 html {
@@ -630,12 +615,6 @@ html {
 .shead .eyebrow {
   display: block;
   margin-bottom: 6px;
-}
-.shead .more {
-  font-family: var(--font-body), var(--font-khmer), sans-serif;
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
 }
 .grid3,
 .grid2 {
@@ -1072,19 +1051,6 @@ html {
 .proj-name {
   font-size: 20px;
 }
-/* Softer labels than the site-wide tags: these cards are read, not scanned. */
-.proj .tag {
-  font-family: var(--font-body), var(--font-khmer), sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  border-radius: 999px;
-  padding: 2px 10px;
-}
-.proj .tag::before {
-  border-radius: 50%;
-}
 .proj-more {
   font-size: 14px;
   font-weight: 600;
@@ -1120,11 +1086,9 @@ html {
   opacity: 0.9;
 }
 .crumbs {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   color: var(--muted);
-  text-transform: uppercase;
 }
 .crumbs a {
   color: var(--fg2);
@@ -1149,13 +1113,13 @@ html {
   margin-top: 28px;
 }
 .chip {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   padding: 7px 12px;
   border: 1px solid var(--line);
   color: var(--fg2);
   text-decoration: none;
+  border-radius: 999px;
 }
 .chip:hover {
   border-color: var(--c);
@@ -1213,7 +1177,6 @@ html {
 .lvl {
   font-family: var(--font-mono), var(--font-khmer), monospace;
   font-size: 11px;
-  letter-spacing: 0.1em;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -1480,11 +1443,10 @@ html {
   --c: var(--amber);
 }
 .pj-eyebrow {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--c);
+  font-weight: 600;
 }
 .pj-section {
   scroll-margin-top: calc(var(--bar-h) + 76px);
@@ -1534,10 +1496,8 @@ html {
   padding: 6px 10px;
   border-bottom: 2px solid transparent;
   color: var(--muted);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -1601,6 +1561,7 @@ html {
   justify-items: start;
 }
 .pj-big-dl {
+  border-radius: 12px;
   display: inline-grid;
   grid-template-columns: auto 1fr;
   gap: 2px 16px;
@@ -1623,11 +1584,9 @@ html {
 }
 .pj-big-dl b {
   color: var(--cyan);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
 }
 .pj-big-dl span {
   color: var(--fg2);
@@ -1639,9 +1598,8 @@ html {
   flex-wrap: wrap;
   gap: 6px 18px;
   margin: 0;
-  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
   font-size: 12px;
-  letter-spacing: 0.08em;
 }
 .pj-more a {
   color: var(--fg2);
@@ -1663,6 +1621,7 @@ html {
   content: '';
   width: 6px;
   height: 6px;
+  border-radius: 50%;
   background: var(--lime);
   box-shadow: 0 0 8px var(--lime);
 }
@@ -1921,11 +1880,9 @@ html {
 }
 .pj-table thead th {
   color: var(--muted);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 .pj-table tbody th {
   width: 22%;
@@ -2027,11 +1984,10 @@ html {
   border: 1px solid var(--line);
   background: none;
   color: var(--fg2);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 12px;
   cursor: pointer;
+  border-radius: 6px;
 }
 .pj-sha button:hover {
   border-color: var(--cyan);
@@ -2073,11 +2029,10 @@ html {
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 14px;
   cursor: pointer;
+  font-weight: 600;
 }
 .pj-tabs button[aria-selected='true'] {
   color: var(--cyan);
@@ -2329,11 +2284,10 @@ html {
   margin: 0;
 }
 .practice-label {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--c, var(--cyan));
+  font-weight: 600;
 }
 .practice-q > :first-child {
   margin-top: 0;
@@ -2425,11 +2379,10 @@ html {
   --cc: var(--pink);
 }
 .callout-label {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
   font-size: 12px !important;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: var(--cc) !important;
+  font-weight: 600;
 }
 .callout p {
   font-size: 16px;
@@ -2452,16 +2405,13 @@ figure.code {
   background: var(--raised);
   font-family: var(--font-mono), var(--font-khmer), monospace;
   font-size: 11px;
-  letter-spacing: 0.12em;
   color: var(--muted);
-  text-transform: uppercase;
 }
 .code-copy {
   color: var(--cyan);
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
 }
 figure.code pre {
   margin: 0;
@@ -2528,10 +2478,8 @@ figure.code pre {
   vertical-align: top;
 }
 .table-wrap th {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--muted);
   font-weight: 500;
 }
@@ -2612,13 +2560,12 @@ figure.code pre {
 .fact {
   padding: 12px 14px;
   border: 1px solid var(--line);
+  border-radius: 10px;
 }
 .fact dt {
-  font-family: var(--font-mono), var(--font-khmer), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-body), var(--font-khmer), sans-serif;
+  font-size: 13px;
   color: var(--muted);
-  text-transform: uppercase;
 }
 .fact dd {
   margin: 0;
@@ -2668,6 +2615,7 @@ figure.code pre {
   top: 7px;
   width: 9px;
   height: 9px;
+  border-radius: 50%;
   background: var(--bg);
   border: 2px solid var(--cyan);
 }
@@ -2881,10 +2829,6 @@ html[data-reading='on'] .prose li {
     display: block !important;
     max-width: none !important;
     padding: 0 !important;
-  }
-  .frame::before,
-  .frame::after {
-    display: none !important;
   }
   .prose a[href^='http']::after {
     content: ' (' attr(href) ')';
@@ -4937,19 +4881,6 @@ html[data-motion='on'][data-transition='in'] #main {
   to {
     opacity: 1;
     transform: none;
-  }
-}
-/* Frame corners draw out from nothing. */
-html[data-motion='on'][data-transition='in'] #main .frame::before,
-html[data-motion='on'][data-transition='in'] #main .frame::after {
-  animation: corners-in 0.5s ease-out 0.12s both;
-}
-/* Only "from": the corners grow to whatever size the frame normally has. */
-@keyframes corners-in {
-  from {
-    width: 0;
-    height: 0;
-    opacity: 0;
   }
 }
 /* The heading types itself in (the text is there all along: only its clipping changes). */

@@ -81,20 +81,17 @@ function hasContent(page: ProjectPageData, s: PageSection): boolean {
 function Section({
   id,
   title,
-  eyebrow,
   lead,
   children,
 }: {
   id: PageSection;
   title: string;
-  eyebrow?: string;
   lead?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section id={id} className="section pj-section" aria-labelledby={`pj-${id}-h`}>
       <div className="pj-head">
-        {eyebrow && <span className="pj-eyebrow">{eyebrow}</span>}
         <h2 id={`pj-${id}-h`}>{title}</h2>
         {lead && <p className="lead">{lead}</p>}
       </div>
@@ -150,7 +147,7 @@ function SubNav({ page, ids }: { page: ProjectPageData; ids: PageSection[] }) {
 function Why({ page }: { page: ProjectPageData }) {
   const { project: p } = page;
   return (
-    <Section id="why" eyebrow={`Why ${p.name}`} title={page.whyTitle || `Why ${p.name}?`} lead={page.whyText}>
+    <Section id="why" title={page.whyTitle || `Why ${p.name}?`} lead={page.whyText}>
       {page.replaces.length > 0 ? (
         <div className="pj-swap">
           <div className="frame pj-before">
@@ -304,7 +301,7 @@ export function ProjectPage(page: ProjectPageData) {
     ),
     why: () => <Why page={page} />,
     showcase: () => (
-      <Section id="showcase" eyebrow="A closer look" title={`What ${p.name} does`}>
+      <Section id="showcase" title={`What ${p.name} does`}>
         <div className="pj-show">
           {page.showcase.map((row) => (
             <article key={row.media + row.title} className={`pj-row${row.color ? ` c-${row.color}` : ''}`}>
