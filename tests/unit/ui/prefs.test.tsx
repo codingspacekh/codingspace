@@ -57,8 +57,8 @@ describe('remembered choices (PUB-11)', () => {
         <TopBar />
       </UiRoot>,
     );
-    expect(screen.getByRole('button', { name: /motion on/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Motion' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Sound' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('toggling stores the choice', async () => {
@@ -67,7 +67,7 @@ describe('remembered choices (PUB-11)', () => {
         <TopBar />
       </UiRoot>,
     );
-    await userEvent.click(screen.getByRole('button', { name: /motion on/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Motion' }));
     expect(JSON.parse(window.localStorage.getItem('cs-prefs')!)).toEqual({ motion: false });
     expect(document.documentElement.dataset.motion).toBe('off');
   });
@@ -121,7 +121,7 @@ describe('sound (PUB-11): off by default, opt-in', () => {
         <HoverProbe />
       </UiRoot>,
     );
-    const toggle = screen.getByRole('button', { name: /sound off/i });
+    const toggle = screen.getByRole('button', { name: 'Sound' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(screen.getByRole('button', { name: 'probe' }));
     expect(play.hover).not.toHaveBeenCalled();
@@ -134,9 +134,9 @@ describe('sound (PUB-11): off by default, opt-in', () => {
         <HoverProbe />
       </UiRoot>,
     );
-    await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sound' }));
     await waitFor(() => expect(play.start).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Sound' })).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'probe' }));
     await waitFor(() => expect(play.hover).toHaveBeenCalledTimes(1));
   });
@@ -147,12 +147,12 @@ describe('sound (PUB-11): off by default, opt-in', () => {
         <TopBar />
       </UiRoot>,
     );
-    await userEvent.click(screen.getByRole('button', { name: /sound off/i }));
-    await userEvent.click(screen.getByRole('button', { name: /sound on/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sound' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sound' }));
     await waitFor(() => expect(play.start).toHaveBeenCalledTimes(1));
     await new Promise((r) => setTimeout(r, 20)); // no second chime
     expect(play.start).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: /sound off/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sound' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('the logo links home', () => {

@@ -330,10 +330,10 @@ test.describe('site content', { tag: '@single-account' }, () => {
       /Projectile motion/,
     ]);
     await expectAccessible(student);
-    await student.getByRole('link', { name: 'Start with part 1 →' }).click();
+    await student.getByRole('link', { name: 'Start with part 1' }).click();
     const box = student.getByRole('navigation', { name: `Series: ${title}` });
     await expect(box).toContainText('Part 1 of 2');
-    await box.getByRole('link', { name: /Next → · Physics/ }).click();
+    await box.getByRole('link', { name: /Next · Physics/ }).click();
     await expect(student.getByRole('heading', { level: 1, name: 'Projectile motion' })).toBeVisible();
     await expect(student.getByText(`Part 2 of 2 in the series ${title}`)).toBeVisible();
     await expectAccessible(student);

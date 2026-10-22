@@ -134,7 +134,7 @@ describe('<PostView>', () => {
       'href',
       '/posts/vectors',
     );
-    expect(within(box).getByRole('link', { name: /Next → · Physics Projectile motion/ })).toHaveAttribute(
+    expect(within(box).getByRole('link', { name: /Next · Physics Projectile motion/ })).toHaveAttribute(
       'href',
       '/posts/projectile-motion',
     );

@@ -50,7 +50,7 @@ export function Layout({
       <PageSkeleton />
       <footer className="site-footer">
         <div className="footer-inner">
-          <span>© 2026 codingspacekh.dev · Teach · Build · Live</span>
+          <span>© 2026 codingspacekh.dev</span>
           {/* Plain links: the Study menu needs JavaScript, these don't. */}
           <nav aria-label="Subjects" className="footer-links">
             {subjects.map((s) => (
@@ -62,7 +62,6 @@ export function Layout({
             <Link href="/syllabus">Syllabus</Link>
             <Link href="/projects">Projects</Link>
             <Link href="/author">Author</Link>
-            <a href="/rss.xml">RSS</a>
           </nav>
         </div>
       </footer>

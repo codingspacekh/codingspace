@@ -58,8 +58,10 @@ test('turning sound on loads the sound module without errors', async ({ page }) 
   if (await burger.isVisible()) await burger.click();
   // Listen before clicking: the module and the sound load within milliseconds of the click.
   const chime = page.waitForResponse((r) => r.url().endsWith('/sounds/intro.mp3') && r.ok());
-  await page.getByRole('button', { name: /sound off/i }).click();
-  await expect(page.getByRole('button', { name: /sound on/i })).toHaveAttribute('aria-pressed', 'true');
+  const sound = page.getByRole('button', { name: 'Sound', exact: true });
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
   await chime;
   expect(problems, problems.join('\n')).toEqual([]);
 });

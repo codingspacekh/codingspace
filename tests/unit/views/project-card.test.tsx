@@ -22,13 +22,13 @@ describe('<ProjectCard>', () => {
     expect(link).toHaveAttribute('href', '/projects/runner');
     expect(link).not.toHaveAttribute('target');
     expect(link).toHaveClass('c-amber');
-    expect(link).toHaveTextContent('Details and download →');
+    expect(link).toHaveTextContent('Details and download');
     expect(screen.queryByText('Coming soon')).toBeNull();
   });
 
   it('says “Coming soon” until there is something to download', () => {
     render(<ProjectCard project={{ ...project, available: false }} />);
     expect(screen.getByText('Coming soon')).toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveTextContent('See the project →');
+    expect(screen.getByRole('link')).toHaveTextContent('See the project');
   });
 });

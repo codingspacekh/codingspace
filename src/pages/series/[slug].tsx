@@ -37,7 +37,7 @@ function Continue({ lessons }: { lessons: SeriesPageData['lessons'] }) {
   const lesson = lessons[p.next]!;
   return (
     <Link href={`/posts/${lesson.slug}`} className="btn pri">
-      {p.done === 0 ? 'Start with part 1 →' : `Continue with part ${p.next + 1}: ${lesson.title} →`}
+      {p.done === 0 ? 'Start with part 1' : `Continue with part ${p.next + 1}: ${lesson.title}`}
     </Link>
   );
 }

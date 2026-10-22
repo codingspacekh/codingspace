@@ -64,7 +64,9 @@ test.describe('a visitor whose device asks for reduced motion', () => {
     await page.goto('/');
     const burger = page.getByRole('button', { name: 'Menu' });
     if (await burger.isVisible()) await burger.click();
-    await page.getByRole('button', { name: /motion off/i }).click();
+    const motion = page.getByRole('button', { name: 'Motion', exact: true });
+    await expect(motion).toHaveAttribute('aria-pressed', 'false');
+    await motion.click();
     await expect(page.locator('html')).toHaveAttribute('data-motion', 'on');
     await page.goto('/projects');
     await expect(page.locator('html')).toHaveAttribute('data-motion', 'on');
@@ -298,7 +300,7 @@ test.describe('page changes and the sound offer (after soulextract.com)', () => 
       await expect(reminder).toHaveCount(0);
       const burger = page.getByRole('button', { name: 'Menu' });
       if (await burger.isVisible()) await burger.click();
-      await expect(page.getByRole('button', { name: /sound on/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sound', exact: true })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 });

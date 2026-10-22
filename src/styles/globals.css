@@ -361,9 +361,17 @@ html[data-reading='on'] .ui-streak {
   white-space: nowrap;
   border-radius: 8px;
 }
-.ui-toggle[aria-pressed='true'] {
+.ui-toggle[aria-pressed='true'],
+.ui-toggle[aria-current='page'] {
   color: var(--cyan);
   border-color: rgba(24, 228, 236, 0.6);
+}
+.ui-icon {
+  display: inline-flex;
+  padding: 7px;
+}
+.ui-icon:hover {
+  color: var(--cyan);
 }
 .burger {
   display: none;
