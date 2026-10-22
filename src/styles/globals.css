@@ -703,9 +703,9 @@ html {
 }
 .headline {
   font-family: var(--font-display), var(--font-body), var(--font-khmer), sans-serif;
-  /* Each line on one line: the longest, "Crush physics.", is about 10.1 × the font size wide in
+  /* Each line on one line: the longest, "My Crush, Physics.", is about 12.7 × the font size wide in
      Orbitron, and the text column is about 46% of the screen (one column below 900px). */
-  font-size: clamp(36px, 4.3vw, 53px);
+  font-size: clamp(29px, 3.4vw, 42px);
   line-height: 1.05;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -713,7 +713,7 @@ html {
 }
 @media (max-width: 900px) {
   .headline {
-    font-size: clamp(26px, calc((100vw - 32px) / 10.6), 53px);
+    font-size: clamp(21px, calc((100vw - 32px) / 13.3), 42px);
   }
 }
 .headline > span {
